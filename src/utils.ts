@@ -3,7 +3,7 @@ import TrackSegment from "./engine/TrackSegment";
 
 /**
  * Best-effort navigation along a network of path segments.
- * Stops when there's a decision point.
+ * Chooses randomly when there's a decision point.
  * @param segment
  * @param startingDistance distance already traveled along the current segment
  * @param reverse
@@ -14,7 +14,7 @@ export function easyNavigate(
   startingDistance: number,
   reverse: boolean,
   distance: number,
-): { point: Point; excess: number } {
+): { point: Point; excess: number; finalSegment: TrackSegment } {
   let distanceRemaining = distance + startingDistance;
   let currentSegment = segment;
   while (currentSegment) {
@@ -23,26 +23,34 @@ export function easyNavigate(
       reverse,
     );
     if (followCurrentSegment.excess === 0) {
-      return followCurrentSegment;
+      return {
+        point: followCurrentSegment.point,
+        excess: 0,
+        finalSegment: currentSegment,
+      };
     }
 
     distanceRemaining -= currentSegment.length;
-    currentSegment = currentSegment.atEnd[0];
+    currentSegment =
+      currentSegment.atEnd[
+        Math.floor(Math.random() * currentSegment.atEnd.length)
+      ];
   }
 
   return {
     point: { x: 0, y: 0 },
     excess: 0,
+    finalSegment: segment,
   };
 }
 
 export function isNetworkCoherent(segments: TrackSegment[]): boolean {
   const visitedSegments = new Set<TrackSegment>();
   let segmentsToVisit: TrackSegment[] = [segments[0]];
+  if (segments.length === 1) return false;
 
   visitedSegments.add(segments[0]);
   while (visitedSegments.size < segments.length && segmentsToVisit.length) {
-    console.log(visitedSegments.size < segments.length, segmentsToVisit.length);
     const nextSegmentsToVisit: TrackSegment[] = [];
     segmentsToVisit.forEach((segment) => {
       visitedSegments.add(segment);
@@ -56,7 +64,6 @@ export function isNetworkCoherent(segments: TrackSegment[]): boolean {
           (endSegment) => !visitedSegments.has(endSegment),
         ),
       );
-      console.log("nstv", nextSegmentsToVisit.length);
     });
     segmentsToVisit = nextSegmentsToVisit;
   }
