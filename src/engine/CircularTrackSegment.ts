@@ -21,20 +21,35 @@ class CircularTrackSegment implements TrackSegment {
     this.center = center;
     this.counterClockWise = counterClockWise;
 
-    const initialAngle = Math.atan2(
+    let initialAngle = Math.atan2(
       this.start.y - this.center.y,
       this.start.x - this.center.x,
     );
-    const finalAngle = Math.atan2(
+    let finalAngle = Math.atan2(
       this.end.y - this.center.y,
       this.end.x - this.center.x,
     );
 
+    // Convert angles to range of [0 - 2*Pi]
+    initialAngle = (initialAngle + 2 * Math.PI) % (2 * Math.PI);
+    finalAngle = (finalAngle + 2 * Math.PI) % (2 * Math.PI);
+
+    // Then make the correct one larger based on CCW
+    if (counterClockWise) {
+      // Final should be less
+      if (finalAngle > initialAngle) {
+        initialAngle += 2 * Math.PI;
+      }
+    } else {
+      if (initialAngle > finalAngle) {
+        finalAngle += 2 * Math.PI;
+      }
+    }
+
     const radius = Math.sqrt(
       (center.x - start.x) ** 2 + (center.y - start.y) ** 2,
     );
-    this._length = (finalAngle - initialAngle) * radius;
-
+    this._length = Math.abs(finalAngle - initialAngle) * radius;
     this.atStart = [];
     this.atEnd = [];
   }
