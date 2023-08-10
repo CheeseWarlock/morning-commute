@@ -31,4 +31,13 @@ describe("a single CircularTrackSegment", () => {
     expect(positionAlong.point.y).toBeCloseTo(v, 4);
     expect(positionAlong.excess).toBe(0);
   });
+
+  it("should calculate reverse position along correctly", () => {
+    const segment = new CircularTrackSegment(pointA, pointC, pointB, true);
+    const positionAlong = segment.getPositionAlong(segment.length / 2, true);
+    const v = Math.cos(Math.PI / 4) * 10;
+    expect(positionAlong.point.x).toBeCloseTo(10 - v, 4);
+    expect(positionAlong.point.y).toBeCloseTo(v, 4);
+    expect(positionAlong.excess).toBe(0);
+  });
 });

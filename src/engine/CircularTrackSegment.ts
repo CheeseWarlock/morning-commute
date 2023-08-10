@@ -84,28 +84,33 @@ class CircularTrackSegment implements TrackSegment {
     reverse: boolean = false,
   ): { point: Point; excess: number } {
     if (distance > this.length) {
+      const point = reverse ? this.start : this.end;
       return {
         point: {
-          x: this.end.x,
-          y: this.end.y,
+          x: point.x,
+          y: point.y,
         },
         excess: distance - this.length,
       };
     }
 
-    // theta = L / r
     const theta = distance / this.#radius;
+
+    // The starting angle for this calculation
+    const startingAngle = reverse ? this.#finalAngle : this.#initialAngle;
     let angleAlong = 0;
-    if (this.counterClockWise) {
-      angleAlong = this.#initialAngle - theta;
+
+    // If we're in reverse, the CCWness of this segment is inverted for this calculation
+    if (this.counterClockWise !== reverse) {
+      angleAlong = startingAngle - theta;
     } else {
-      angleAlong = this.#initialAngle + theta;
+      angleAlong = startingAngle + theta;
     }
 
     return {
       point: {
-        x: this.center.x + Math.cos(angleAlong),
-        y: this.center.y + Math.sin(angleAlong),
+        x: this.center.x + Math.cos(angleAlong) * this.#radius,
+        y: this.center.y + Math.sin(angleAlong) * this.#radius,
       },
       excess: 0,
     };
