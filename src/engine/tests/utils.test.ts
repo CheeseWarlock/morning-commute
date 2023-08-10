@@ -61,6 +61,20 @@ describe("easy navigation", () => {
     expect(navResult.point.x).toBeCloseTo(6, 4);
     expect(navResult.point.y).toBeCloseTo(6, 4);
   });
+
+  it("handles a transition from non-reverse to reverse", () => {
+    const firstSegment = new LinearTrackSegment(
+      { x: 0, y: 0 },
+      { x: 0, y: 10 },
+    );
+    const secondSegment = new LinearTrackSegment(
+      { x: 0, y: 20 },
+      { x: 0, y: 10 },
+    );
+    firstSegment.connect(secondSegment);
+    const navResult = easyNavigate(firstSegment, 0, false, 12);
+    expect(navResult.point.y).toBeCloseTo(12, 4);
+  });
 });
 
 describe("network coherence", () => {
