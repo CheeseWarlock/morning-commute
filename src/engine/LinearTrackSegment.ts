@@ -25,8 +25,25 @@ class LinearTrackSegment implements TrackSegment {
    * @param segment
    */
   connect(segment: TrackSegment) {
-    this.atEnd.push(segment);
-    segment.atStart.push(this);
+    if (this.start.x === segment.start.x && this.start.y === segment.start.y) {
+      this.atStart.push(segment);
+      segment.atStart.push(this);
+    } else if (
+      this.start.x === segment.end.x &&
+      this.start.y === segment.end.y
+    ) {
+      this.atStart.push(segment);
+      segment.atEnd.push(this);
+    } else if (
+      this.end.x === segment.start.x &&
+      this.end.y === segment.start.y
+    ) {
+      this.atEnd.push(segment);
+      segment.atStart.push(this);
+    } else if (this.end.x === segment.end.x && this.end.y === segment.end.y) {
+      this.atEnd.push(segment);
+      segment.atEnd.push(this);
+    }
   }
 
   getPositionAlong(

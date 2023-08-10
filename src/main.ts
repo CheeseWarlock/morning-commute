@@ -4,6 +4,7 @@ import viteLogo from "/vite.svg";
 import { setupCounter } from "./counter.ts";
 import Map from "./renderer/basic/map.ts";
 import LinearTrackSegment from "./engine/LinearTrackSegment.ts";
+import CircularTrackSegment from "./engine/CircularTrackSegment.ts";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
@@ -38,7 +39,17 @@ h2.connect(v4);
 v4.connect(h3);
 h3.connect(v3);
 v3.connect(h2);
-const network = [h1, h2, h3, v1, v2, v3, v4];
+const q = new CircularTrackSegment(
+  { x: 40, y: 0 },
+  { x: 40, y: 80 },
+  { x: 40, y: 40 },
+  true,
+);
+q.connect(h1);
+q.connect(h3);
+q.connect(v2);
+q.connect(v4);
+const network = [h1, h2, h3, v1, v2, v3, v4, q];
 const map = new Map(document.querySelector("#map-holder")!, network);
 
 setupCounter(document.querySelector<HTMLButtonElement>("#counter")!);
