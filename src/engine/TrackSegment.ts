@@ -8,7 +8,7 @@ interface TrackSegment {
   atEnd: TrackSegment[];
   getPositionAlong: (
     distance: number,
-    number?: boolean,
+    reverse?: boolean,
   ) => { point: Point; excess: number };
 }
 
