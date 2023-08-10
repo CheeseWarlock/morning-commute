@@ -10,9 +10,9 @@ class CircularTrackSegment implements TrackSegment {
   counterClockWise: boolean;
   _length: number;
   #theta: number;
-  #radius: number;
-  #initialAngle: number;
-  #finalAngle: number;
+  radius: number;
+  initialAngle: number;
+  finalAngle: number;
 
   constructor(
     start: Point,
@@ -33,8 +33,8 @@ class CircularTrackSegment implements TrackSegment {
       this.end.y - this.center.y,
       this.end.x - this.center.x,
     );
-    this.#initialAngle = initialAngle;
-    this.#finalAngle = finalAngle;
+    this.initialAngle = initialAngle;
+    this.finalAngle = finalAngle;
 
     // Convert angles to range of [0 - 2*Pi]
     initialAngle = (initialAngle + 2 * Math.PI) % (2 * Math.PI);
@@ -56,7 +56,7 @@ class CircularTrackSegment implements TrackSegment {
       (center.x - start.x) ** 2 + (center.y - start.y) ** 2,
     );
     this.#theta = Math.abs(finalAngle - initialAngle);
-    this.#radius = radius;
+    this.radius = radius;
     this._length = Math.abs(finalAngle - initialAngle) * radius;
     this.atStart = [];
     this.atEnd = [];
@@ -75,7 +75,10 @@ class CircularTrackSegment implements TrackSegment {
    * @param segment
    */
   connect(segment: TrackSegment) {
-    if (this.start.x === segment.start.x && this.start.y === segment.start.y) {
+    /**/ if (
+      this.start.x === segment.start.x &&
+      this.start.y === segment.start.y
+    ) {
       this.atStart.push(segment);
       segment.atStart.push(this);
     } else if (
@@ -111,10 +114,10 @@ class CircularTrackSegment implements TrackSegment {
       };
     }
 
-    const theta = distance / this.#radius;
+    const theta = distance / this.radius;
 
     // The starting angle for this calculation
-    const startingAngle = reverse ? this.#finalAngle : this.#initialAngle;
+    const startingAngle = reverse ? this.finalAngle : this.initialAngle;
     let angleAlong = 0;
 
     // If we're in reverse, the CCWness of this segment is inverted for this calculation
@@ -126,8 +129,8 @@ class CircularTrackSegment implements TrackSegment {
 
     return {
       point: {
-        x: this.center.x + Math.cos(angleAlong) * this.#radius,
-        y: this.center.y + Math.sin(angleAlong) * this.#radius,
+        x: this.center.x + Math.cos(angleAlong) * this.radius,
+        y: this.center.y + Math.sin(angleAlong) * this.radius,
       },
       excess: 0,
     };

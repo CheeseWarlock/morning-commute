@@ -41,12 +41,15 @@ export function easyNavigate(
     const targetList = currentlyReversing
       ? currentSegment.atStart
       : currentSegment.atEnd;
-    const nextSegment = targetList[Math.floor(0.999 * targetList.length)];
+    const nextSegment =
+      targetList[Math.floor(Math.random() * targetList.length)];
 
     // Determine if we're reversing on the new segment
     const isNextSegmentFlippedFromCurrent = !(
-      currentSegment.end.x === nextSegment.start.x &&
-      currentSegment.end.y === nextSegment.start.y
+      (currentSegment.end.x === nextSegment.start.x &&
+        currentSegment.end.y === nextSegment.start.y) ||
+      (currentSegment.start.x === nextSegment.end.x &&
+        currentSegment.start.y === nextSegment.end.y)
     );
     currentlyReversing = currentlyReversing !== isNextSegmentFlippedFromCurrent;
     currentSegment = nextSegment;

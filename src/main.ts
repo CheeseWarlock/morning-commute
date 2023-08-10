@@ -43,13 +43,23 @@ const q = new CircularTrackSegment(
   { x: 40, y: 0 },
   { x: 40, y: 80 },
   { x: 40, y: 40 },
+  false,
+);
+const q2 = new CircularTrackSegment(
+  { x: 0, y: 0 },
+  { x: 40, y: 40 },
+  { x: 40, y: 0 },
   true,
 );
+q2.connect(h1);
+q2.connect(v1);
+q2.connect(h2);
+q2.connect(v2);
 q.connect(h1);
 q.connect(h3);
 q.connect(v2);
 q.connect(v4);
-const network = [h1, h2, h3, v1, v2, v3, v4, q];
+const network = [h1, h2, h3, v1, v2, v3, v4, q, q2];
 const map = new Map(document.querySelector("#map-holder")!, network);
 
 setupCounter(document.querySelector<HTMLButtonElement>("#counter")!);
