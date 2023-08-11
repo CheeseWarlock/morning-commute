@@ -15,6 +15,42 @@ describe("a single CircularTrackSegment", () => {
     expect(segment.length).toBeCloseTo((3 * (10 * Math.PI)) / 2, 4);
   });
 
+  it("has proper clockwiseness when crossing the 0-angle barrier", () => {
+    const start = { x: 20, y: 0 };
+    const end = { x: 20, y: 40 };
+    const center = { x: 0, y: 20 };
+    const clockwiseSegment = new CircularTrackSegment(start, end, center);
+    const counterClockWiseSegment = new CircularTrackSegment(
+      start,
+      end,
+      center,
+      true,
+    );
+    expect(counterClockWiseSegment.length).toBeCloseTo(
+      clockwiseSegment.length * 3,
+    );
+    expect(
+      clockwiseSegment.getPositionAlong(clockwiseSegment.length / 2, false)
+        .point.y,
+    ).toBeCloseTo(20, 4);
+    expect(
+      counterClockWiseSegment.getPositionAlong(
+        clockwiseSegment.length / 2,
+        false,
+      ).point.x,
+    ).toBeCloseTo(0, 4);
+    expect(
+      clockwiseSegment.getPositionAlong(clockwiseSegment.length / 2, true).point
+        .y,
+    ).toBeCloseTo(20, 4);
+    expect(
+      counterClockWiseSegment.getPositionAlong(
+        clockwiseSegment.length / 2,
+        true,
+      ).point.x,
+    ).toBeCloseTo(0, 4);
+  });
+
   it("should report the end point when distance exceeds length", () => {
     const segment = new CircularTrackSegment(pointA, pointC, pointB, true);
     const positionAlong = segment.getPositionAlong(100);

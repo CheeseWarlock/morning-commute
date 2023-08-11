@@ -18,7 +18,7 @@ class CircularTrackSegment implements TrackSegment {
     start: Point,
     end: Point,
     center: Point,
-    counterClockWise: boolean = true,
+    counterClockWise: boolean = false,
   ) {
     this.start = start;
     this.end = end;
