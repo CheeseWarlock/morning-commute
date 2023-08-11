@@ -1,7 +1,10 @@
 import Point from "./Point";
 import TrackSegment from "./TrackSegment";
 
-class CircularTrackSegment implements TrackSegment {
+/**
+ * A segment of track with a circular curve.
+ */
+class CircularTrackSegment extends TrackSegment {
   start: Point;
   end: Point;
   atStart: TrackSegment[];
@@ -20,6 +23,7 @@ class CircularTrackSegment implements TrackSegment {
     center: Point,
     counterClockWise: boolean = false,
   ) {
+    super();
     this.start = start;
     this.end = end;
     this.center = center;
@@ -64,39 +68,6 @@ class CircularTrackSegment implements TrackSegment {
 
   get length() {
     return this._length;
-  }
-
-  get isWellConnected() {
-    return this.atStart?.length > 0 && this.atEnd.length > 0;
-  }
-
-  /**
-   * Connects the end of this segment to the start of another.
-   * @param segment
-   */
-  connect(segment: TrackSegment) {
-    /**/ if (
-      this.start.x === segment.start.x &&
-      this.start.y === segment.start.y
-    ) {
-      this.atStart.push(segment);
-      segment.atStart.push(this);
-    } else if (
-      this.start.x === segment.end.x &&
-      this.start.y === segment.end.y
-    ) {
-      this.atStart.push(segment);
-      segment.atEnd.push(this);
-    } else if (
-      this.end.x === segment.start.x &&
-      this.end.y === segment.start.y
-    ) {
-      this.atEnd.push(segment);
-      segment.atStart.push(this);
-    } else if (this.end.x === segment.end.x && this.end.y === segment.end.y) {
-      this.atEnd.push(segment);
-      segment.atEnd.push(this);
-    }
   }
 
   getPositionAlong(

@@ -1,54 +1,20 @@
 import CircularTrackSegment from "../../engine/CircularTrackSegment";
 import LinearTrackSegment from "../../engine/LinearTrackSegment";
-import TrackSegment from "../../engine/TrackSegment";
-import { easyNavigate } from "../../utils";
-
-class Train {
-  position: { x: number; y: number };
-  #currentSegment: any;
-  #currentDistance: number;
-  #currentlyReversing: boolean;
-  constructor(segment: TrackSegment) {
-    this.position = { x: segment.start.x, y: segment.start.y };
-    this.#currentSegment = segment;
-    this.#currentDistance = 0;
-    this.#currentlyReversing = false;
-  }
-
-  update() {
-    // Game logic
-    this.#currentDistance += 1;
-    const newPos = easyNavigate(
-      this.#currentSegment,
-      this.#currentDistance,
-      this.#currentlyReversing,
-      0,
-    );
-
-    this.position.x = newPos.point.x;
-    this.position.y = newPos.point.y;
-
-    if (newPos.finalSegment !== this.#currentSegment) {
-      this.#currentDistance -= this.#currentSegment.length;
-      this.#currentSegment = newPos.finalSegment;
-      this.#currentlyReversing = newPos.reversing;
-    }
-  }
-}
+import Network from "../../engine/Network";
+import Train from "../../engine/Train";
 
 class Map {
   #canvas: HTMLCanvasElement;
-  #network: TrackSegment[];
-  trains: Train[];
+  #network: Network;
   #offset: { x: number; y: number };
   #size: { x: number; y: number };
   #scale: number;
   constructor(
     element: HTMLElement,
-    network: TrackSegment[],
+    network: Network,
     offset = { x: 10, y: 10 },
     scale = 2,
-    size = { x: 250, y: 250 },
+    size = { x: 300, y: 250 },
   ) {
     this.#offset = offset;
     this.#scale = scale;
@@ -59,14 +25,9 @@ class Map {
     element.appendChild(canvas);
     this.#canvas = canvas;
     this.#network = network;
-    this.trains = [
-      new Train(network[0]),
-      new Train(network[0]),
-      new Train(network[0]),
-      new Train(network[0]),
-      new Train(network[0]),
-      new Train(network[0]),
-    ];
+    network.segments.forEach((segment) => {
+      network.trains.push(new Train(segment));
+    });
 
     requestAnimationFrame(() => {
       this.update();
@@ -77,10 +38,12 @@ class Map {
     const context = this.#canvas.getContext("2d");
     if (!context) return;
 
+    this.#network.update();
+
     // Render
     context.clearRect(0, 0, this.#size.x, this.#size.y);
     context.strokeStyle = "rgb(200, 200, 200)";
-    this.#network.forEach((segment) => {
+    this.#network.segments.forEach((segment) => {
       if (segment instanceof LinearTrackSegment) {
         context.beginPath();
         context.moveTo(
@@ -105,8 +68,7 @@ class Map {
         context.stroke();
       }
     });
-    this.trains.forEach((train) => {
-      train.update();
+    this.#network.trains.forEach((train) => {
       context.fillStyle = "rgba(200, 0, 0, 0.8)";
       context.beginPath();
       context.arc(

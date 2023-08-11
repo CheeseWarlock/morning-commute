@@ -55,6 +55,26 @@ describe("a series of LinearTrackSegments", () => {
     const segmentB = new LinearTrackSegment(pointB, pointC);
     const segmentC = new LinearTrackSegment(pointC, pointD);
 
+    segmentA.connect(segmentB, true);
+    segmentB.connect(segmentC, true);
+
+    const positionAlong = segmentA.getPositionAlong(15);
+    expect(positionAlong.point.x).toBeCloseTo(10, 4);
+    expect(positionAlong.point.y).toBeCloseTo(0, 4);
+    expect(positionAlong.excess).toBeCloseTo(5, 4);
+  });
+});
+
+describe("connection logic", () => {
+  const pointA = { x: 0, y: 0 };
+  const pointB = { x: 10, y: 0 };
+  const pointC = { x: 10, y: 10 };
+  const pointD = { x: 0, y: 10 };
+  it("does not connect segments when angles don't line up", () => {
+    const segmentA = new LinearTrackSegment(pointA, pointB);
+    const segmentB = new LinearTrackSegment(pointB, pointC);
+    const segmentC = new LinearTrackSegment(pointC, pointD);
+
     segmentA.connect(segmentB);
     segmentB.connect(segmentC);
 

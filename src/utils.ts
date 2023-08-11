@@ -88,3 +88,7 @@ export function isNetworkCoherent(segments: TrackSegment[]): boolean {
   }
   return visitedSegments.size === segments.length;
 }
+
+export function areAnglesEqual(angleA: number, angleB: number) {
+  return angleA % Math.PI === angleB % Math.PI;
+}
