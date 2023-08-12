@@ -1,6 +1,6 @@
 import "./style.css";
 import Map from "./renderer/basic/map.ts";
-import network from "./engine/networks/DoubleLoop.ts";
+import network from "./engine/networks/Complex.ts";
 
 // document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 //   <div>
