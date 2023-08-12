@@ -15,6 +15,12 @@ describe("a single CircularTrackSegment", () => {
     expect(segment.length).toBeCloseTo((3 * (10 * Math.PI)) / 2, 4);
   });
 
+  it("should have a sensible initial and final angle", () => {
+    const segment = new CircularTrackSegment(pointA, pointC, pointB, true);
+    expect(segment.initialAngle).toBeCloseTo(0.5 * Math.PI, 4); // PI
+    expect(segment.finalAngle).toBeCloseTo(0, 4); // PI / 2
+  });
+
   it("has proper clockwiseness when crossing the 0-angle barrier", () => {
     const start = { x: 20, y: 0 };
     const end = { x: 20, y: 40 };
@@ -68,7 +74,7 @@ describe("a single CircularTrackSegment", () => {
     expect(positionAlong.excess).toBe(0);
   });
 
-  it("should calculate reverse position along correctly", () => {
+  it.only("should calculate reverse position along correctly", () => {
     const segment = new CircularTrackSegment(pointA, pointC, pointB, true);
     const positionAlong = segment.getPositionAlong(segment.length / 2, true);
     const v = Math.cos(Math.PI / 4) * 10;

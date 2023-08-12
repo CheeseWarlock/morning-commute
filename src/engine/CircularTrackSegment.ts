@@ -29,6 +29,7 @@ class CircularTrackSegment extends TrackSegment {
     this.center = center;
     this.counterClockWise = counterClockWise;
 
+    // Angles from start/end to center...
     let initialAngle = Math.atan2(
       this.start.y - this.center.y,
       this.start.x - this.center.x,
@@ -37,6 +38,16 @@ class CircularTrackSegment extends TrackSegment {
       this.end.y - this.center.y,
       this.end.x - this.center.x,
     );
+
+    // So rotate by 90 degrees
+    if (counterClockWise) {
+      initialAngle -= Math.PI / 2;
+      finalAngle -= Math.PI / 2;
+    } else {
+      initialAngle += Math.PI / 2;
+      finalAngle += Math.PI / 2;
+    }
+
     this.initialAngle = initialAngle;
     this.finalAngle = finalAngle;
 
@@ -88,14 +99,16 @@ class CircularTrackSegment extends TrackSegment {
     const theta = distance / this.radius;
 
     // The starting angle for this calculation
-    const startingAngle = reverse ? this.finalAngle : this.initialAngle;
+    const startingAngle = reverse
+      ? this.finalAngle + Math.PI
+      : this.initialAngle;
     let angleAlong = 0;
 
     // If we're in reverse, the CCWness of this segment is inverted for this calculation
     if (this.counterClockWise !== reverse) {
-      angleAlong = startingAngle - theta;
+      angleAlong = startingAngle - theta + Math.PI / 2;
     } else {
-      angleAlong = startingAngle + theta;
+      angleAlong = startingAngle + theta - Math.PI / 2;
     }
 
     return {

@@ -5,6 +5,8 @@ import TrackSegment from "./TrackSegment";
  * A segment of straight track.
  */
 class LinearTrackSegment extends TrackSegment {
+  initialAngle: number;
+  finalAngle: number;
   length: number;
   start: Point;
   end: Point;
@@ -18,6 +20,8 @@ class LinearTrackSegment extends TrackSegment {
     this.length = Math.sqrt((start.x - end.x) ** 2 + (start.y - end.y) ** 2);
     this.atStart = [];
     this.atEnd = [];
+    this.initialAngle = Math.atan2(end.y - start.y, end.x - start.x);
+    this.finalAngle = this.initialAngle;
   }
 
   getPositionAlong(

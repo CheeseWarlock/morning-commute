@@ -90,5 +90,8 @@ export function isNetworkCoherent(segments: TrackSegment[]): boolean {
 }
 
 export function areAnglesEqual(angleA: number, angleB: number) {
-  return angleA % Math.PI === angleB % Math.PI;
+  return (
+    (angleA + 2 * Math.PI) % (2 * Math.PI) ===
+    (angleB + 2 * Math.PI) % (2 * Math.PI)
+  );
 }

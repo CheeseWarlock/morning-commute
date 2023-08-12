@@ -11,22 +11,22 @@ const v1 = new LinearTrackSegment({ x: 0, y: 0 }, { x: 0, y: 10 });
 const v2 = new LinearTrackSegment({ x: 10, y: 10 }, { x: 10, y: 0 });
 const v3 = new LinearTrackSegment({ x: 0, y: 20 }, { x: 0, y: 10 });
 const v4 = new LinearTrackSegment({ x: 10, y: 10 }, { x: 10, y: 20 });
-h1.connect(v1);
-v1.connect(h2);
-h2.connect(v2);
-v2.connect(h1);
-h2.connect(v4);
-v4.connect(h3);
-h3.connect(v3);
-v3.connect(h2);
+h1.connect(v1, true);
+v1.connect(h2, true);
+h2.connect(v2, true);
+v2.connect(h1, true);
+h2.connect(v4, true);
+v4.connect(h3, true);
+h3.connect(v3, true);
+v3.connect(h2, true);
 
 const pointA = { x: 0, y: 0 };
 const pointB = { x: 10, y: 10 };
 const circleCentre = { x: 10, y: 0 };
 const circularSegment = new CircularTrackSegment(pointA, pointB, circleCentre);
 const linearSegment = new LinearTrackSegment(pointB, pointA);
-circularSegment.connect(linearSegment);
-linearSegment.connect(circularSegment);
+circularSegment.connect(linearSegment, true);
+linearSegment.connect(circularSegment, true);
 
 describe("easy navigation", () => {
   it("should navigate across multiple track segments", () => {
@@ -71,7 +71,7 @@ describe("easy navigation", () => {
       { x: 0, y: 20 },
       { x: 0, y: 10 },
     );
-    firstSegment.connect(secondSegment);
+    firstSegment.connect(secondSegment, true);
     const navResult = easyNavigate(firstSegment, 0, false, 12);
     expect(navResult.point.y).toBeCloseTo(12, 4);
   });
@@ -79,7 +79,7 @@ describe("easy navigation", () => {
   it("handles a transition from reverse to non-reverse", () => {
     const segment = new LinearTrackSegment({ x: 40, y: 40 }, { x: 40, y: 80 });
     const segment2 = new LinearTrackSegment({ x: 0, y: 40 }, { x: 40, y: 40 });
-    segment.connect(segment2);
+    segment.connect(segment2, true);
 
     const navResult = easyNavigate(segment, 46, true, 0);
     expect(navResult.point.x).toBe(34);

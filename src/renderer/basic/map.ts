@@ -61,8 +61,10 @@ class Map {
           (segment.center.x + this.#offset.x) * this.#scale,
           (segment.center.y + this.#offset.y) * this.#scale,
           segment.radius * this.#scale,
-          segment.initialAngle,
-          segment.finalAngle,
+          segment.initialAngle +
+            (segment.counterClockWise ? Math.PI / 2 : -Math.PI / 2),
+          segment.finalAngle +
+            (segment.counterClockWise ? Math.PI / 2 : -Math.PI / 2),
           segment.counterClockWise,
         );
         context.stroke();
