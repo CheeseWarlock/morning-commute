@@ -14,7 +14,7 @@ class Map {
     network: Network,
     offset = { x: 10, y: 10 },
     scale = 2,
-    size = { x: 300, y: 250 },
+    size = { x: 800, y: 600 },
   ) {
     this.#offset = offset;
     this.#scale = scale;
@@ -25,9 +25,9 @@ class Map {
     element.appendChild(canvas);
     this.#canvas = canvas;
     this.#network = network;
-    network.segments.forEach((segment) => {
-      network.trains.push(new Train(segment));
-    });
+    network.trains.push(new Train(network.segments[0]));
+    network.trains.push(new Train(network.segments[2]));
+    network.trains.push(new Train(network.segments[4]));
 
     requestAnimationFrame(() => {
       this.update();
@@ -43,6 +43,7 @@ class Map {
     // Render
     context.clearRect(0, 0, this.#size.x, this.#size.y);
     context.strokeStyle = "rgb(200, 200, 200)";
+    context.lineWidth = 2;
     this.#network.segments.forEach((segment) => {
       if (segment instanceof LinearTrackSegment) {
         context.beginPath();
@@ -71,12 +72,12 @@ class Map {
       }
     });
     this.#network.trains.forEach((train) => {
-      context.fillStyle = "rgba(200, 0, 0, 0.8)";
+      context.fillStyle = "rgba(200, 0, 0, 0.9)";
       context.beginPath();
       context.arc(
         (train.position.x + this.#offset.x) * this.#scale,
         (train.position.y + this.#offset.y) * this.#scale,
-        4,
+        5,
         0,
         Math.PI * 2,
       );
