@@ -6,7 +6,7 @@ import TrackSegment from "./TrackSegment";
  */
 class Train {
   position: { x: number; y: number };
-  #currentSegment: any;
+  #currentSegment: TrackSegment;
   #currentDistance: number;
   #currentlyReversing: boolean;
   #speed: number;
@@ -18,23 +18,50 @@ class Train {
     this.#speed = Math.random() + 0.5;
   }
 
+  /**
+   * Select a path when encountering a split
+   */
+  decidePath() {
+    // Random
+  }
+
+  /**
+   * Update position and status
+   */
   update() {
-    // Game logic
     this.#currentDistance += this.#speed;
-    const newPos = easyNavigate(
-      this.#currentSegment,
-      this.#currentDistance,
-      this.#currentlyReversing,
-      0,
-    );
 
-    this.position.x = newPos.point.x;
-    this.position.y = newPos.point.y;
-
-    if (newPos.finalSegment !== this.#currentSegment) {
+    if (
+      this.#currentSegment.getPositionAlong(
+        this.#currentDistance,
+        this.#currentlyReversing,
+      ).excess > 0
+    ) {
+      // We are arriving at a decision point
+      const candidates = this.#currentlyReversing
+        ? this.#currentSegment.atStart
+        : this.#currentSegment.atEnd;
+      const selectedTrack =
+        candidates[Math.floor(Math.random() * candidates.length)];
+      const newPos = easyNavigate(
+        this.#currentSegment,
+        this.#currentDistance,
+        this.#currentlyReversing,
+        0,
+        selectedTrack,
+      );
       this.#currentDistance -= this.#currentSegment.length;
-      this.#currentSegment = newPos.finalSegment;
+      this.#currentSegment = selectedTrack;
       this.#currentlyReversing = newPos.reversing;
+      this.position.x = newPos.point.x;
+      this.position.y = newPos.point.y;
+    } else {
+      const newPos = this.#currentSegment.getPositionAlong(
+        this.#currentDistance,
+        this.#currentlyReversing,
+      );
+      this.position.x = newPos.point.x;
+      this.position.y = newPos.point.y;
     }
   }
 }

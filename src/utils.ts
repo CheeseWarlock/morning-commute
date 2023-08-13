@@ -14,6 +14,7 @@ export function easyNavigate(
   startingDistance: number,
   reverse: boolean,
   distance: number,
+  targetSegment?: TrackSegment,
 ): {
   point: Point;
   excess: number;
@@ -41,8 +42,12 @@ export function easyNavigate(
     const targetList = currentlyReversing
       ? currentSegment.atStart
       : currentSegment.atEnd;
-    const nextSegment =
-      targetList[Math.floor(Math.random() * targetList.length)];
+    let nextSegment;
+    if (targetSegment && targetList.includes(targetSegment)) {
+      nextSegment = targetSegment;
+    } else {
+      nextSegment = targetList[Math.floor(Math.random() * targetList.length)];
+    }
 
     // Determine if we're reversing on the new segment
     const isNextSegmentFlippedFromCurrent = !(

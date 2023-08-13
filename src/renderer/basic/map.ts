@@ -26,8 +26,6 @@ class Map {
     this.#canvas = canvas;
     this.#network = network;
     network.trains.push(new Train(network.segments[0]));
-    network.trains.push(new Train(network.segments[2]));
-    network.trains.push(new Train(network.segments[4]));
 
     requestAnimationFrame(() => {
       this.update();
