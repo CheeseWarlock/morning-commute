@@ -9,6 +9,7 @@ class Map {
   #offset: { x: number; y: number };
   #size: { x: number; y: number };
   #scale: number;
+  #context: CanvasRenderingContext2D | null;
   constructor(
     element: HTMLElement,
     network: Network,
@@ -24,6 +25,7 @@ class Map {
     canvas.height = size.y;
     element.appendChild(canvas);
     this.#canvas = canvas;
+    this.#context = canvas.getContext("2d");
     this.#network = network;
     network.trains.push(new Train(network.segments[0]));
 
@@ -32,31 +34,26 @@ class Map {
     });
   }
 
-  update() {
-    const context = this.#canvas.getContext("2d");
-    if (!context) return;
-
-    this.#network.update();
-
-    // Render
-    context.clearRect(0, 0, this.#size.x, this.#size.y);
-    context.strokeStyle = "rgb(200, 200, 200)";
-    context.lineWidth = 2;
+  drawTrackSections() {
+    if (!this.#context) return;
+    this.#context.strokeStyle = "rgb(200, 200, 200)";
+    this.#context.lineWidth = 2;
     this.#network.segments.forEach((segment) => {
+      if (!this.#context) return;
       if (segment instanceof LinearTrackSegment) {
-        context.beginPath();
-        context.moveTo(
+        this.#context.beginPath();
+        this.#context.moveTo(
           (segment.start.x + this.#offset.x) * this.#scale,
           (segment.start.y + this.#offset.y) * this.#scale,
         );
-        context.lineTo(
+        this.#context.lineTo(
           (segment.end.x + this.#offset.x) * this.#scale,
           (segment.end.y + this.#offset.y) * this.#scale,
         );
-        context.stroke();
+        this.#context.stroke();
       } else if (segment instanceof CircularTrackSegment) {
-        context.beginPath();
-        context.arc(
+        this.#context.beginPath();
+        this.#context.arc(
           (segment.center.x + this.#offset.x) * this.#scale,
           (segment.center.y + this.#offset.y) * this.#scale,
           segment.radius * this.#scale,
@@ -66,21 +63,86 @@ class Map {
             (segment.counterClockWise ? Math.PI / 2 : -Math.PI / 2),
           segment.counterClockWise,
         );
-        context.stroke();
+        this.#context.stroke();
       }
     });
+  }
+
+  drawTrains() {
     this.#network.trains.forEach((train) => {
-      context.fillStyle = "rgba(200, 0, 0, 0.9)";
-      context.beginPath();
-      context.arc(
+      if (!this.#context) return;
+      this.#context.fillStyle = "rgba(200, 0, 0)";
+      this.#context.beginPath();
+      this.#context.arc(
         (train.position.x + this.#offset.x) * this.#scale,
         (train.position.y + this.#offset.y) * this.#scale,
         5,
         0,
         Math.PI * 2,
       );
-      context.fill();
+      this.#context.closePath();
+      this.#context.fill();
     });
+  }
+
+  drawStations() {
+    this.#network.stations.forEach((station) => {
+      if (!this.#context) return;
+      this.#context.fillStyle = "rgb(0, 0, 200)";
+      const SIZE = 10;
+
+      // Ugh a rotated rectangle isn't trivial
+      const targetPosition = { x: 100, y: 100 };
+      const targetRotation = 0.5;
+
+      this.#context.moveTo(
+        targetPosition.x +
+          (-SIZE * Math.cos(targetRotation) -
+            (SIZE / 2) * Math.sin(targetRotation)),
+        targetPosition.y +
+          (-(SIZE / 2) * Math.cos(targetRotation) +
+            SIZE * Math.sin(targetRotation)),
+      );
+      this.#context.lineTo(
+        targetPosition.x +
+          (SIZE * Math.cos(targetRotation) -
+            (SIZE / 2) * Math.sin(targetRotation)),
+        targetPosition.y +
+          (-(SIZE / 2) * Math.cos(targetRotation) -
+            SIZE * Math.sin(targetRotation)),
+      );
+      this.#context.lineTo(
+        targetPosition.x +
+          (SIZE * Math.cos(targetRotation) +
+            (SIZE / 2) * Math.sin(targetRotation)),
+        targetPosition.y +
+          ((SIZE / 2) * Math.cos(targetRotation) -
+            SIZE * Math.sin(targetRotation)),
+      );
+      this.#context.lineTo(
+        targetPosition.x +
+          (-SIZE * Math.cos(targetRotation) +
+            (SIZE / 2) * Math.sin(targetRotation)),
+        targetPosition.y +
+          ((SIZE / 2) * Math.cos(targetRotation) +
+            SIZE * Math.sin(targetRotation)),
+      );
+
+      this.#context.closePath();
+      this.#context.fill();
+    });
+  }
+
+  update() {
+    this.#network.update();
+    this.#context = this.#canvas.getContext("2d");
+    if (!this.#context) return;
+
+    // Render
+    this.#context.clearRect(0, 0, this.#size.x, this.#size.y);
+    this.drawTrackSections();
+    this.drawTrains();
+    this.drawStations();
 
     requestAnimationFrame(() => {
       this.update();

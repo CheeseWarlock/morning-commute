@@ -1,3 +1,4 @@
+import Station, { ALIGNMENT } from "../Station";
 import NetworkBuilder from "./NetworkBuilder";
 
 const builder = new NetworkBuilder();
@@ -104,6 +105,10 @@ builder.curveTo(
     y: 40,
   },
   true,
+);
+
+builder.network.stations.push(
+  new Station(builder.network.segments[0], 2, ALIGNMENT.LEFT),
 );
 
 export default builder.network;

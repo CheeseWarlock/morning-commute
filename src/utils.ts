@@ -100,3 +100,13 @@ export function areAnglesEqual(angleA: number, angleB: number) {
     (angleB + 2 * Math.PI) % (2 * Math.PI)
   );
 }
+
+export function generateName(p) {
+  const v = "eaoiuy";
+  const c = "tnshrdlwpfgcvbmjkzxq";
+  const f = (g) => {
+    const val = Math.random();
+    return g[Math.floor(val ** p * g.length)];
+  };
+  return f(c).toUpperCase() + f(v) + f(c) + f(v) + f(c);
+}
