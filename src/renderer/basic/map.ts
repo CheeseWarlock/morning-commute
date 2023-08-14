@@ -1,6 +1,7 @@
 import CircularTrackSegment from "../../engine/CircularTrackSegment";
 import LinearTrackSegment from "../../engine/LinearTrackSegment";
 import Network from "../../engine/Network";
+import Point from "../../engine/Point";
 import { ALIGNMENT } from "../../engine/Station";
 import Train from "../../engine/Train";
 
@@ -33,6 +34,13 @@ class Map {
     requestAnimationFrame(() => {
       this.update();
     });
+  }
+
+  transformPosition(p: Point): Point {
+    return {
+      x: (p.x + this.#offset.x) * this.#scale,
+      y: (p.y + this.#offset.y) * this.#scale,
+    };
   }
 
   drawTrackSections() {
@@ -72,17 +80,22 @@ class Map {
   drawTrains() {
     this.#network.trains.forEach((train) => {
       if (!this.#context) return;
+      const canvasPosition = this.transformPosition(train.position);
       this.#context.fillStyle = "rgba(200, 0, 0)";
       this.#context.beginPath();
-      this.#context.arc(
-        (train.position.x + this.#offset.x) * this.#scale,
-        (train.position.y + this.#offset.y) * this.#scale,
-        5,
-        0,
-        Math.PI * 2,
-      );
+      this.#context.arc(canvasPosition.x, canvasPosition.y, 5, 0, Math.PI * 2);
       this.#context.closePath();
       this.#context.fill();
+
+      // Now draw passenger counts
+      this.#context.textAlign = "center";
+      this.#context.fillStyle = "rgb(255,255,255)";
+      this.#context.font = "12pt sans-serif";
+      this.#context.fillText(
+        train.passengers.length + "",
+        canvasPosition.x,
+        canvasPosition.y - 10,
+      );
     });
   }
 
@@ -147,6 +160,16 @@ class Map {
 
       this.#context.closePath();
       this.#context.fill();
+
+      // Now draw passenger counts
+      this.#context.textAlign = "center";
+      this.#context.fillStyle = "rgb(255,255,255)";
+      this.#context.font = "12pt sans-serif";
+      this.#context.fillText(
+        station.waitingPassengers.length + "",
+        targetPosition.x,
+        targetPosition.y - 10,
+      );
     });
   }
 

@@ -1,3 +1,4 @@
+import Passenger from "./Passenger";
 import Station from "./Station";
 import TrackSegment from "./TrackSegment";
 import Train from "./Train";
@@ -32,7 +33,19 @@ class Network {
   }
 
   update() {
+    this.generatePassengers();
     this.trains.forEach((t) => t.update());
+  }
+
+  generatePassengers() {
+    this.stations.forEach((station) => {
+      if (Math.random() > 0.99) {
+        const destinations = this.stations.filter((s) => s !== station);
+        const destination =
+          destinations[Math.floor(Math.random() * destinations.length)];
+        station.waitingPassengers.push(new Passenger(station, destination));
+      }
+    });
   }
 }
 

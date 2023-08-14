@@ -137,6 +137,7 @@ class CircularTrackSegment extends TrackSegment {
       angleAlong = startingAngle + theta;
     }
 
+    // TODO: is this edge case real?
     if (Math.abs(angleAlong + Math.PI) < 0.0000001) {
       return Math.PI;
     }

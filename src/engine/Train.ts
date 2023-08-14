@@ -1,4 +1,5 @@
 import { easyNavigate } from "../utils";
+import Passenger from "./Passenger";
 import Station from "./Station";
 import TrackSegment from "./TrackSegment";
 
@@ -19,6 +20,8 @@ class Train {
   state: TRAIN_STATE = TRAIN_STATE.MOVING;
   #stopTime: number = 0;
   #upcomingStations: Station[] = [];
+  capacity: number = 8;
+  passengers: Passenger[] = [];
   constructor(segment: TrackSegment, speed?: number) {
     this.position = { x: segment.start.x, y: segment.start.y };
     this.#currentSegment = segment;
@@ -32,6 +35,22 @@ class Train {
    */
   decidePath() {
     // Random
+  }
+
+  processPassengers() {
+    // TODO: don't rely on this as the source of truth
+    const station = this.#upcomingStations[0];
+
+    // Dropoff
+    this.passengers = this.passengers.filter((p) => p.destination !== station);
+
+    // Pickup
+    while (
+      station.waitingPassengers.length &&
+      this.passengers.length < this.capacity
+    ) {
+      this.passengers.push(station.waitingPassengers.splice(0, 1)[0]);
+    }
   }
 
   /**
@@ -86,6 +105,7 @@ class Train {
             this.#currentDistance = stationDistance;
             this.state = TRAIN_STATE.STOPPED_AT_STATION;
             this.#stopTime = 1000;
+            this.processPassengers();
           }
         }
         const newPos = this.#currentSegment.getPositionAlong(
