@@ -1619,6 +1619,11 @@ babel-preset-jest@^29.5.0:
     babel-plugin-jest-hoist "^29.5.0"
     babel-preset-current-node-syntax "^1.0.0"
 
+babylonjs@^6.16.0:
+  version "6.16.0"
+  resolved "https://registry.yarnpkg.com/babylonjs/-/babylonjs-6.16.0.tgz#3c5c650fd75ed482a1b8bbf90599fdfd7c256de9"
+  integrity sha512-q85YmfioRYHzCK0SVcFvKWcMdJfUDYiDtPNKHajJV2x8tH8m4FaCBq73IBamoBvl9EXOt0WRHRoBctjd6/lMfA==
+
 balanced-match@^1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-1.0.2.tgz#e83e3a7e3f300b34cb9d87f615fa0cbf357690ee"

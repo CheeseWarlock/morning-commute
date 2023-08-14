@@ -5,11 +5,12 @@ import Network from "../../engine/Network";
 import Point from "../../engine/Point";
 import { ALIGNMENT } from "../../engine/Station";
 import Train from "../../engine/Train";
+import IRenderer from "./IRenderer";
 
 /**
  * Draws the game to an HTMLCanvasElement.
  */
-class CanvasRenderer {
+class CanvasRenderer implements IRenderer {
   #canvas: HTMLCanvasElement;
   #network: Network;
   #offset: { x: number; y: number };
@@ -19,7 +20,6 @@ class CanvasRenderer {
   _testingOptions = {
     randomizeFramerate: false,
   };
-  #lastTime: number = 0;
   constructor(
     element: HTMLElement,
     game: Game,
@@ -37,12 +37,6 @@ class CanvasRenderer {
     this.#canvas = canvas;
     this.#context = canvas.getContext("2d");
     this.#network = game.network;
-
-    requestAnimationFrame((cb) => {
-      const deltaT = cb - this.#lastTime;
-      this.update(deltaT);
-      this.#lastTime = cb;
-    });
   }
 
   transformPosition(p: Point): Point {
@@ -182,8 +176,7 @@ class CanvasRenderer {
     });
   }
 
-  update(deltaT: number) {
-    this.#network.update(deltaT);
+  update() {
     this.#context = this.#canvas.getContext("2d");
     if (!this.#context) return;
 
@@ -192,23 +185,6 @@ class CanvasRenderer {
     this.drawTrackSections();
     this.drawTrains();
     this.drawStations();
-
-    requestAnimationFrame((cb) => {
-      if (this._testingOptions.randomizeFramerate) {
-        setTimeout(
-          () => {
-            const deltaT = cb - this.#lastTime;
-            this.update(deltaT);
-            this.#lastTime = cb;
-          },
-          20 + (Math.random() > 0.1 ? 0 : 100 + 100 * Math.random()),
-        );
-      } else {
-        const deltaT = cb - this.#lastTime;
-        this.update(deltaT);
-        this.#lastTime = cb;
-      }
-    });
   }
 }
 

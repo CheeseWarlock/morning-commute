@@ -65,8 +65,6 @@ class Train implements GameObject {
    * Update position and status
    */
   update(deltaT: number) {
-    // speed is... pixels per second?
-    console.log("TESTING");
     if (this.state === TRAIN_STATE.STOPPED_AT_STATION) {
       this.#stopTime -= deltaT;
       if (this.#stopTime <= 0) {

@@ -2,6 +2,9 @@ import "./style.css";
 import Map from "./renderer/basic/CanvasRenderer.ts";
 import network from "./engine/networks/Complex.ts";
 import Game from "./engine/Game.ts";
+import * as BABYLON from "babylonjs";
+import RendererCoordinator from "./renderer/RendererCoordinator.ts";
+import BabylonRenderer from "./renderer/basic/BabylonRenderer.ts";
 
 // document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 //   <div>
@@ -23,10 +26,27 @@ import Game from "./engine/Game.ts";
 // `;
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
-    <p id="map-holder"></p><p id="map-holder-2"></p>
+    <p id="map-holder"></p><p id="map-holder-2"></p><p id="renderCanvasHolder"></p>
   </div>
 `;
 network.autoConnect();
 const game = new Game(network);
-const map = new Map(document.querySelector("#map-holder")!, game);
-const map2 = new Map(document.querySelector("#map-holder-2")!, game);
+const map = new Map(
+  document.querySelector("#map-holder")!,
+  game,
+  { x: 40, y: 40 },
+  1,
+  { x: 400, y: 300 },
+);
+const map2 = new Map(
+  document.querySelector("#map-holder-2")!,
+  game,
+  { x: 20, y: 20 },
+  2,
+  { x: 600, y: 300 },
+);
+const map3 = new BabylonRenderer(
+  document.querySelector("#renderCanvasHolder")!,
+  game,
+);
+const coordinator = new RendererCoordinator(game, [map, map2, map3]);
