@@ -1,3 +1,4 @@
+import GameObject from "./GameObject";
 import Passenger from "./Passenger";
 import Station from "./Station";
 import TrackSegment from "./TrackSegment";
@@ -6,7 +7,7 @@ import Train from "./Train";
 /**
  * A set of Track Segments and other gameplay elements.
  */
-class Network {
+class Network implements GameObject {
   segments: TrackSegment[] = [];
   trains: Train[] = [];
   stations: Station[] = [];
@@ -32,9 +33,9 @@ class Network {
     });
   }
 
-  update() {
+  update(deltaT: number) {
     this.generatePassengers();
-    this.trains.forEach((t) => t.update());
+    this.trains.forEach((t) => t.update(deltaT));
   }
 
   generatePassengers() {

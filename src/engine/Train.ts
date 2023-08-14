@@ -1,4 +1,5 @@
 import { easyNavigate } from "../utils";
+import GameObject from "./GameObject";
 import Passenger from "./Passenger";
 import Station from "./Station";
 import TrackSegment from "./TrackSegment";
@@ -11,11 +12,14 @@ export enum TRAIN_STATE {
 /**
  * A train, currently single car...
  */
-class Train {
+class Train implements GameObject {
   position: { x: number; y: number };
   #currentSegment: TrackSegment;
-  #currentDistance: number;
+  #currentDistance: number = 0;
   #currentlyReversing: boolean;
+  /**
+   * Speed in units per second.
+   */
   #speed: number;
   state: TRAIN_STATE = TRAIN_STATE.MOVING;
   #stopTime: number = 0;
@@ -53,19 +57,26 @@ class Train {
     }
   }
 
+  #moveAlongTracks() {}
+
+  #waitAtStation() {}
+
   /**
    * Update position and status
    */
-  update() {
+  update(deltaT: number) {
+    // speed is... pixels per second?
+    console.log("TESTING");
     if (this.state === TRAIN_STATE.STOPPED_AT_STATION) {
-      this.#stopTime -= 100;
+      this.#stopTime -= deltaT;
       if (this.#stopTime <= 0) {
         this.#stopTime = 0;
         this.state = TRAIN_STATE.MOVING;
         this.#upcomingStations = [];
       }
     } else if (this.state === TRAIN_STATE.MOVING) {
-      this.#currentDistance += this.#speed;
+      const distanceToMove = (this.#speed * deltaT) / 1000;
+      this.#currentDistance += distanceToMove;
       if (
         this.#currentSegment.getPositionAlong(
           this.#currentDistance,

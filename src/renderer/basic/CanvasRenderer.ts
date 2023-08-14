@@ -5,13 +5,17 @@ import Point from "../../engine/Point";
 import { ALIGNMENT } from "../../engine/Station";
 import Train from "../../engine/Train";
 
-class Map {
+class CanvasRenderer {
   #canvas: HTMLCanvasElement;
   #network: Network;
   #offset: { x: number; y: number };
   #size: { x: number; y: number };
   #scale: number;
   #context: CanvasRenderingContext2D | null;
+  _testingOptions = {
+    randomizeFramerate: false,
+  };
+  #lastTime: number = 0;
   constructor(
     element: HTMLElement,
     network: Network,
@@ -29,10 +33,12 @@ class Map {
     this.#canvas = canvas;
     this.#context = canvas.getContext("2d");
     this.#network = network;
-    network.trains.push(new Train(network.segments[0]));
+    network.trains.push(new Train(network.segments[0], 40));
 
-    requestAnimationFrame(() => {
-      this.update();
+    requestAnimationFrame((cb) => {
+      const deltaT = cb - this.#lastTime;
+      this.update(deltaT);
+      this.#lastTime = cb;
     });
   }
 
@@ -173,8 +179,8 @@ class Map {
     });
   }
 
-  update() {
-    this.#network.update();
+  update(deltaT: number) {
+    this.#network.update(deltaT);
     this.#context = this.#canvas.getContext("2d");
     if (!this.#context) return;
 
@@ -184,10 +190,23 @@ class Map {
     this.drawTrains();
     this.drawStations();
 
-    requestAnimationFrame(() => {
-      this.update();
+    requestAnimationFrame((cb) => {
+      if (this._testingOptions.randomizeFramerate) {
+        setTimeout(
+          () => {
+            const deltaT = cb - this.#lastTime;
+            this.update(deltaT);
+            this.#lastTime = cb;
+          },
+          20 + (Math.random() > 0.1 ? 0 : 100 + 100 * Math.random()),
+        );
+      } else {
+        const deltaT = cb - this.#lastTime;
+        this.update(deltaT);
+        this.#lastTime = cb;
+      }
     });
   }
 }
 
-export default Map;
+export default CanvasRenderer;

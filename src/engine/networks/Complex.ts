@@ -5,9 +5,11 @@ const builder = new NetworkBuilder();
 builder.moveTo({ x: 0, y: 20 });
 
 builder.curveTo({ x: 20, y: 0 }, { x: 20, y: 20 });
+builder.addStationOnLastSegment(10, ALIGNMENT.LEFT);
 builder.lineTo({ x: 40, y: 0 });
 builder.curveTo({ x: 60, y: 20 }, { x: 40, y: 20 });
 builder.lineTo({ x: 60, y: 40 });
+builder.addStationOnLastSegment(10, ALIGNMENT.LEFT);
 builder.curveTo({ x: 40, y: 60 }, { x: 40, y: 40 });
 builder.lineTo({ x: 20, y: 60 });
 builder.curveTo({ x: 0, y: 40 }, { x: 20, y: 40 });
@@ -42,6 +44,7 @@ builder.lineTo({
   x: 180 + Math.cos(endAngle) * 20,
   y: 60 + Math.sin(endAngle) * 20,
 });
+builder.addStationOnLastSegment(30, ALIGNMENT.RIGHT);
 builder.curveTo(
   {
     x: 180,
@@ -106,15 +109,5 @@ builder.curveTo(
   },
   true,
 );
-
-const stationA = new Station(builder.network.segments[0], 12, ALIGNMENT.LEFT);
-builder.network.stations.push(stationA);
-
-builder.network.segments[0].stations.push(stationA);
-
-const stationB = new Station(builder.network.segments[3], 12, ALIGNMENT.LEFT);
-builder.network.stations.push(stationB);
-
-builder.network.segments[3].stations.push(stationB);
 
 export default builder.network;

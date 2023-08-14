@@ -1,5 +1,5 @@
 import "./style.css";
-import Map from "./renderer/basic/map.ts";
+import Map from "./renderer/basic/CanvasRenderer.ts";
 import network from "./engine/networks/Complex.ts";
 
 // document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
@@ -26,4 +26,4 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   </div>
 `;
 network.autoConnect();
-new Map(document.querySelector("#map-holder")!, network);
+const map = new Map(document.querySelector("#map-holder")!, network);
