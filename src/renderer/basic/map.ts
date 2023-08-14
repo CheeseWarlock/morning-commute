@@ -1,6 +1,7 @@
 import CircularTrackSegment from "../../engine/CircularTrackSegment";
 import LinearTrackSegment from "../../engine/LinearTrackSegment";
 import Network from "../../engine/Network";
+import { ALIGNMENT } from "../../engine/Station";
 import Train from "../../engine/Train";
 
 class Map {
@@ -88,13 +89,29 @@ class Map {
   drawStations() {
     this.#network.stations.forEach((station) => {
       if (!this.#context) return;
-      this.#context.fillStyle = "rgb(0, 0, 200)";
+      this.#context.fillStyle = "rgb(40, 100, 255)";
       const SIZE = 10;
 
-      // Ugh a rotated rectangle isn't trivial
-      const targetPosition = { x: 100, y: 100 };
-      const targetRotation = 0.5;
+      const targetPosition = station.trackSegment.getPositionAlong(
+        station.distanceAlong,
+      ).point;
+      let angleFromForward = station.trackSegment.getAngleAlong(
+        station.distanceAlong,
+      );
+      angleFromForward +=
+        station.alignment === ALIGNMENT.LEFT ? -Math.PI / 2 : Math.PI / 2;
 
+      targetPosition.x += Math.cos(angleFromForward) * 5;
+      targetPosition.y += Math.sin(angleFromForward) * 5;
+      targetPosition.x += this.#offset.x;
+      targetPosition.y += this.#offset.y;
+      targetPosition.x *= this.#scale;
+      targetPosition.y *= this.#scale;
+
+      const targetRotation = -station.trackSegment.getAngleAlong(
+        station.distanceAlong,
+      );
+      this.#context.beginPath();
       this.#context.moveTo(
         targetPosition.x +
           (-SIZE * Math.cos(targetRotation) -

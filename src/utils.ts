@@ -101,12 +101,12 @@ export function areAnglesEqual(angleA: number, angleB: number) {
   );
 }
 
-export function generateName(p) {
+export function generateName(p: number) {
   const v = "eaoiuy";
   const c = "tnshrdlwpfgcvbmjkzxq";
-  const f = (g) => {
+  const f = (a: string) => {
     const val = Math.random();
-    return g[Math.floor(val ** p * g.length)];
+    return a[Math.floor(val ** p * a.length)];
   };
   return f(c).toUpperCase() + f(v) + f(c) + f(v) + f(c);
 }

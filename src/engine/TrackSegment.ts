@@ -29,6 +29,8 @@ abstract class TrackSegment {
     reverse?: boolean,
   ): { point: Point; excess: number };
 
+  abstract getAngleAlong(distance: number, reverse?: boolean): number;
+
   get isWellConnected() {
     return this.atStart?.length > 0 && this.atEnd.length > 0;
   }
@@ -76,8 +78,6 @@ abstract class TrackSegment {
         matchingPoints.arrays[0].push(segment);
       if (!matchingPoints.arrays[1].includes(this))
         matchingPoints.arrays[1].push(this);
-    } else {
-      console.log("Bad angles", matchingPoints.angles);
     }
   }
 }

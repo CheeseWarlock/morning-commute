@@ -50,7 +50,7 @@ describe("a series of LinearTrackSegments", () => {
     expect(positionAlong.excess).toBeCloseTo(5, 4);
   });
 
-  it("should connect segments correctly", () => {
+  it("connects segments that don't line up when ignoreAngles is true", () => {
     const segmentA = new LinearTrackSegment(pointA, pointB);
     const segmentB = new LinearTrackSegment(pointB, pointC);
     const segmentC = new LinearTrackSegment(pointC, pointD);
@@ -82,5 +82,23 @@ describe("connection logic", () => {
     expect(positionAlong.point.x).toBeCloseTo(10, 4);
     expect(positionAlong.point.y).toBeCloseTo(0, 4);
     expect(positionAlong.excess).toBeCloseTo(5, 4);
+  });
+});
+
+describe("angleAlong", () => {
+  const pointA = { x: 0, y: 0 };
+  const pointB = { x: 10, y: 0 };
+  const pointC = { x: 10, y: 10 };
+  it("returns the appropriate angle regardless of distance", () => {
+    const segmentA = new LinearTrackSegment(pointA, pointB);
+    const segmentB = new LinearTrackSegment(pointB, pointC);
+    const segmentC = new LinearTrackSegment(pointC, pointA);
+
+    let angleAlong = segmentA.getAngleAlong(0);
+    expect(angleAlong).toBeCloseTo(0, 4);
+    angleAlong = segmentB.getAngleAlong(0.5);
+    expect(angleAlong).toBeCloseTo(0.5 * Math.PI, 4);
+    angleAlong = segmentC.getAngleAlong(1);
+    expect(angleAlong).toBeCloseTo((-3 / 4) * Math.PI, 4);
   });
 });

@@ -119,6 +119,30 @@ class CircularTrackSegment extends TrackSegment {
       excess: 0,
     };
   }
+
+  getAngleAlong(distance: number, reverse: boolean = false): number {
+    // if clockwise, angle is increasing
+    const theta = distance / this.radius;
+
+    // The starting angle for this calculation
+    const startingAngle = reverse
+      ? this.finalAngle + Math.PI
+      : this.initialAngle;
+    let angleAlong = 0;
+
+    // If we're in reverse, the CCWness of this segment is inverted for this calculation
+    if (this.counterClockWise !== reverse) {
+      angleAlong = startingAngle - theta;
+    } else {
+      angleAlong = startingAngle + theta;
+    }
+
+    if (Math.abs(angleAlong + Math.PI) < 0.0000001) {
+      return Math.PI;
+    }
+    // Convert to -PI - +PI
+    return ((angleAlong + Math.PI) % (Math.PI * 2)) - Math.PI;
+  }
 }
 
 export default CircularTrackSegment;

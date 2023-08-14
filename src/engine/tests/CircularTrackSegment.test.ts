@@ -74,12 +74,69 @@ describe("a single CircularTrackSegment", () => {
     expect(positionAlong.excess).toBe(0);
   });
 
-  it.only("should calculate reverse position along correctly", () => {
+  it("should calculate reverse position along correctly", () => {
     const segment = new CircularTrackSegment(pointA, pointC, pointB, true);
     const positionAlong = segment.getPositionAlong(segment.length / 2, true);
     const v = Math.cos(Math.PI / 4) * 10;
     expect(positionAlong.point.x).toBeCloseTo(10 - v, 4);
     expect(positionAlong.point.y).toBeCloseTo(v, 4);
     expect(positionAlong.excess).toBe(0);
+  });
+
+  it("calculates angle along properly", () => {
+    const segment = new CircularTrackSegment(pointA, pointC, pointB, true);
+
+    let angleAlong = segment.getAngleAlong(0);
+    expect(angleAlong).toBeCloseTo(Math.PI / 2, 4);
+
+    angleAlong = segment.getAngleAlong(segment.length / 4);
+    expect(angleAlong).toBeCloseTo((Math.PI * 3) / 8, 4);
+
+    angleAlong = segment.getAngleAlong((segment.length * 2) / 4);
+    expect(angleAlong).toBeCloseTo((Math.PI * 2) / 8, 4);
+
+    angleAlong = segment.getAngleAlong((segment.length * 3) / 4);
+    expect(angleAlong).toBeCloseTo((Math.PI * 1) / 8, 4);
+
+    angleAlong = segment.getAngleAlong(segment.length);
+    expect(angleAlong).toBeCloseTo(0, 4);
+
+    const anotherSegment = new CircularTrackSegment(pointA, pointC, pointB);
+
+    angleAlong = anotherSegment.getAngleAlong(0);
+    expect(angleAlong).toBeCloseTo(-Math.PI / 2, 4);
+
+    angleAlong = anotherSegment.getAngleAlong(anotherSegment.length / 2);
+    expect(angleAlong).toBeCloseTo(Math.PI / 4, 4);
+  });
+
+  it("calculates reverse angle along properly", () => {
+    const segment = new CircularTrackSegment(pointA, pointC, pointB, true);
+
+    // let angleAlong = segment.getAngleAlong(0, true);
+    // expect(angleAlong).toBeCloseTo(Math.PI, 4);
+
+    let angleAlong = segment.getAngleAlong(segment.length / 4, true);
+    expect(angleAlong).toBeCloseTo(-(Math.PI * 7) / 8, 4);
+
+    angleAlong = segment.getAngleAlong((segment.length * 2) / 4, true);
+    expect(angleAlong).toBeCloseTo(-(Math.PI * 6) / 8, 4);
+
+    angleAlong = segment.getAngleAlong((segment.length * 3) / 4, true);
+    expect(angleAlong).toBeCloseTo(-(Math.PI * 5) / 8, 4);
+
+    angleAlong = segment.getAngleAlong(segment.length, true);
+    expect(angleAlong).toBeCloseTo(-(Math.PI / 2), 4);
+
+    const anotherSegment = new CircularTrackSegment(pointA, pointC, pointB);
+
+    angleAlong = anotherSegment.getAngleAlong(0, true);
+    expect(angleAlong).toBeCloseTo(0, 4);
+
+    angleAlong = anotherSegment.getAngleAlong(anotherSegment.length / 2, true);
+    expect(angleAlong).toBeCloseTo((Math.PI * -3) / 4, 4);
+
+    angleAlong = anotherSegment.getAngleAlong(anotherSegment.length, true);
+    expect(angleAlong).toBeCloseTo((Math.PI * 2) / 4, 4);
   });
 });

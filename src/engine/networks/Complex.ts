@@ -108,7 +108,11 @@ builder.curveTo(
 );
 
 builder.network.stations.push(
-  new Station(builder.network.segments[0], 2, ALIGNMENT.LEFT),
+  new Station(builder.network.segments[0], 12, ALIGNMENT.LEFT),
+);
+
+builder.network.stations.push(
+  new Station(builder.network.segments[3], 12, ALIGNMENT.LEFT),
 );
 
 export default builder.network;
