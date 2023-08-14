@@ -1,5 +1,6 @@
 import { areAnglesEqual } from "../utils";
 import Point from "./Point";
+import Station from "./Station";
 
 /**
  * A segment of track of any shape.
@@ -24,6 +25,7 @@ abstract class TrackSegment {
    * The direction of travel at the end of this track segment.
    */
   abstract finalAngle: number;
+  stations: Station[] = [];
   abstract getPositionAlong(
     distance: number,
     reverse?: boolean,

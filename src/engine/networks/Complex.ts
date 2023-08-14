@@ -107,12 +107,14 @@ builder.curveTo(
   true,
 );
 
-builder.network.stations.push(
-  new Station(builder.network.segments[0], 12, ALIGNMENT.LEFT),
-);
+const stationA = new Station(builder.network.segments[0], 12, ALIGNMENT.LEFT);
+builder.network.stations.push(stationA);
 
-builder.network.stations.push(
-  new Station(builder.network.segments[3], 12, ALIGNMENT.LEFT),
-);
+builder.network.segments[0].stations.push(stationA);
+
+const stationB = new Station(builder.network.segments[3], 12, ALIGNMENT.LEFT);
+builder.network.stations.push(stationB);
+
+builder.network.segments[3].stations.push(stationB);
 
 export default builder.network;
