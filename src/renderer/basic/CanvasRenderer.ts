@@ -1,10 +1,14 @@
 import CircularTrackSegment from "../../engine/CircularTrackSegment";
+import Game from "../../engine/Game";
 import LinearTrackSegment from "../../engine/LinearTrackSegment";
 import Network from "../../engine/Network";
 import Point from "../../engine/Point";
 import { ALIGNMENT } from "../../engine/Station";
 import Train from "../../engine/Train";
 
+/**
+ * Draws the game to an HTMLCanvasElement.
+ */
 class CanvasRenderer {
   #canvas: HTMLCanvasElement;
   #network: Network;
@@ -18,7 +22,7 @@ class CanvasRenderer {
   #lastTime: number = 0;
   constructor(
     element: HTMLElement,
-    network: Network,
+    game: Game,
     offset = { x: 10, y: 10 },
     scale = 2,
     size = { x: 800, y: 600 },
@@ -32,8 +36,7 @@ class CanvasRenderer {
     element.appendChild(canvas);
     this.#canvas = canvas;
     this.#context = canvas.getContext("2d");
-    this.#network = network;
-    network.trains.push(new Train(network.segments[0], 40));
+    this.#network = game.network;
 
     requestAnimationFrame((cb) => {
       const deltaT = cb - this.#lastTime;

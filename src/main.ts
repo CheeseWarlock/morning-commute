@@ -1,6 +1,7 @@
 import "./style.css";
 import Map from "./renderer/basic/CanvasRenderer.ts";
 import network from "./engine/networks/Complex.ts";
+import Game from "./engine/Game.ts";
 
 // document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 //   <div>
@@ -22,8 +23,10 @@ import network from "./engine/networks/Complex.ts";
 // `;
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
-    <p id="map-holder"></p>
+    <p id="map-holder"></p><p id="map-holder-2"></p>
   </div>
 `;
 network.autoConnect();
-const map = new Map(document.querySelector("#map-holder")!, network);
+const game = new Game(network);
+const map = new Map(document.querySelector("#map-holder")!, game);
+const map2 = new Map(document.querySelector("#map-holder-2")!, game);
