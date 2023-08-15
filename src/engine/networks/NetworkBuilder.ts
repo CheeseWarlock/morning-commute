@@ -5,6 +5,11 @@ import Point from "../Point";
 import Station, { ALIGNMENT } from "../Station";
 import TrackSegment from "../TrackSegment";
 
+/**
+ * Easier Network building.
+ * DOES guarantee that segments' ends will connect positionally.
+ * DOESN'T guarantee that the angles will be smooth.
+ */
 class NetworkBuilder {
   #lastPosition: Point;
   #lastSegment?: TrackSegment;

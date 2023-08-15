@@ -1,17 +1,21 @@
 import * as BABYLON from "babylonjs";
 import IRenderer from "./IRenderer";
 import Game from "../../engine/Game";
+import TrackSegment from "../../engine/TrackSegment";
+import LinearTrackSegment from "../../engine/LinearTrackSegment";
+import CircularTrackSegment from "../../engine/CircularTrackSegment";
 
 class BabylonRenderer implements IRenderer {
   sphere: any;
   game: Game;
+  #scene: BABYLON.Scene;
 
   constructor(element: HTMLElement, game: Game) {
     this.game = game;
     const aCanvas = document.createElement("canvas");
     aCanvas.setAttribute("id", "renderCanvas");
-    aCanvas.width = 400;
-    aCanvas.height = 300;
+    aCanvas.width = 800;
+    aCanvas.height = 600;
     element.appendChild(aCanvas);
 
     // Get the canvas DOM element
@@ -22,57 +26,129 @@ class BabylonRenderer implements IRenderer {
       stencil: true,
     });
     // CreateScene function that creates and return the scene
-    var createScene = () => {
-      // Create a basic BJS Scene object
-      var scene = new BABYLON.Scene(engine);
-      // Create a FreeCamera, and set its position to {x: 0, y: 5, z: -10}
-      var camera = new BABYLON.UniversalCamera(
-        "camera1",
-        new BABYLON.Vector3(0, 10, -20),
-        scene,
-      );
-      // Target the camera to scene origin
-      camera.setTarget(BABYLON.Vector3.Zero());
-      // Attach the camera to the canvas
-      camera.attachControl(canvas, false);
-      // Create a basic light, aiming 0, 1, 0 - meaning, to the sky
-      var light = new BABYLON.HemisphericLight(
-        "light1",
-        new BABYLON.Vector3(0, 1, 0),
-        scene,
-      );
-      // Create a built-in "sphere" shape; its constructor takes 6 params: name, segment, diameter, scene, updatable, sideOrientation
-      var sphere = BABYLON.Mesh.CreateSphere(
-        "sphere1",
-        16,
-        2,
-        scene,
-        false,
-        BABYLON.Mesh.FRONTSIDE,
-      );
-      this.sphere = sphere;
-      // Move the sphere upward 1/2 of its height
-      sphere.position.y = 1;
-      // Create a built-in "ground" shape; its constructor takes 6 params : name, width, height, subdivision, scene, updatable
-      var ground = BABYLON.Mesh.CreateGround("ground1", 6, 6, 2, scene, false);
-      // Return the created scene
-      return scene;
-    };
-    // call the createScene function
-    var scene = createScene();
-    // run the render loop
+    var scene = new BABYLON.Scene(engine);
+    this.#scene = scene;
+    const camera = new BABYLON.ArcRotateCamera(
+      "Camera",
+      (3 * Math.PI) / 2,
+      Math.PI / 2,
+      30,
+      new BABYLON.Vector3(40, 0, -40),
+    );
+    camera.attachControl(canvas, false);
+    // var light = new BABYLON.HemisphericLight(
+    //   "light1",
+    //   new BABYLON.Vector3(0, 1, 0),
+    //   scene,
+    // );
+    const light = new BABYLON.DirectionalLight(
+      "light2",
+      new BABYLON.Vector3(1, -20, 2),
+      scene,
+    );
+    const sphere = BABYLON.MeshBuilder.CreateSphere(
+      "sphere2",
+      {
+        diameter: 6,
+      },
+      scene,
+    );
+
+    const groundMat = new BABYLON.StandardMaterial("groundMat");
+    groundMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
+    sphere.material = groundMat;
+    this.sphere = sphere;
+    sphere.position.y = 2;
+    // var ground = BABYLON.Mesh.CreateGround("ground1", 20, 20, 2, scene, false);
+
     engine.runRenderLoop(function () {
       scene.render();
     });
-    // the canvas/window resize event handler
     window.addEventListener("resize", function () {
       engine.resize();
     });
+    this.game.network.segments.forEach((segment) => {
+      this.#convertTrackSegmentToGeometry(segment);
+    });
+  }
+
+  #setupScene() {}
+
+  #convertTrackSegmentToGeometry(segment: TrackSegment) {
+    const myShape = [
+      new BABYLON.Vector3(0, 0, 0),
+      new BABYLON.Vector3(2, 0, 0),
+      new BABYLON.Vector3(2, 1, 0),
+      new BABYLON.Vector3(4, 1, 0),
+      new BABYLON.Vector3(4, 0, 0),
+      new BABYLON.Vector3(6, 0, 0),
+      new BABYLON.Vector3(6, -1, 0),
+
+      new BABYLON.Vector3(-6, -1, 0),
+
+      new BABYLON.Vector3(-6, 0, 0),
+      new BABYLON.Vector3(-4, 0, 0),
+      new BABYLON.Vector3(-4, 1, 0),
+      new BABYLON.Vector3(-2, 1, 0),
+      new BABYLON.Vector3(-2, 0, 0),
+    ];
+    let myPath: BABYLON.Vector3[] = [];
+    myShape.push(myShape[0]); //close profile
+    if (segment instanceof LinearTrackSegment) {
+      myPath = [
+        new BABYLON.Vector3(segment.start.x, 0, -segment.start.y),
+        new BABYLON.Vector3(segment.end.x, 0, -segment.end.y),
+      ];
+    } else if (segment instanceof CircularTrackSegment) {
+      const start = segment.getPositionAlong(0);
+      const startAngle = segment.initialAngle;
+      myPath.push(
+        new BABYLON.Vector3(
+          start.point.x - 0.01 * Math.cos(startAngle),
+          0,
+          -start.point.y + 0.01 * Math.sin(startAngle),
+        ),
+      );
+      const segmentCount = Math.floor(segment.length / 3);
+      for (let i = 0; i <= segmentCount; i++) {
+        const p = segment.getPositionAlong((segment.length * i) / segmentCount);
+        myPath.push(new BABYLON.Vector3(p.point.x, 0, -p.point.y));
+      }
+      const end = segment.getPositionAlong(segment.length);
+      const endAngle = segment.finalAngle;
+      myPath.push(
+        new BABYLON.Vector3(
+          end.point.x + 0.01 * Math.cos(endAngle),
+          0,
+          -end.point.y - 0.01 * Math.sin(endAngle),
+        ),
+      );
+    }
+
+    const extrusion = BABYLON.MeshBuilder.ExtrudeShape(
+      "squareb",
+      {
+        shape: myShape,
+        path: myPath,
+        sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+        scale: 0.5,
+      },
+      this.#scene,
+    );
+    var myMaterial = new BABYLON.StandardMaterial("");
+
+    extrusion.convertToFlatShadedMesh();
+    myMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+    myMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+    // myMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+    myMaterial.ambientColor = new BABYLON.Color3(0.77, 0.77, 0.77);
+
+    extrusion.material = myMaterial;
   }
 
   update() {
-    this.sphere.position.x = this.game.network.trains[0].position.x / 15;
-    this.sphere.position.z = -this.game.network.trains[0].position.y / 15;
+    this.sphere.position.x = this.game.network.trains[0].position.x;
+    this.sphere.position.z = -this.game.network.trains[0].position.y;
   }
 }
 

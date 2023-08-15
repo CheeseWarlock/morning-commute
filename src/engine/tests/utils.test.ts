@@ -84,6 +84,22 @@ describe("easy navigation", () => {
     const navResult = easyNavigate(segment, 46, true, 0);
     expect(navResult.point.x).toBe(34);
   });
+
+  it("respects target segment parameter", () => {
+    const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 20, y: 0 });
+    const segment2 = new LinearTrackSegment({ x: 20, y: 0 }, { x: 40, y: 0 });
+    const segment3 = new CircularTrackSegment(
+      { x: 20, y: 0 },
+      { x: 40, y: 20 },
+      { x: 20, y: 20 },
+    );
+    segment.connect(segment2);
+    segment.connect(segment3);
+    let navResult = easyNavigate(segment, 0, false, 30, segment2);
+    expect(navResult.finalSegment).toBe(segment2);
+    navResult = easyNavigate(segment, 0, false, 30, segment3);
+    expect(navResult.finalSegment).toBe(segment3);
+  });
 });
 
 describe("network coherence", () => {
