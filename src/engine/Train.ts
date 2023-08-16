@@ -9,6 +9,11 @@ export enum TRAIN_STATE {
   STOPPED_AT_STATION = "stopped-at-station",
 }
 
+export type TMovementOptions = {
+  slowdown?: boolean;
+  waitTime?: number;
+};
+
 /**
  * A train, currently single car...
  */
@@ -26,12 +31,23 @@ class Train implements GameObject {
   #upcomingStations: Station[] = [];
   capacity: number = 8;
   passengers: Passenger[] = [];
-  constructor(segment: TrackSegment, speed?: number) {
+  /**
+   * How long this train should wait at a station.
+   */
+  #waitTime: number;
+  #slowdown: boolean;
+  constructor(
+    segment: TrackSegment,
+    speed?: number,
+    movementOptions: TMovementOptions = {},
+  ) {
     this.position = { x: segment.start.x, y: segment.start.y };
     this.#currentSegment = segment;
     this.#currentDistance = 0;
     this.#currentlyReversing = false;
     this.#speed = speed || Math.random() + 0.5;
+    this.#waitTime = movementOptions.waitTime || 1000;
+    this.#slowdown = movementOptions.slowdown || false;
   }
 
   /**
@@ -57,7 +73,7 @@ class Train implements GameObject {
     }
   }
 
-  #moveAlongTracks() {}
+  #moveAlongTrackSegment() {}
 
   #waitAtStation() {}
 
@@ -68,19 +84,20 @@ class Train implements GameObject {
     if (this.state === TRAIN_STATE.STOPPED_AT_STATION) {
       this.#stopTime -= deltaT;
       if (this.#stopTime <= 0) {
+        const excessTime = -this.#stopTime;
         this.#stopTime = 0;
         this.state = TRAIN_STATE.MOVING;
         this.#upcomingStations = [];
+        this.update(excessTime);
       }
     } else if (this.state === TRAIN_STATE.MOVING) {
       const distanceToMove = (this.#speed * deltaT) / 1000;
       this.#currentDistance += distanceToMove;
-      if (
-        this.#currentSegment.getPositionAlong(
-          this.#currentDistance,
-          this.#currentlyReversing,
-        ).excess > 0
-      ) {
+      const excess = this.#currentSegment.getPositionAlong(
+        this.#currentDistance,
+        this.#currentlyReversing,
+      ).excess;
+      if (excess > 0) {
         // We are arriving at a decision point
         const candidates = this.#currentlyReversing
           ? this.#currentSegment.atStart
@@ -94,12 +111,12 @@ class Train implements GameObject {
           0,
           selectedTrack,
         );
+        const millisToProcess = (1000 * excess) / this.#speed;
         this.#currentDistance -= this.#currentSegment.length;
         this.#currentSegment = selectedTrack;
         this.#upcomingStations = selectedTrack.stations.slice();
         this.#currentlyReversing = newPos.reversing;
-        this.position.x = newPos.point.x;
-        this.position.y = newPos.point.y;
+        this.update(excess);
       } else {
         if (this.#upcomingStations.length) {
           // There's a station around here
@@ -111,9 +128,14 @@ class Train implements GameObject {
             this.#currentDistance >= stationDistance &&
             this.state === TRAIN_STATE.MOVING
           ) {
+            const distanceToStation =
+              stationDistance - (this.#currentDistance - distanceToMove);
+            const millisToStation = (1000 * distanceToStation) / this.#speed;
+            console.log("distance to station", distanceToStation);
+            console.log("millis to station", millisToStation);
             this.#currentDistance = stationDistance;
             this.state = TRAIN_STATE.STOPPED_AT_STATION;
-            this.#stopTime = 1000;
+            this.#stopTime = this.#waitTime - millisToStation;
             this.processPassengers();
           }
         }

@@ -1,8 +1,7 @@
 import "./style.css";
 import Map from "./renderer/basic/CanvasRenderer.ts";
-import network from "./engine/networks/Complex.ts";
+import network from "./engine/networks/SimpleStation.ts";
 import Game from "./engine/Game.ts";
-import * as BABYLON from "babylonjs";
 import RendererCoordinator from "./renderer/RendererCoordinator.ts";
 import BabylonRenderer from "./renderer/basic/BabylonRenderer.ts";
 

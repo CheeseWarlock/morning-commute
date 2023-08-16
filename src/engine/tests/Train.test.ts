@@ -80,15 +80,43 @@ describe("train motion", () => {
     const station = new Station(segment2, 8, ALIGNMENT.LEFT);
     segment2.stations.push(station);
     const train = new Train(segment, 12);
-    for (let i = 0; i < 12; i++) {
-      train.update(100);
+    for (let i = 0; i < 20; i++) {
+      train.update(180);
     }
     const firstResult = train.position.x;
 
     const secondTrain = new Train(segment, 12);
-    for (let i = 0; i < 24; i++) {
-      secondTrain.update(50);
+    for (let i = 0; i < 40; i++) {
+      secondTrain.update(90);
     }
     expect(secondTrain.position.x).toBeCloseTo(firstResult, 4);
+  });
+
+  it.only("can stop at a station for part of an update cycle", () => {
+    const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 20, y: 0 });
+    const segment2 = new LinearTrackSegment({ x: 20, y: 0 }, { x: 70, y: 0 });
+    const segment3 = new LinearTrackSegment(pointC, pointD);
+    segment.connect(segment2);
+    segment2.connect(segment3);
+    const station = new Station(segment2, 20, ALIGNMENT.LEFT);
+    segment2.stations.push(station);
+    const train = new Train(segment, 12, { waitTime: 2500 });
+    train.update(4500);
+    expect(train.position.x).toBeCloseTo(40, 4);
+    train.update(1500);
+    expect(train.position.x).toBeCloseTo(40, 4);
+    train.update(1500);
+    expect(train.position.x).toBeCloseTo(50, 4);
+  });
+
+  it("waits an appropriate amount of time at a station, including speeding up and slowing down", () => {
+    const segment = new LinearTrackSegment(pointA, pointB);
+    const segment2 = new LinearTrackSegment(pointB, pointC);
+    const segment3 = new LinearTrackSegment(pointC, pointD);
+    segment.connect(segment2);
+    segment2.connect(segment3);
+    const station = new Station(segment2, 8, ALIGNMENT.LEFT);
+    segment2.stations.push(station);
+    const train = new Train(segment, 10, { slowdown: true, waitTime: 0 });
   });
 });
