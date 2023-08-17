@@ -112,11 +112,11 @@ class Train implements GameObject {
           selectedTrack,
         );
         const millisToProcess = (1000 * excess) / this.#speed;
-        this.#currentDistance -= this.#currentSegment.length;
+        this.#currentDistance = 0; //-= this.#currentSegment.length;
         this.#currentSegment = selectedTrack;
         this.#upcomingStations = selectedTrack.stations.slice();
         this.#currentlyReversing = newPos.reversing;
-        this.update(excess);
+        this.update(millisToProcess);
       } else {
         if (this.#upcomingStations.length) {
           // There's a station around here
