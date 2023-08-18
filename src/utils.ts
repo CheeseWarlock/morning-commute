@@ -101,6 +101,23 @@ export function areAnglesEqual(angleA: number, angleB: number) {
   );
 }
 
+/**
+ * Turns "distance effort" into distance, to handle slowdown near a station.
+ * @param distance
+ * @param stationPosition
+ */
+export function distanceEffort(distance: number, stationPosition: number) {
+  if (distance < stationPosition - 2) {
+    return distance;
+  } else if (distance < stationPosition) {
+    return -((distance - stationPosition) ** 2 / 4) + stationPosition - 1;
+  } else if (distance < stationPosition + 2) {
+    return -((distance - stationPosition) ** 2 / 4) + stationPosition - 1;
+  } else {
+    return distance - 2;
+  }
+}
+
 export function generateName(p: number) {
   const v = "eaoiuy";
   const c = "tnshrdlwpfgcvbmjkzxq";

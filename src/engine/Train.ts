@@ -1,4 +1,4 @@
-import { easyNavigate } from "../utils";
+import { distanceEffort, easyNavigate } from "../utils";
 import GameObject from "./GameObject";
 import Passenger from "./Passenger";
 import Station from "./Station";
@@ -74,9 +74,32 @@ class Train implements GameObject {
   }
 
   #moveAlongTrackSegment(deltaT: number) {
+    const distanceEffortFunction = (dE: number) => {
+      if (this.#currentSegment.stations.length) {
+        return distanceEffort(
+          dE,
+          this.#currentSegment.stations[0].distanceAlong,
+        );
+      } else {
+        return dE;
+      }
+    };
     const distanceToMove = (this.#speed * deltaT) / 1000;
     this.#currentDistance += distanceToMove;
+    const tempDistance = distanceEffortFunction(this.#currentDistance);
+    console.log(
+      tempDistance,
+      this.#currentDistance,
+      this.#currentSegment.length,
+    );
     if (this.#upcomingStations.length) {
+      const newPos = this.#currentSegment.getPositionAlong(
+        tempDistance,
+        this.#currentlyReversing,
+      );
+      this.position.x = newPos.point.x;
+      this.position.y = newPos.point.y;
+      return;
       // There's a station around here
       const station = this.#currentSegment.stations[0];
       const stationDistance = this.#currentlyReversing
@@ -101,14 +124,15 @@ class Train implements GameObject {
       ).excess;
       if (excess > 0) {
         this.#selectNewTrackSegment(excess);
+      } else {
+        const newPos = this.#currentSegment.getPositionAlong(
+          tempDistance,
+          this.#currentlyReversing,
+        );
+        this.position.x = newPos.point.x;
+        this.position.y = newPos.point.y;
       }
     }
-    const newPos = this.#currentSegment.getPositionAlong(
-      this.#currentDistance,
-      this.#currentlyReversing,
-    );
-    this.position.x = newPos.point.x;
-    this.position.y = newPos.point.y;
   }
 
   #waitAtStation(deltaT: number) {
