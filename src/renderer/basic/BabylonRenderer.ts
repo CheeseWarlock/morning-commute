@@ -4,9 +4,10 @@ import Game from "../../engine/Game";
 import TrackSegment from "../../engine/TrackSegment";
 import LinearTrackSegment from "../../engine/LinearTrackSegment";
 import CircularTrackSegment from "../../engine/CircularTrackSegment";
+import { ALIGNMENT } from "../../engine/Station";
 
 class BabylonRenderer implements IRenderer {
-  sphere: any;
+  spheres: any[] = [];
   game: Game;
   #scene: BABYLON.Scene;
 
@@ -46,19 +47,73 @@ class BabylonRenderer implements IRenderer {
       new BABYLON.Vector3(1, -20, 2),
       scene,
     );
-    const sphere = BABYLON.MeshBuilder.CreateSphere(
-      "sphere2",
-      {
-        diameter: 6,
-      },
-      scene,
-    );
+    game.network.trains.forEach(() => {
+      const sphere = BABYLON.MeshBuilder.CreateSphere(
+        "sphere2",
+        {
+          diameter: 4,
+        },
+        scene,
+      );
 
-    const groundMat = new BABYLON.StandardMaterial("groundMat");
-    groundMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
-    sphere.material = groundMat;
-    this.sphere = sphere;
-    sphere.position.y = 2;
+      const groundMat = new BABYLON.StandardMaterial("groundMat");
+      groundMat.diffuseColor = new BABYLON.Color3(1, 0.15, 0.15);
+      sphere.material = groundMat;
+      this.spheres.push(sphere);
+      sphere.position.y = 2;
+    });
+
+    game.network.stations.forEach((station) => {
+      const rect = [
+        new BABYLON.Vector3(-2, -1, 0),
+        new BABYLON.Vector3(2, -1, 0),
+        new BABYLON.Vector3(2, 1, 0),
+
+        new BABYLON.Vector3(0, 2, 0),
+        new BABYLON.Vector3(-2, 1, 0),
+      ];
+      rect.push(rect[0]);
+      const targetPosition = station.trackSegment.getPositionAlong(
+        station.distanceAlong,
+      ).point;
+      let angleFromForward = station.trackSegment.getAngleAlong(
+        station.distanceAlong,
+      );
+      angleFromForward +=
+        station.alignment === ALIGNMENT.LEFT ? -Math.PI / 2 : Math.PI / 2;
+
+      targetPosition.x += Math.cos(angleFromForward) * 5;
+      targetPosition.y += Math.sin(angleFromForward) * 5;
+
+      const path = [
+        new BABYLON.Vector3(-4, 0, 0),
+        new BABYLON.Vector3(4, 0, 0),
+      ];
+
+      const extrusion = BABYLON.MeshBuilder.ExtrudeShape(
+        "squareb",
+        {
+          shape: rect,
+          path: path,
+          sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+          scale: 0.7,
+          cap: BABYLON.Mesh.CAP_ALL,
+        },
+        this.#scene,
+      );
+      extrusion.position.x = targetPosition.x;
+      extrusion.position.z = -targetPosition.y;
+      extrusion.rotation.y = angleFromForward + Math.PI / 2;
+      var myMaterial = new BABYLON.StandardMaterial("");
+      extrusion.convertToFlatShadedMesh();
+      myMaterial.diffuseColor = new BABYLON.Color3(0.3, 0.6, 1);
+      myMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+      // myMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+      myMaterial.ambientColor = new BABYLON.Color3(0.77, 0.77, 0.77);
+
+      extrusion.material = myMaterial;
+    });
+
     // var ground = BABYLON.Mesh.CreateGround("ground1", 20, 20, 2, scene, false);
 
     engine.runRenderLoop(function () {
@@ -131,7 +186,7 @@ class BabylonRenderer implements IRenderer {
         shape: myShape,
         path: myPath,
         sideOrientation: BABYLON.Mesh.DOUBLESIDE,
-        scale: 0.5,
+        scale: 0.3,
       },
       this.#scene,
     );
@@ -147,8 +202,10 @@ class BabylonRenderer implements IRenderer {
   }
 
   update() {
-    this.sphere.position.x = this.game.network.trains[0].position.x;
-    this.sphere.position.z = -this.game.network.trains[0].position.y;
+    this.game.network.trains.forEach((train, i) => {
+      this.spheres[i].position.x = train.position.x;
+      this.spheres[i].position.z = -train.position.y;
+    });
   }
 }
 
