@@ -135,7 +135,7 @@ class Train implements GameObject {
             console.log("millis to station", millisToStation);
             this.#currentDistance = stationDistance;
             this.state = TRAIN_STATE.STOPPED_AT_STATION;
-            this.#stopTime = this.#waitTime - millisToStation;
+            this.#stopTime = this.#waitTime - (deltaT - millisToStation);
             this.processPassengers();
           }
         }

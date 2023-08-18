@@ -92,51 +92,33 @@ describe("train motion", () => {
     expect(secondTrain.position.x).toBeCloseTo(firstResult, 4);
   });
 
-  it.only("can stop at a station for part of an update cycle", () => {
-    const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 20, y: 0 });
-    const segment2 = new LinearTrackSegment({ x: 20, y: 0 }, { x: 70, y: 0 });
-    const segment3 = new LinearTrackSegment(pointC, pointD);
-    segment.connect(segment2);
-    segment2.connect(segment3);
-    const station = new Station(segment2, 20, ALIGNMENT.LEFT);
-    segment2.stations.push(station);
-    const train = new Train(segment, 5, { waitTime: 6000 });
-    train.update(3000);
-    expect(train.position.x).toBeCloseTo(15, 4);
-    train.update(3000);
-    expect(train.position.x).toBeCloseTo(30, 4);
-    train.update(3000);
-    expect(train.position.x).toBeCloseTo(40, 4);
-    train.update(3000);
-    expect(train.position.x).toBeCloseTo(40, 4);
-    train.update(3000);
-    expect(train.position.x).toBeCloseTo(50, 4);
-  });
-
-  it.only("can stop at a station for part of an update cycle", () => {
-    const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 20, y: 0 });
-    const segment2 = new LinearTrackSegment({ x: 20, y: 0 }, { x: 70, y: 0 });
-    const segment3 = new LinearTrackSegment(pointC, pointD);
-    segment.connect(segment2);
-    segment2.connect(segment3);
-    const station = new Station(segment2, 20, ALIGNMENT.LEFT);
-    segment2.stations.push(station);
-    const train = new Train(segment, 5, { waitTime: 6000 });
-    train.update(1500);
-    train.update(1500);
-    expect(train.position.x).toBeCloseTo(15, 4);
-    train.update(1500);
-    train.update(1500);
-    expect(train.position.x).toBeCloseTo(30, 4);
-    train.update(1500);
-    train.update(1500);
-    expect(train.position.x).toBeCloseTo(40, 4);
-    train.update(1500);
-    train.update(1500);
-    expect(train.position.x).toBeCloseTo(40, 4);
-    train.update(1500);
-    train.update(1500);
-    expect(train.position.x).toBeCloseTo(50, 4);
+  it("can stop at a station for part of an update cycle, at any update rate", () => {
+    const testTimings = [3000, 1500, 1000, 500];
+    const repeat = (f: () => void, n: number) => {
+      for (let i = 0; i < n; i++) {
+        f();
+      }
+    };
+    testTimings.forEach((timing) => {
+      const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 20, y: 0 });
+      const segment2 = new LinearTrackSegment({ x: 20, y: 0 }, { x: 70, y: 0 });
+      const segment3 = new LinearTrackSegment(pointC, pointD);
+      segment.connect(segment2);
+      segment2.connect(segment3);
+      const station = new Station(segment2, 20, ALIGNMENT.LEFT);
+      segment2.stations.push(station);
+      const train = new Train(segment, 5, { waitTime: 6000 });
+      repeat(() => train.update(timing), 3000 / timing);
+      expect(train.position.x).toBeCloseTo(15, 4);
+      repeat(() => train.update(timing), 3000 / timing);
+      expect(train.position.x).toBeCloseTo(30, 4);
+      repeat(() => train.update(timing), 3000 / timing);
+      expect(train.position.x).toBeCloseTo(40, 4);
+      repeat(() => train.update(timing), 3000 / timing);
+      expect(train.position.x).toBeCloseTo(40, 4);
+      repeat(() => train.update(timing), 3000 / timing);
+      expect(train.position.x).toBeCloseTo(45, 4);
+    });
   });
 
   it("waits an appropriate amount of time at a station, including speeding up and slowing down", () => {
