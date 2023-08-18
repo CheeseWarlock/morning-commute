@@ -1,4 +1,4 @@
-import { distanceEffort, easyNavigate } from "../utils";
+import { distanceEffortToDistance, easyNavigate } from "../utils";
 import GameObject from "./GameObject";
 import Passenger from "./Passenger";
 import Station from "./Station";
@@ -85,10 +85,9 @@ class Train implements GameObject {
       if (this.#currentSegment.stations.length) {
         const stationDist = this.#currentlyReversing
           ? this.#currentSegment.length -
-            this.#currentSegment.stations[0].distanceAlong +
-            slowDownAmount / 2
-          : this.#currentSegment.stations[0].distanceAlong + slowDownAmount / 2;
-        return distanceEffort(dE, stationDist, slowDownAmount);
+            this.#currentSegment.stations[0].distanceAlong
+          : this.#currentSegment.stations[0].distanceAlong;
+        return distanceEffortToDistance(dE, stationDist, slowDownAmount);
       } else {
         return dE;
       }
@@ -142,10 +141,7 @@ class Train implements GameObject {
       );
       this.position.x = newPos.point.x;
       this.position.y = newPos.point.y;
-      const excess = this.#currentSegment.getPositionAlong(
-        physicalDistance,
-        this.#currentlyReversing,
-      ).excess;
+      const excess = newPos.excess;
       if (excess > 0) {
         this.#selectNewTrackSegment(excess);
       }

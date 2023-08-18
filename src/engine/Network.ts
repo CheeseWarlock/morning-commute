@@ -36,11 +36,32 @@ class Network implements GameObject {
   update(deltaT: number) {
     this.generatePassengers();
     this.trains.forEach((t) => t.update(deltaT));
+    this.detectCollisions();
+  }
+
+  /**
+   * This is currently a VERY naive implementation.
+   */
+  detectCollisions() {
+    this.trains.forEach((t1) => {
+      this.trains.forEach((t2) => {
+        if (t1 !== t2) {
+          const d = Math.sqrt(
+            (t1.position.x - t2.position.x) ** 2 +
+              (t1.position.y - t2.position.y) ** 2,
+          );
+          if (d < 10) {
+            t1.passengers = [];
+            t2.passengers = [];
+          }
+        }
+      });
+    });
   }
 
   generatePassengers() {
     this.stations.forEach((station) => {
-      if (Math.random() > 0.99) {
+      if (Math.random() > 0.995) {
         const destinations = this.stations.filter((s) => s !== station);
         const destination =
           destinations[Math.floor(Math.random() * destinations.length)];

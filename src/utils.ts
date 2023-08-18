@@ -103,29 +103,38 @@ export function areAnglesEqual(angleA: number, angleB: number) {
 
 /**
  * Turns "distance effort" into distance, to handle slowdown near a station.
- * @param distance
- * @param stationPosition
+ * @param distance the amount of effort moved along the track
+ * @param stationPosition the position of the station along the track
+ * @param slowdownAmount the amount of extra effort it should take to go across this track
  */
-export function distanceEffort(
-  distance: number,
+export function distanceEffortToDistance(
+  distanceEffort: number,
   stationPosition: number,
-  slowdownFactor: number,
+  slowdownAmount: number,
 ) {
+  const stationPositionInDistanceEffort = stationPosition + slowdownAmount / 2;
   let result = 0;
-  if (distance < stationPosition - slowdownFactor) {
-    result = distance;
-  } else if (distance < stationPosition) {
+  if (distanceEffort < stationPositionInDistanceEffort - slowdownAmount) {
+    result = distanceEffort;
+  } else if (distanceEffort < stationPositionInDistanceEffort) {
     result =
-      -((distance - stationPosition) ** 2 / (2 * slowdownFactor)) +
-      stationPosition -
-      slowdownFactor / 2;
-  } else if (distance < stationPosition + slowdownFactor) {
+      -(
+        (distanceEffort - stationPositionInDistanceEffort) ** 2 /
+        (2 * slowdownAmount)
+      ) +
+      stationPositionInDistanceEffort -
+      slowdownAmount / 2;
+  } else if (
+    distanceEffort <
+    stationPositionInDistanceEffort + slowdownAmount
+  ) {
     result =
-      (distance - stationPosition) ** 2 / (2 * slowdownFactor) +
-      stationPosition -
-      slowdownFactor / 2;
+      (distanceEffort - stationPositionInDistanceEffort) ** 2 /
+        (2 * slowdownAmount) +
+      stationPositionInDistanceEffort -
+      slowdownAmount / 2;
   } else {
-    result = distance - slowdownFactor;
+    result = distanceEffort - slowdownAmount;
   }
   return result;
 }
