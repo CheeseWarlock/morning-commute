@@ -106,16 +106,28 @@ export function areAnglesEqual(angleA: number, angleB: number) {
  * @param distance
  * @param stationPosition
  */
-export function distanceEffort(distance: number, stationPosition: number) {
-  if (distance < stationPosition - 2) {
-    return distance;
+export function distanceEffort(
+  distance: number,
+  stationPosition: number,
+  slowdownFactor: number,
+) {
+  let result = 0;
+  if (distance < stationPosition - slowdownFactor) {
+    result = distance;
   } else if (distance < stationPosition) {
-    return -((distance - stationPosition) ** 2 / 4) + stationPosition - 1;
-  } else if (distance < stationPosition + 2) {
-    return -((distance - stationPosition) ** 2 / 4) + stationPosition - 1;
+    result =
+      -((distance - stationPosition) ** 2 / (2 * slowdownFactor)) +
+      stationPosition -
+      slowdownFactor / 2;
+  } else if (distance < stationPosition + slowdownFactor) {
+    result =
+      (distance - stationPosition) ** 2 / (2 * slowdownFactor) +
+      stationPosition -
+      slowdownFactor / 2;
   } else {
-    return distance - 2;
+    result = distance - slowdownFactor;
   }
+  return result;
 }
 
 export function generateName(p: number) {

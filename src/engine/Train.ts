@@ -20,7 +20,7 @@ export type TMovementOptions = {
 class Train implements GameObject {
   position: { x: number; y: number };
   #currentSegment: TrackSegment;
-  #currentDistance: number = 0;
+  #currentDistanceEffort: number = 0;
   #currentlyReversing: boolean;
   /**
    * Speed in units per second.
@@ -43,7 +43,7 @@ class Train implements GameObject {
   ) {
     this.position = { x: segment.start.x, y: segment.start.y };
     this.#currentSegment = segment;
-    this.#currentDistance = 0;
+    this.#currentDistanceEffort = 0;
     this.#currentlyReversing = false;
     this.#speed = speed || Math.random() + 0.5;
     this.#waitTime = movementOptions.waitTime || 1000;
@@ -74,63 +74,80 @@ class Train implements GameObject {
   }
 
   #moveAlongTrackSegment(deltaT: number) {
+    /**
+     * Turn distance-effort into distance.
+     */
     const distanceEffortFunction = (dE: number) => {
+      const slowDownAmount = this.#slowdown ? 16 : 0;
+      if (!this.#slowdown) {
+        return dE;
+      }
       if (this.#currentSegment.stations.length) {
-        return distanceEffort(
-          dE,
-          this.#currentSegment.stations[0].distanceAlong,
-        );
+        const stationDist = this.#currentlyReversing
+          ? this.#currentSegment.length -
+            this.#currentSegment.stations[0].distanceAlong +
+            slowDownAmount / 2
+          : this.#currentSegment.stations[0].distanceAlong + slowDownAmount / 2;
+        return distanceEffort(dE, stationDist, slowDownAmount);
       } else {
         return dE;
       }
     };
-    const distanceToMove = (this.#speed * deltaT) / 1000;
-    this.#currentDistance += distanceToMove;
-    const tempDistance = distanceEffortFunction(this.#currentDistance);
-    console.log(
-      tempDistance,
-      this.#currentDistance,
-      this.#currentSegment.length,
-    );
+
+    const distanceEffortToMove = (this.#speed * deltaT) / 1000;
+    this.#currentDistanceEffort += distanceEffortToMove;
+
+    let physicalDistance = distanceEffortFunction(this.#currentDistanceEffort);
+
     if (this.#upcomingStations.length) {
-      const newPos = this.#currentSegment.getPositionAlong(
-        tempDistance,
-        this.#currentlyReversing,
-      );
-      this.position.x = newPos.point.x;
-      this.position.y = newPos.point.y;
-      return;
       // There's a station around here
       const station = this.#currentSegment.stations[0];
       const stationDistance = this.#currentlyReversing
         ? this.#currentSegment.length - station.distanceAlong
         : station.distanceAlong;
-      if (
-        this.#currentDistance >= stationDistance &&
-        this.state === TRAIN_STATE.MOVING
-      ) {
-        const distanceToStation =
-          stationDistance - (this.#currentDistance - distanceToMove);
-        const millisToStation = (1000 * distanceToStation) / this.#speed;
-        this.#currentDistance = stationDistance;
+      const stationDistanceEffort = stationDistance + (this.#slowdown ? 8 : 0);
+
+      const isArrivingAtStation =
+        this.#currentDistanceEffort >= stationDistanceEffort &&
+        this.state === TRAIN_STATE.MOVING;
+
+      if (isArrivingAtStation) {
+        const distanceEffortToStation =
+          stationDistanceEffort -
+          (this.#currentDistanceEffort - distanceEffortToMove);
+        const millisToStation = (1000 * distanceEffortToStation) / this.#speed;
+        this.#currentDistanceEffort = stationDistanceEffort;
         this.state = TRAIN_STATE.STOPPED_AT_STATION;
         this.#stopTime = this.#waitTime - (deltaT - millisToStation);
         this.processPassengers();
-      }
-    } else {
-      const excess = this.#currentSegment.getPositionAlong(
-        this.#currentDistance,
-        this.#currentlyReversing,
-      ).excess;
-      if (excess > 0) {
-        this.#selectNewTrackSegment(excess);
-      } else {
+
         const newPos = this.#currentSegment.getPositionAlong(
-          tempDistance,
+          stationDistance,
           this.#currentlyReversing,
         );
         this.position.x = newPos.point.x;
         this.position.y = newPos.point.y;
+      } else {
+        const newPos = this.#currentSegment.getPositionAlong(
+          physicalDistance,
+          this.#currentlyReversing,
+        );
+        this.position.x = newPos.point.x;
+        this.position.y = newPos.point.y;
+      }
+    } else {
+      const newPos = this.#currentSegment.getPositionAlong(
+        physicalDistance,
+        this.#currentlyReversing,
+      );
+      this.position.x = newPos.point.x;
+      this.position.y = newPos.point.y;
+      const excess = this.#currentSegment.getPositionAlong(
+        physicalDistance,
+        this.#currentlyReversing,
+      ).excess;
+      if (excess > 0) {
+        this.#selectNewTrackSegment(excess);
       }
     }
   }
@@ -154,13 +171,13 @@ class Train implements GameObject {
       candidates[Math.floor(Math.random() * candidates.length)];
     const newPos = easyNavigate(
       this.#currentSegment,
-      this.#currentDistance,
+      this.#currentDistanceEffort,
       this.#currentlyReversing,
       0,
       selectedTrack,
     );
     const millisToProcess = (1000 * excess) / this.#speed;
-    this.#currentDistance = 0;
+    this.#currentDistanceEffort = 0;
     this.#currentSegment = selectedTrack;
     this.#upcomingStations = selectedTrack.stations.slice();
     this.#currentlyReversing = newPos.reversing;

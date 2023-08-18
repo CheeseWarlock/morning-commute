@@ -1,4 +1,4 @@
-import { easyNavigate, isNetworkCoherent } from "../../utils";
+import { distanceEffort, easyNavigate, isNetworkCoherent } from "../../utils";
 import CircularTrackSegment from "../CircularTrackSegment";
 import LinearTrackSegment from "../LinearTrackSegment";
 
@@ -120,5 +120,22 @@ describe("network coherence", () => {
     const firstSegment = new LinearTrackSegment(pointA, pointB);
     const secondSegment = new LinearTrackSegment(pointB, circleCentre);
     expect(isNetworkCoherent([firstSegment, secondSegment])).toBe(false);
+  });
+});
+
+describe("distance effort function", () => {
+  it("uses its parameters properly", () => {
+    expect(distanceEffort(0, 10, 5)).toBeCloseTo(0);
+    expect(distanceEffort(4, 10, 5)).toBeCloseTo(4);
+    expect(distanceEffort(8, 10, 5)).toBeCloseTo(7.1);
+    expect(distanceEffort(10, 10, 5)).toBeCloseTo(7.5);
+    expect(distanceEffort(12, 10, 5)).toBeCloseTo(7.9);
+    expect(distanceEffort(16, 10, 5)).toBeCloseTo(11);
+  });
+
+  it("uses its parameters properly", () => {
+    expect(distanceEffort(10, 14, 3)).toBeCloseTo(10);
+    expect(distanceEffort(14, 14, 3)).toBeCloseTo(12.5);
+    expect(distanceEffort(21, 14, 3)).toBeCloseTo(18);
   });
 });
