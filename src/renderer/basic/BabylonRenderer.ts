@@ -10,6 +10,7 @@ class BabylonRenderer implements IRenderer {
   spheres: any[] = [];
   game: Game;
   #scene: BABYLON.Scene;
+  materials: Map<string, BABYLON.Material> = new Map();
 
   constructor(element: HTMLElement, game: Game) {
     this.game = game;
@@ -47,6 +48,9 @@ class BabylonRenderer implements IRenderer {
       new BABYLON.Vector3(1, -20, 2),
       scene,
     );
+    const trainMaterial = new BABYLON.StandardMaterial("trainMaterial");
+    trainMaterial.diffuseColor = new BABYLON.Color3(1, 0.15, 0.15);
+    this.materials.set("train", trainMaterial);
     game.network.trains.forEach(() => {
       const sphere = BABYLON.MeshBuilder.CreateSphere(
         "sphere2",
@@ -55,13 +59,18 @@ class BabylonRenderer implements IRenderer {
         },
         scene,
       );
-
-      const groundMat = new BABYLON.StandardMaterial("groundMat");
-      groundMat.diffuseColor = new BABYLON.Color3(1, 0.15, 0.15);
-      sphere.material = groundMat;
+      sphere.material = trainMaterial;
       this.spheres.push(sphere);
       sphere.position.y = 2;
     });
+
+    const stationMaterial = new BABYLON.StandardMaterial("");
+
+    stationMaterial.diffuseColor = new BABYLON.Color3(0.3, 0.6, 1);
+    stationMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+    // stationMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+    stationMaterial.ambientColor = new BABYLON.Color3(0.77, 0.77, 0.77);
+    this.materials.set("station", stationMaterial);
 
     game.network.stations.forEach((station) => {
       const rect = [
@@ -104,14 +113,9 @@ class BabylonRenderer implements IRenderer {
       extrusion.position.x = targetPosition.x;
       extrusion.position.z = -targetPosition.y;
       extrusion.rotation.y = angleFromForward + Math.PI / 2;
-      var myMaterial = new BABYLON.StandardMaterial("");
       extrusion.convertToFlatShadedMesh();
-      myMaterial.diffuseColor = new BABYLON.Color3(0.3, 0.6, 1);
-      myMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
-      // myMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
-      myMaterial.ambientColor = new BABYLON.Color3(0.77, 0.77, 0.77);
 
-      extrusion.material = myMaterial;
+      extrusion.material = stationMaterial;
     });
 
     // var ground = BABYLON.Mesh.CreateGround("ground1", 20, 20, 2, scene, false);
@@ -196,7 +200,7 @@ class BabylonRenderer implements IRenderer {
     myMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
     myMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     // myMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
-    myMaterial.ambientColor = new BABYLON.Color3(0.77, 0.77, 0.77);
+    myMaterial.ambientColor = new BABYLON.Color3(0.82, 0.82, 0.82);
 
     extrusion.material = myMaterial;
   }
