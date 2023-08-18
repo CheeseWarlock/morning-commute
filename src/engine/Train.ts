@@ -73,79 +73,84 @@ class Train implements GameObject {
     }
   }
 
-  #moveAlongTrackSegment() {}
+  #moveAlongTrackSegment(deltaT: number) {
+    const distanceToMove = (this.#speed * deltaT) / 1000;
+    this.#currentDistance += distanceToMove;
+    if (this.#upcomingStations.length) {
+      // There's a station around here
+      const station = this.#currentSegment.stations[0];
+      const stationDistance = this.#currentlyReversing
+        ? this.#currentSegment.length - station.distanceAlong
+        : station.distanceAlong;
+      if (
+        this.#currentDistance >= stationDistance &&
+        this.state === TRAIN_STATE.MOVING
+      ) {
+        const distanceToStation =
+          stationDistance - (this.#currentDistance - distanceToMove);
+        const millisToStation = (1000 * distanceToStation) / this.#speed;
+        this.#currentDistance = stationDistance;
+        this.state = TRAIN_STATE.STOPPED_AT_STATION;
+        this.#stopTime = this.#waitTime - (deltaT - millisToStation);
+        this.processPassengers();
+      }
+    } else {
+      const excess = this.#currentSegment.getPositionAlong(
+        this.#currentDistance,
+        this.#currentlyReversing,
+      ).excess;
+      if (excess > 0) {
+        this.#selectNewTrackSegment(excess);
+      }
+    }
+    const newPos = this.#currentSegment.getPositionAlong(
+      this.#currentDistance,
+      this.#currentlyReversing,
+    );
+    this.position.x = newPos.point.x;
+    this.position.y = newPos.point.y;
+  }
 
-  #waitAtStation() {}
+  #waitAtStation(deltaT: number) {
+    this.#stopTime -= deltaT;
+    if (this.#stopTime <= 0) {
+      const excessTime = -this.#stopTime;
+      this.#stopTime = 0;
+      this.state = TRAIN_STATE.MOVING;
+      this.#upcomingStations = [];
+      this.update(excessTime);
+    }
+  }
+
+  #selectNewTrackSegment(excess: number) {
+    const candidates = this.#currentlyReversing
+      ? this.#currentSegment.atStart
+      : this.#currentSegment.atEnd;
+    const selectedTrack =
+      candidates[Math.floor(Math.random() * candidates.length)];
+    const newPos = easyNavigate(
+      this.#currentSegment,
+      this.#currentDistance,
+      this.#currentlyReversing,
+      0,
+      selectedTrack,
+    );
+    const millisToProcess = (1000 * excess) / this.#speed;
+    this.#currentDistance = 0;
+    this.#currentSegment = selectedTrack;
+    this.#upcomingStations = selectedTrack.stations.slice();
+    this.#currentlyReversing = newPos.reversing;
+    this.update(millisToProcess);
+  }
 
   /**
    * Update position and status
    */
   update(deltaT: number) {
     if (this.state === TRAIN_STATE.STOPPED_AT_STATION) {
-      this.#stopTime -= deltaT;
-      if (this.#stopTime <= 0) {
-        const excessTime = -this.#stopTime;
-        this.#stopTime = 0;
-        this.state = TRAIN_STATE.MOVING;
-        this.#upcomingStations = [];
-        this.update(excessTime);
-      }
+      this.#waitAtStation(deltaT);
     } else if (this.state === TRAIN_STATE.MOVING) {
-      const distanceToMove = (this.#speed * deltaT) / 1000;
-      this.#currentDistance += distanceToMove;
-      const excess = this.#currentSegment.getPositionAlong(
-        this.#currentDistance,
-        this.#currentlyReversing,
-      ).excess;
-      if (excess > 0) {
-        // We are arriving at a decision point
-        const candidates = this.#currentlyReversing
-          ? this.#currentSegment.atStart
-          : this.#currentSegment.atEnd;
-        const selectedTrack =
-          candidates[Math.floor(Math.random() * candidates.length)];
-        const newPos = easyNavigate(
-          this.#currentSegment,
-          this.#currentDistance,
-          this.#currentlyReversing,
-          0,
-          selectedTrack,
-        );
-        const millisToProcess = (1000 * excess) / this.#speed;
-        this.#currentDistance = 0; //-= this.#currentSegment.length;
-        this.#currentSegment = selectedTrack;
-        this.#upcomingStations = selectedTrack.stations.slice();
-        this.#currentlyReversing = newPos.reversing;
-        this.update(millisToProcess);
-      } else {
-        if (this.#upcomingStations.length) {
-          // There's a station around here
-          const station = this.#currentSegment.stations[0];
-          const stationDistance = this.#currentlyReversing
-            ? this.#currentSegment.length - station.distanceAlong
-            : station.distanceAlong;
-          if (
-            this.#currentDistance >= stationDistance &&
-            this.state === TRAIN_STATE.MOVING
-          ) {
-            const distanceToStation =
-              stationDistance - (this.#currentDistance - distanceToMove);
-            const millisToStation = (1000 * distanceToStation) / this.#speed;
-            console.log("distance to station", distanceToStation);
-            console.log("millis to station", millisToStation);
-            this.#currentDistance = stationDistance;
-            this.state = TRAIN_STATE.STOPPED_AT_STATION;
-            this.#stopTime = this.#waitTime - (deltaT - millisToStation);
-            this.processPassengers();
-          }
-        }
-        const newPos = this.#currentSegment.getPositionAlong(
-          this.#currentDistance,
-          this.#currentlyReversing,
-        );
-        this.position.x = newPos.point.x;
-        this.position.y = newPos.point.y;
-      }
+      this.#moveAlongTrackSegment(deltaT);
     }
   }
 }
