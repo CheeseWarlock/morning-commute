@@ -5,6 +5,7 @@ import Network from "../../engine/Network";
 import Point from "../../engine/Point";
 import { ALIGNMENT } from "../../engine/Station";
 import Train from "../../engine/Train";
+import { getExtentForTrackSegment } from "../../engine/networks/trackutils";
 import IRenderer from "./IRenderer";
 
 /**
@@ -23,7 +24,7 @@ class CanvasRenderer implements IRenderer {
   constructor(
     element: HTMLElement,
     game: Game,
-    offset = { x: 10, y: 10 },
+    offset = { x: 0, y: 0 },
     scale = 2,
     size = { x: 800, y: 600 },
   ) {
@@ -33,10 +34,52 @@ class CanvasRenderer implements IRenderer {
     const canvas = document.createElement("canvas");
     canvas.width = size.x;
     canvas.height = size.y;
+    canvas.style.background = "black";
     element.appendChild(canvas);
     this.#canvas = canvas;
     this.#context = canvas.getContext("2d");
     this.#network = game.network;
+
+    const gameBounds = game.network.getBounds();
+
+    const padding = 100;
+    // The max fittable scale along X
+    const scaleX =
+      (this.#size.x - padding) / (gameBounds.max.x - gameBounds.min.x);
+    // The max fittable scale along Y
+    const scaleY =
+      (this.#size.y - padding) / (gameBounds.max.y - gameBounds.min.y);
+
+    if (scaleX < scaleY) {
+      this.#scale = scaleX;
+      const excessY =
+        (this.#size.y -
+          padding -
+          (gameBounds.max.y - gameBounds.min.y) * this.#scale) /
+        2;
+      this.#offset = {
+        x: -gameBounds.min.x + padding / (this.#scale * 2),
+        y:
+          -gameBounds.min.y +
+          excessY / this.#scale +
+          padding / (this.#scale * 2),
+      };
+    } else {
+      this.#scale = scaleY;
+      const excessX =
+        (this.#size.x -
+          padding -
+          (gameBounds.max.x - gameBounds.min.x) * this.#scale) /
+        2;
+
+      this.#offset = {
+        x:
+          -gameBounds.min.x +
+          excessX / this.#scale +
+          padding / (this.#scale * 2),
+        y: -gameBounds.min.y + padding / (this.#scale * 2),
+      };
+    }
   }
 
   transformPosition(p: Point): Point {

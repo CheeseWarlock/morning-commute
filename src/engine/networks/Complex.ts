@@ -25,8 +25,11 @@ builder.curveTo({ x: 100, y: 60 }, { x: 100, y: 40 });
 builder.lineTo({ x: 80, y: 60 });
 builder.curveTo({ x: 60, y: 40 }, { x: 80, y: 40 });
 
+// The big one
 builder.moveTo({ x: 0, y: 40 });
-builder.curveTo({ x: 120, y: 40 }, { x: 60, y: 40 }, true);
+builder.lineTo({ x: 0, y: 60 });
+builder.curveTo({ x: 120, y: 60 }, { x: 60, y: 60 }, true);
+builder.lineTo({ x: 120, y: 40 });
 
 builder.moveTo({ x: 40, y: 0 });
 builder.lineTo({ x: 80, y: 0 });

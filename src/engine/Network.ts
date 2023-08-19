@@ -3,6 +3,7 @@ import Passenger from "./Passenger";
 import Station from "./Station";
 import TrackSegment from "./TrackSegment";
 import Train from "./Train";
+import { getExtentForTrackSegment } from "./networks/trackutils";
 
 /**
  * A set of Track Segments and other gameplay elements.
@@ -31,6 +32,29 @@ class Network implements GameObject {
         }
       });
     });
+  }
+
+  getBounds() {
+    const gameBounds = this.segments.map((segment: TrackSegment) =>
+      getExtentForTrackSegment(segment),
+    );
+    const minX = Math.min(
+      ...gameBounds.map((b: { min: { x: number } }) => b.min.x),
+    );
+    const maxX = Math.max(
+      ...gameBounds.map((b: { max: { x: number } }) => b.max.x),
+    );
+    const minY = Math.min(
+      ...gameBounds.map((b: { min: { y: number } }) => b.min.y),
+    );
+    const maxY = Math.max(
+      ...gameBounds.map((b: { max: { y: number } }) => b.max.y),
+    );
+
+    return {
+      min: { x: minX, y: minY },
+      max: { x: maxX, y: maxY },
+    };
   }
 
   update(deltaT: number) {

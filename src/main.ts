@@ -33,14 +33,14 @@ const game = new Game(network);
 const map = new Map(
   document.querySelector("#map-holder")!,
   game,
-  { x: 40, y: 40 },
+  { x: 0, y: 0 },
   1,
   { x: 400, y: 300 },
 );
 const map2 = new Map(
   document.querySelector("#map-holder-2")!,
   game,
-  { x: 20, y: 20 },
+  { x: 0, y: 0 },
   2,
   { x: 600, y: 300 },
 );

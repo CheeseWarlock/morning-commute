@@ -30,14 +30,7 @@ class BabylonRenderer implements IRenderer {
     // CreateScene function that creates and return the scene
     var scene = new BABYLON.Scene(engine);
     this.#scene = scene;
-    const camera = new BABYLON.ArcRotateCamera(
-      "Camera",
-      (3 * Math.PI) / 2,
-      Math.PI / 2,
-      30,
-      new BABYLON.Vector3(40, 0, -40),
-    );
-    camera.attachControl(canvas, false);
+
     // var light = new BABYLON.HemisphericLight(
     //   "light1",
     //   new BABYLON.Vector3(0, 1, 0),
@@ -118,7 +111,45 @@ class BabylonRenderer implements IRenderer {
       extrusion.material = stationMaterial;
     });
 
-    // var ground = BABYLON.Mesh.CreateGround("ground1", 20, 20, 2, scene, false);
+    const gameBounds = game.network.getBounds();
+
+    const padding = 50;
+    var ground = BABYLON.Mesh.CreateGround(
+      "ground1",
+      gameBounds.max.x - gameBounds.min.x + padding,
+      gameBounds.max.y - gameBounds.min.y + padding,
+      2,
+      scene,
+      false,
+    );
+    const groundMaterial = new BABYLON.StandardMaterial("");
+    groundMaterial.diffuseColor = new BABYLON.Color3(0.4, 0.6, 0.3);
+    groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+    groundMaterial.ambientColor = new BABYLON.Color3(0.77, 0.77, 0.77);
+    ground.material = groundMaterial;
+    ground.position.x = (gameBounds.max.x + gameBounds.min.x) / 2;
+    ground.position.y = -1;
+    ground.position.z = -(gameBounds.max.y + gameBounds.min.y) / 2;
+
+    const camera = new BABYLON.ArcRotateCamera(
+      "Camera",
+      (3 * Math.PI) / 2,
+      1,
+      200,
+      new BABYLON.Vector3(
+        (gameBounds.max.x + gameBounds.min.x) / 2,
+        0,
+        -(gameBounds.max.y + gameBounds.min.y) / 2,
+      ),
+    );
+    camera.attachControl(canvas, false);
+    // camera.target = new BABYLON.Vector3(
+    //   (gameBounds.max.x + gameBounds.min.x) / 2,
+    //   0,
+    //   -(gameBounds.max.y + gameBounds.min.y) / 2,
+    // );
+    // camera.position = ;
+    // camera.upVector = new BABYLON.Vector3(0, -1, 0);
 
     engine.runRenderLoop(function () {
       scene.render();
@@ -197,10 +228,10 @@ class BabylonRenderer implements IRenderer {
     var myMaterial = new BABYLON.StandardMaterial("");
 
     extrusion.convertToFlatShadedMesh();
-    myMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+    myMaterial.diffuseColor = new BABYLON.Color3(0.65, 0.65, 0.65);
     myMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     // myMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
-    myMaterial.ambientColor = new BABYLON.Color3(0.82, 0.82, 0.82);
+    myMaterial.ambientColor = new BABYLON.Color3(0.87, 0.87, 0.87);
 
     extrusion.material = myMaterial;
   }
