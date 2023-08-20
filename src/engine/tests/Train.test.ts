@@ -1,8 +1,10 @@
 import LinearTrackSegment from "../LinearTrackSegment";
+import Passenger from "../Passenger";
 import Point from "../Point";
 import Station, { ALIGNMENT } from "../Station";
 import Train from "../Train";
 import SimpleJoin from "../networks/SimpleJoin";
+import SimpleStation from "../networks/SimpleStation";
 
 describe("train motion", () => {
   const pointA = { x: 0, y: 0 };
@@ -123,6 +125,49 @@ describe("train motion", () => {
     });
   });
 
+  it("can navigate in reverse along track segments", () => {
+    const network = SimpleStation;
+
+    const train = new Train(network.segments[0], 10);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+    train.update(1000);
+  });
+
   it("waits an appropriate amount of time at a station, including speeding up and slowing down", () => {
     const segment = new LinearTrackSegment(pointA, pointB);
     const segment2 = new LinearTrackSegment(pointB, pointC);
@@ -162,8 +207,6 @@ describe("train following cars", () => {
     train.update(distanceThroughCurve * 100 + 100);
     expect(train.position.x).toBeCloseTo(61);
     expect(train.position.y).toBeCloseTo(30);
-    const distanceTo = (a: Point, b: Point) =>
-      Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 
     // The first train car should be 5 units away, on the curved track
     // The head car is 1 unit along this straight track, so that's 4 along the curve
@@ -173,5 +216,42 @@ describe("train following cars", () => {
     ).point;
     expect(train.followingCars[0].position.x).toBeCloseTo(expectedPosition.x);
     expect(train.followingCars[0].position.y).toBeCloseTo(expectedPosition.y);
+  });
+});
+
+describe("passenger pickup and dropoff", () => {
+  const network = SimpleStation;
+  const badStation = new Station({} as any, 0, ALIGNMENT.LEFT);
+  it("drops off passengers whose station match", () => {
+    const train = new Train(network.segments[0], 10, { slowdown: true });
+    train.passengers.push(new Passenger({} as any, network.stations[0]));
+    train.passengers.push(new Passenger({} as any, badStation));
+    expect(train.passengers.length).toBe(2);
+    train.update(10000);
+    expect(train.passengers.length).toBe(1);
+  });
+
+  it("picks up passengers", () => {
+    const train = new Train(network.segments[0], 10, { slowdown: true });
+    network.stations[0].waitingPassengers.push(
+      new Passenger(network.stations[0], badStation),
+    );
+    expect(train.passengers.length).toBe(0);
+    train.update(10000);
+    expect(train.passengers.length).toBe(1);
+  });
+
+  it("does not pick up passengers beyond capacity", () => {
+    const train = new Train(network.segments[0], 10, { slowdown: true });
+    train.capacity = 1;
+    network.stations[0].waitingPassengers.push(
+      new Passenger(network.stations[0], badStation),
+    );
+    network.stations[0].waitingPassengers.push(
+      new Passenger(network.stations[0], badStation),
+    );
+    expect(train.passengers.length).toBe(0);
+    train.update(10000);
+    expect(train.passengers.length).toBe(1);
   });
 });

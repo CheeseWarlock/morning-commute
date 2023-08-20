@@ -57,13 +57,6 @@ class Train implements GameObject {
     this.followingCars.push(new TrainFollowingCar(this.position));
   }
 
-  /**
-   * Select a path when encountering a split
-   */
-  decidePath() {
-    // Random
-  }
-
   processPassengers() {
     // TODO: don't rely on this as the source of truth
     const station = this.#upcomingStations[0];
@@ -99,6 +92,10 @@ class Train implements GameObject {
         return dE;
       }
     };
+
+    if (this.#currentlyReversing) {
+      console.log("REveresing");
+    }
 
     const distanceEffortToMove = (this.#speed * deltaT) / 1000;
     this.#currentDistanceEffort += distanceEffortToMove;
@@ -204,10 +201,7 @@ class Train implements GameObject {
       this.#moveAlongTrackSegment(deltaT);
     }
     this.followingCars.forEach((car, idx) => {
-      let remainingDistance = 5 * (idx + 1);
-      let targetSegment = this.#currentSegment;
-      let segmentIdx = this.#previousSegments.length;
-      let tempReversing = this.#currentlyReversing;
+      const remainingDistance = 5 * (idx + 1);
 
       if (this.#currentDistance - remainingDistance > 0) {
         // All good, we're on the right segment
