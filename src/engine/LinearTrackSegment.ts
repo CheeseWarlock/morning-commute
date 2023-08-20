@@ -49,6 +49,24 @@ class LinearTrackSegment extends TrackSegment {
           excess: distance - this.length,
         };
       }
+    } else if (distance < 0) {
+      if (reverse) {
+        return {
+          point: {
+            x: this.end.x,
+            y: this.end.y,
+          },
+          excess: -distance,
+        };
+      } else {
+        return {
+          point: {
+            x: this.start.x,
+            y: this.start.y,
+          },
+          excess: -distance,
+        };
+      }
     } else {
       if (reverse) {
         return {

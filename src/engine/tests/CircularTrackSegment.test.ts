@@ -65,6 +65,14 @@ describe("a single CircularTrackSegment", () => {
     expect(positionAlong.excess).toBe(100 - segment.length);
   });
 
+  it("should report the start point when distance is less than 0", () => {
+    const segment = new CircularTrackSegment(pointA, pointC, pointB, true);
+    const positionAlong = segment.getPositionAlong(segment.length - 100);
+    expect(positionAlong.point.x).toBe(0);
+    expect(positionAlong.point.y).toBe(0);
+    expect(positionAlong.excess).toBe(100 - segment.length);
+  });
+
   it("should report the position along the track when distance is less than length", () => {
     const segment = new CircularTrackSegment(pointA, pointC, pointB, true);
     const positionAlong = segment.getPositionAlong(segment.length / 2);

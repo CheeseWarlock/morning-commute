@@ -1,6 +1,8 @@
 import LinearTrackSegment from "../LinearTrackSegment";
+import Point from "../Point";
 import Station, { ALIGNMENT } from "../Station";
 import Train from "../Train";
+import SimpleJoin from "../networks/SimpleJoin";
 
 describe("train motion", () => {
   const pointA = { x: 0, y: 0 };
@@ -130,5 +132,46 @@ describe("train motion", () => {
     const station = new Station(segment2, 8, ALIGNMENT.LEFT);
     segment2.stations.push(station);
     const train = new Train(segment, 10, { slowdown: true, waitTime: 0 });
+  });
+});
+
+describe("train following cars", () => {
+  const network = SimpleJoin;
+
+  it("places train cars behind the lead car", () => {
+    const train = new Train(network.segments[0], 10, { slowdown: true });
+    train.update(2000);
+
+    const distanceTo = (a: Point, b: Point) =>
+      Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+
+    expect(
+      distanceTo(train.position, train.followingCars[0].position),
+    ).toBeCloseTo(5);
+    expect(
+      distanceTo(train.position, train.followingCars[1].position),
+    ).toBeCloseTo(10);
+  });
+
+  it("can position following cars properly on a different track segment than the lead car", () => {
+    const train = new Train(network.segments[1], 10, { slowdown: true });
+    const distanceThroughCurve = (Math.PI / 2) * 30;
+    // At 10/sec, update for...
+    // dist 30? 1000 * 30 / spd
+
+    train.update(distanceThroughCurve * 100 + 100);
+    expect(train.position.x).toBeCloseTo(61);
+    expect(train.position.y).toBeCloseTo(30);
+    const distanceTo = (a: Point, b: Point) =>
+      Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+
+    // The first train car should be 5 units away, on the curved track
+    // The head car is 1 unit along this straight track, so that's 4 along the curve
+    const expectedPosition = network.segments[1].getPositionAlong(
+      4,
+      true,
+    ).point;
+    expect(train.followingCars[0].position.x).toBeCloseTo(expectedPosition.x);
+    expect(train.followingCars[0].position.y).toBeCloseTo(expectedPosition.y);
   });
 });

@@ -3,6 +3,7 @@ import GameObject from "./GameObject";
 import Passenger from "./Passenger";
 import Station from "./Station";
 import TrackSegment from "./TrackSegment";
+import TrainFollowingCar from "./TrainFollowingCar";
 
 export enum TRAIN_STATE {
   MOVING = "moving",
@@ -21,6 +22,7 @@ class Train implements GameObject {
   position: { x: number; y: number };
   #currentSegment: TrackSegment;
   #currentDistanceEffort: number = 0;
+  #currentDistance: number = 0;
   #currentlyReversing: boolean;
   /**
    * Speed in units per second.
@@ -36,6 +38,8 @@ class Train implements GameObject {
    */
   #waitTime: number;
   #slowdown: boolean;
+  followingCars: TrainFollowingCar[] = [];
+  #previousSegments: { segment: TrackSegment; reversing: boolean }[] = [];
   constructor(
     segment: TrackSegment,
     speed?: number,
@@ -48,6 +52,9 @@ class Train implements GameObject {
     this.#speed = speed || Math.random() + 0.5;
     this.#waitTime = movementOptions.waitTime || 1000;
     this.#slowdown = movementOptions.slowdown || false;
+    this.followingCars.push(new TrainFollowingCar(this.position));
+    this.followingCars.push(new TrainFollowingCar(this.position));
+    this.followingCars.push(new TrainFollowingCar(this.position));
   }
 
   /**
@@ -124,6 +131,7 @@ class Train implements GameObject {
           stationDistance,
           this.#currentlyReversing,
         );
+        this.#currentDistance = stationDistance;
         this.position.x = newPos.point.x;
         this.position.y = newPos.point.y;
       } else {
@@ -131,6 +139,7 @@ class Train implements GameObject {
           physicalDistance,
           this.#currentlyReversing,
         );
+        this.#currentDistance = physicalDistance;
         this.position.x = newPos.point.x;
         this.position.y = newPos.point.y;
       }
@@ -139,6 +148,7 @@ class Train implements GameObject {
         physicalDistance,
         this.#currentlyReversing,
       );
+      this.#currentDistance = physicalDistance;
       this.position.x = newPos.point.x;
       this.position.y = newPos.point.y;
       const excess = newPos.excess;
@@ -174,6 +184,10 @@ class Train implements GameObject {
     );
     const millisToProcess = (1000 * excess) / this.#speed;
     this.#currentDistanceEffort = 0;
+    this.#previousSegments.push({
+      segment: this.#currentSegment,
+      reversing: this.#currentlyReversing,
+    });
     this.#currentSegment = selectedTrack;
     this.#upcomingStations = selectedTrack.stations.slice();
     this.#currentlyReversing = newPos.reversing;
@@ -189,6 +203,34 @@ class Train implements GameObject {
     } else if (this.state === TRAIN_STATE.MOVING) {
       this.#moveAlongTrackSegment(deltaT);
     }
+    this.followingCars.forEach((car, idx) => {
+      let remainingDistance = 5 * (idx + 1);
+      let targetSegment = this.#currentSegment;
+      let segmentIdx = this.#previousSegments.length;
+      let tempReversing = this.#currentlyReversing;
+
+      if (this.#currentDistance - remainingDistance > 0) {
+        // All good, we're on the right segment
+        car.position = this.#currentSegment.getPositionAlong(
+          this.#currentDistance - remainingDistance,
+          this.#currentlyReversing,
+        ).point;
+      } else {
+        const target =
+          this.#previousSegments[this.#previousSegments.length - 1];
+        if (!target) {
+          car.position = { x: 0, y: 0 };
+        } else {
+          const wasReversing = target.reversing;
+          const targetSegment = target.segment;
+          const pos = targetSegment.getPositionAlong(
+            remainingDistance - this.#currentDistance,
+            !wasReversing,
+          );
+          car.position = pos.point;
+        }
+      }
+    });
   }
 }
 

@@ -96,6 +96,17 @@ class CircularTrackSegment extends TrackSegment {
       };
     }
 
+    if (distance < 0) {
+      const point = reverse ? this.end : this.start;
+      return {
+        point: {
+          x: point.x,
+          y: point.y,
+        },
+        excess: -distance,
+      };
+    }
+
     const theta = distance / this.radius;
 
     // The starting angle for this calculation

@@ -133,6 +133,22 @@ class CanvasRenderer implements IRenderer {
       this.#context.closePath();
       this.#context.fill();
 
+      train.followingCars.forEach((car) => {
+        if (!this.#context) return;
+        const canvasPosition = this.transformPosition(car.position);
+        this.#context.fillStyle = "rgba(200, 0, 200)";
+        this.#context.beginPath();
+        this.#context.arc(
+          canvasPosition.x,
+          canvasPosition.y,
+          5,
+          0,
+          Math.PI * 2,
+        );
+        this.#context.closePath();
+        this.#context.fill();
+      });
+
       // Now draw passenger counts
       this.#context.textAlign = "center";
       this.#context.fillStyle = "rgb(255,255,255)";
