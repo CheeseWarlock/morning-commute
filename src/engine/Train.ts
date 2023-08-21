@@ -93,10 +93,6 @@ class Train implements GameObject {
       }
     };
 
-    if (this.#currentlyReversing) {
-      console.log("REveresing");
-    }
-
     const distanceEffortToMove = (this.#speed * deltaT) / 1000;
     this.#currentDistanceEffort += distanceEffortToMove;
 
@@ -123,14 +119,23 @@ class Train implements GameObject {
         this.state = TRAIN_STATE.STOPPED_AT_STATION;
         this.#stopTime = this.#waitTime - (deltaT - millisToStation);
         this.processPassengers();
-
-        const newPos = this.#currentSegment.getPositionAlong(
-          stationDistance,
-          this.#currentlyReversing,
-        );
-        this.#currentDistance = stationDistance;
-        this.position.x = newPos.point.x;
-        this.position.y = newPos.point.y;
+        if (this.#stopTime < 0) {
+          this.state = TRAIN_STATE.MOVING;
+          // Cleared it in a single update!
+          const excess = -this.#stopTime;
+          this.#stopTime = 0;
+          this.state = TRAIN_STATE.MOVING;
+          this.#upcomingStations = [];
+          this.update(excess);
+        } else {
+          const newPos = this.#currentSegment.getPositionAlong(
+            stationDistance,
+            this.#currentlyReversing,
+          );
+          this.#currentDistance = stationDistance;
+          this.position.x = newPos.point.x;
+          this.position.y = newPos.point.y;
+        }
       } else {
         const newPos = this.#currentSegment.getPositionAlong(
           physicalDistance,
