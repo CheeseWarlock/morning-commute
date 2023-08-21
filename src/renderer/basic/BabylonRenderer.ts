@@ -7,7 +7,7 @@ import CircularTrackSegment from "../../engine/CircularTrackSegment";
 import { ALIGNMENT } from "../../engine/Station";
 
 class BabylonRenderer implements IRenderer {
-  spheres: any[] = [];
+  spheres: BABYLON.Mesh[][] = [];
   game: Game;
   #scene: BABYLON.Scene;
   materials: Map<string, BABYLON.Material> = new Map();
@@ -44,7 +44,13 @@ class BabylonRenderer implements IRenderer {
     const trainMaterial = new BABYLON.StandardMaterial("trainMaterial");
     trainMaterial.diffuseColor = new BABYLON.Color3(1, 0.15, 0.15);
     this.materials.set("train", trainMaterial);
-    game.network.trains.forEach(() => {
+    const trainFollowingMaterial = new BABYLON.StandardMaterial(
+      "trainFollowingMaterial",
+    );
+    trainFollowingMaterial.diffuseColor = new BABYLON.Color3(1, 0.15, 1);
+    this.materials.set("trainFollowing", trainFollowingMaterial);
+    game.network.trains.forEach((train) => {
+      const theseSpheres: BABYLON.Mesh[] = [];
       const sphere = BABYLON.MeshBuilder.CreateSphere(
         "sphere2",
         {
@@ -53,7 +59,21 @@ class BabylonRenderer implements IRenderer {
         scene,
       );
       sphere.material = trainMaterial;
-      this.spheres.push(sphere);
+      theseSpheres.push(sphere);
+      train.followingCars.forEach(() => {
+        const sphere = BABYLON.MeshBuilder.CreateSphere(
+          "sphere2",
+          {
+            diameter: 4,
+          },
+          scene,
+        );
+        sphere.material = trainFollowingMaterial;
+        theseSpheres.push(sphere);
+        sphere.position.y = 2;
+      });
+
+      this.spheres.push(theseSpheres);
       sphere.position.y = 2;
     });
 
@@ -238,8 +258,13 @@ class BabylonRenderer implements IRenderer {
 
   update() {
     this.game.network.trains.forEach((train, i) => {
-      this.spheres[i].position.x = train.position.x;
-      this.spheres[i].position.z = -train.position.y;
+      const theseSpheres = this.spheres[i];
+      theseSpheres[0].position.x = train.position.x;
+      theseSpheres[0].position.z = -train.position.y;
+      train.followingCars.forEach((car, i) => {
+        theseSpheres[i + 1].position.x = car.position.x;
+        theseSpheres[i + 1].position.z = -car.position.y;
+      });
     });
   }
 }

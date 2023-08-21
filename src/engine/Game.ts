@@ -10,7 +10,7 @@ class Game {
   constructor(network: Network) {
     this.network = network;
     network.trains.push(new Train(network.segments[0], 40, { slowdown: true }));
-    // network.trains.push(new Train(network.segments[0], 60, { slowdown: true }));
+    network.trains.push(new Train(network.segments[0], 60, { slowdown: true }));
   }
 }
 
