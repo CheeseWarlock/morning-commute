@@ -22,6 +22,11 @@ class Game {
     network.trains.push(new Train(network.segments[0], 40, { slowdown: true }));
     network.trains.push(new Train(network.segments[0], 60, { slowdown: true }));
     this.selectedTrain = network.trains[0];
+    network.trains.forEach((train) => {
+      this.turnStrategies.set(train, TRAIN_STRATEGIES.RANDOM);
+      train.strategy = () => TRAIN_STRATEGIES.RANDOM;
+    });
+
     const c = new Controller();
     c.on(KEYS.UP, () => {
       this.#selectedTrainIndex =

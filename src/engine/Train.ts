@@ -210,12 +210,12 @@ class Train implements GameObject {
 
       if (strategy === TRAIN_STRATEGIES.TURN_LEFT) {
         selectedTrack = candidatesByTurnDirection[0].segment;
-        console.log("turn left");
-      } else {
+      } else if (strategy === TRAIN_STRATEGIES.TURN_RIGHT) {
         selectedTrack =
           candidatesByTurnDirection[candidatesByTurnDirection.length - 1]
             .segment;
-        console.log("turn right");
+      } else {
+        // stay random
       }
     }
 
