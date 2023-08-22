@@ -47,6 +47,12 @@ class NetworkBuilder {
     this.#lastSegment = segment;
   }
 
+  back() {
+    if (this.#lastSegment) {
+      this.#lastPosition = this.#lastSegment.start;
+    }
+  }
+
   addStationOnLastSegment(distanceAlong: number, alignment: ALIGNMENT) {
     if (!this.#lastSegment) return;
     const station = new Station(this.#lastSegment, distanceAlong, alignment);

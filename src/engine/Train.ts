@@ -1,4 +1,6 @@
 import { distanceEffortToDistance, easyNavigate } from "../utils";
+import CircularTrackSegment from "./CircularTrackSegment";
+import { TRAIN_STRATEGIES } from "./Game";
 import GameObject from "./GameObject";
 import Passenger from "./Passenger";
 import Station from "./Station";
@@ -40,6 +42,7 @@ class Train implements GameObject {
   #slowdown: boolean;
   followingCars: TrainFollowingCar[] = [];
   #previousSegments: { segment: TrackSegment; reversing: boolean }[] = [];
+  strategy: () => TRAIN_STRATEGIES = () => TRAIN_STRATEGIES.TURN_LEFT;
   constructor(
     segment: TrackSegment,
     speed?: number,
@@ -172,11 +175,44 @@ class Train implements GameObject {
   }
 
   #selectNewTrackSegment(excess: number) {
+    const currentConnectionPoint = this.#currentlyReversing
+      ? this.#currentSegment.start
+      : this.#currentSegment.end;
     const candidates = this.#currentlyReversing
       ? this.#currentSegment.atStart
       : this.#currentSegment.atEnd;
-    const selectedTrack =
+
+    let selectedTrack =
       candidates[Math.floor(Math.random() * candidates.length)];
+
+    const strategy = this.strategy();
+    const candidatesByTurnDirection = candidates
+      .map((t) => {
+        const connectsAtStart =
+          t.start.x === currentConnectionPoint.x &&
+          t.start.y === currentConnectionPoint.y;
+
+        if (t instanceof CircularTrackSegment) {
+          const isLeftward = t.counterClockWise === connectsAtStart;
+          return {
+            segment: t as TrackSegment,
+            order: (isLeftward ? -1 : 1) * (1 / t.radius),
+          };
+        }
+
+        return {
+          segment: t,
+          order: 0,
+        };
+      })
+      .sort((a, b) => a.order - b.order);
+
+    if (strategy === TRAIN_STRATEGIES.TURN_LEFT) {
+      selectedTrack = candidatesByTurnDirection[0].segment;
+    } else {
+      selectedTrack =
+        candidatesByTurnDirection[candidatesByTurnDirection.length - 1].segment;
+    }
     const newPos = easyNavigate(
       this.#currentSegment,
       this.#currentDistanceEffort,

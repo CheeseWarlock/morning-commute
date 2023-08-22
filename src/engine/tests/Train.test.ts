@@ -1,3 +1,4 @@
+import { TRAIN_STRATEGIES } from "../Game";
 import LinearTrackSegment from "../LinearTrackSegment";
 import Passenger from "../Passenger";
 import Point from "../Point";
@@ -5,6 +6,7 @@ import Station, { ALIGNMENT } from "../Station";
 import Train from "../Train";
 import SimpleJoin from "../networks/SimpleJoin";
 import SimpleStation from "../networks/SimpleStation";
+import LotsOfSplits from "../networks/TestingNetworks/LotsOfSplits";
 
 describe("train motion", () => {
   const pointA = { x: 0, y: 0 };
@@ -270,5 +272,24 @@ describe("passenger pickup and dropoff", () => {
     expect(train.passengers.length).toBe(0);
     train.update(10000);
     expect(train.passengers.length).toBe(1);
+  });
+});
+
+describe("turn strategies", () => {
+  const network = LotsOfSplits;
+
+  const train = new Train(network.segments[0], 10);
+
+  it("should stay along the track when strategy is specified", () => {
+    train.strategy = () => TRAIN_STRATEGIES.TURN_LEFT;
+    train.update(2500);
+    expect(train.position.x).toBeCloseTo(25);
+
+    train.strategy = () => TRAIN_STRATEGIES.TURN_RIGHT;
+    train.update(1000);
+    expect(train.position.x).toBeCloseTo(35);
+
+    train.update(1000);
+    expect(train.position.y).toBeGreaterThan(10);
   });
 });
