@@ -185,34 +185,40 @@ class Train implements GameObject {
     let selectedTrack =
       candidates[Math.floor(Math.random() * candidates.length)];
 
-    const strategy = this.strategy();
-    const candidatesByTurnDirection = candidates
-      .map((t) => {
-        const connectsAtStart =
-          t.start.x === currentConnectionPoint.x &&
-          t.start.y === currentConnectionPoint.y;
+    if (candidates.length > 1) {
+      const strategy = this.strategy();
+      const candidatesByTurnDirection = candidates
+        .map((t) => {
+          const connectsAtStart =
+            t.start.x === currentConnectionPoint.x &&
+            t.start.y === currentConnectionPoint.y;
 
-        if (t instanceof CircularTrackSegment) {
-          const isLeftward = t.counterClockWise === connectsAtStart;
+          if (t instanceof CircularTrackSegment) {
+            const isLeftward = t.counterClockWise === connectsAtStart;
+            return {
+              segment: t as TrackSegment,
+              order: (isLeftward ? -1 : 1) * (1 / t.radius),
+            };
+          }
+
           return {
-            segment: t as TrackSegment,
-            order: (isLeftward ? -1 : 1) * (1 / t.radius),
+            segment: t,
+            order: 0,
           };
-        }
+        })
+        .sort((a, b) => a.order - b.order);
 
-        return {
-          segment: t,
-          order: 0,
-        };
-      })
-      .sort((a, b) => a.order - b.order);
-
-    if (strategy === TRAIN_STRATEGIES.TURN_LEFT) {
-      selectedTrack = candidatesByTurnDirection[0].segment;
-    } else {
-      selectedTrack =
-        candidatesByTurnDirection[candidatesByTurnDirection.length - 1].segment;
+      if (strategy === TRAIN_STRATEGIES.TURN_LEFT) {
+        selectedTrack = candidatesByTurnDirection[0].segment;
+        console.log("turn left");
+      } else {
+        selectedTrack =
+          candidatesByTurnDirection[candidatesByTurnDirection.length - 1]
+            .segment;
+        console.log("turn right");
+      }
     }
+
     const newPos = easyNavigate(
       this.#currentSegment,
       this.#currentDistanceEffort,

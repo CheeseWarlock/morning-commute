@@ -21,6 +21,7 @@ class CanvasRenderer implements IRenderer {
   _testingOptions = {
     randomizeFramerate: false,
   };
+  #game: Game;
   constructor(
     element: HTMLElement,
     game: Game,
@@ -39,6 +40,7 @@ class CanvasRenderer implements IRenderer {
     this.#canvas = canvas;
     this.#context = canvas.getContext("2d");
     this.#network = game.network;
+    this.#game = game;
 
     const gameBounds = game.network.getBounds();
 
@@ -149,15 +151,27 @@ class CanvasRenderer implements IRenderer {
         this.#context.fill();
       });
 
-      // Now draw passenger counts
-      this.#context.textAlign = "center";
-      this.#context.fillStyle = "rgb(255,255,255)";
-      this.#context.font = "12pt sans-serif";
-      this.#context.fillText(
-        train.passengers.length + "",
-        canvasPosition.x,
-        canvasPosition.y - 10,
-      );
+      if (train === this.#game.selectedTrain) {
+        // Now draw passenger counts
+        this.#context.textAlign = "center";
+        this.#context.fillStyle = "rgb(255,255,255)";
+        this.#context.font = "12pt sans-serif";
+        this.#context.fillText(
+          train.passengers.length + "" + this.#game.turnStrategies.get(train),
+          canvasPosition.x,
+          canvasPosition.y - 10,
+        );
+      } else {
+        // Now draw passenger counts
+        this.#context.textAlign = "center";
+        this.#context.fillStyle = "rgb(255,255,255)";
+        this.#context.font = "12pt sans-serif";
+        this.#context.fillText(
+          train.passengers.length + "",
+          canvasPosition.x,
+          canvasPosition.y - 10,
+        );
+      }
     });
   }
 
