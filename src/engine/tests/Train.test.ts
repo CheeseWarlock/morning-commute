@@ -236,6 +236,24 @@ describe("train following cars", () => {
     expect(train.followingCars[0].position.x).toBeCloseTo(expectedPosition.x);
     expect(train.followingCars[0].position.y).toBeCloseTo(expectedPosition.y);
   });
+
+  it("can position following cars properly even when the train spans 3 segments", () => {
+    const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 20, y: 0 });
+    const segment2 = new LinearTrackSegment({ x: 20, y: 0 }, { x: 30, y: 0 });
+    const segment3 = new LinearTrackSegment({ x: 30, y: 0 }, { x: 40, y: 0 });
+    const segment4 = new LinearTrackSegment({ x: 40, y: 0 }, { x: 50, y: 0 });
+    segment.connect(segment2);
+    segment2.connect(segment3);
+    segment3.connect(segment4);
+
+    const train = new Train(segment, 10);
+    train.update(1000);
+    train.update(3100);
+    expect(train.position.x).toBeCloseTo(41);
+    expect(train.followingCars[0].position.x).toBeCloseTo(36);
+    expect(train.followingCars[1].position.x).toBeCloseTo(31);
+    expect(train.followingCars[2].position.x).toBeCloseTo(26);
+  });
 });
 
 describe("passenger pickup and dropoff", () => {
