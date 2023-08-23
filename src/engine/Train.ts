@@ -248,29 +248,35 @@ class Train implements GameObject {
       this.#moveAlongTrackSegment(deltaT);
     }
     this.followingCars.forEach((car, idx) => {
-      const remainingDistance = 5 * (idx + 1);
+      let remainingDistance =
+        this.#currentSegment.length - this.#currentDistance + 5 * (idx + 1);
+      let targetSegmentIndex = this.#previousSegments.length - 1;
+      let targetSegment = this.#currentSegment;
+      let wasReversing = this.#currentlyReversing;
 
-      if (this.#currentDistance - remainingDistance > 0) {
-        // All good, we're on the right segment
-        car.position = this.#currentSegment.getPositionAlong(
-          this.#currentDistance - remainingDistance,
-          this.#currentlyReversing,
-        ).point;
-      } else {
-        const target =
-          this.#previousSegments[this.#previousSegments.length - 1];
+      let attemptedPosition = targetSegment.getPositionAlong(
+        remainingDistance,
+        !wasReversing,
+      );
+      remainingDistance = attemptedPosition.excess;
+
+      while (remainingDistance > 0) {
+        const target = this.#previousSegments[targetSegmentIndex];
+        targetSegmentIndex -= 1;
         if (!target) {
           car.position = { x: 0, y: 0 };
+          remainingDistance = 0;
         } else {
-          const wasReversing = target.reversing;
-          const targetSegment = target.segment;
-          const pos = targetSegment.getPositionAlong(
-            remainingDistance - this.#currentDistance,
+          wasReversing = target.reversing;
+          targetSegment = target.segment;
+          attemptedPosition = targetSegment.getPositionAlong(
+            remainingDistance,
             !wasReversing,
           );
-          car.position = pos.point;
+          remainingDistance = attemptedPosition.excess;
         }
       }
+      car.position = attemptedPosition.point;
     });
   }
 }
