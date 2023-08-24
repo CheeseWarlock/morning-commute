@@ -293,6 +293,26 @@ describe("passenger pickup and dropoff", () => {
   });
 });
 
+describe("wait time per-passenger", () => {
+  it("waits extra time per passenger processed when specified", () => {
+    const network = SimpleStation;
+
+    const train = new Train(network.segments[0], 10, {
+      waitTime: 2000,
+      waitTimePerPassenger: 1000,
+    });
+    network.stations[0].waitingPassengers.push(
+      new Passenger(network.stations[0], {} as any),
+    );
+
+    // Station is at 50
+    // Get to station, wait, wait for passenger, move again
+    train.update(5000 + 1000 + 2000 + 1000);
+    expect(train.passengers.length).toBe(1);
+    expect(train.position.x).toBeCloseTo(60);
+  });
+});
+
 describe("turn strategies", () => {
   const network = LotsOfSplits;
 

@@ -10,11 +10,13 @@ import TrainFollowingCar from "./TrainFollowingCar";
 export enum TRAIN_STATE {
   MOVING = "moving",
   STOPPED_AT_STATION = "stopped-at-station",
+  HANDLING_PASSENGERS = "handling-passengers",
 }
 
 export type TMovementOptions = {
   slowdown?: boolean;
   waitTime?: number;
+  waitTimePerPassenger?: number;
 };
 
 /**
@@ -39,6 +41,11 @@ class Train implements GameObject {
    * How long this train should wait at a station.
    */
   #waitTime: number;
+  /**
+   * How long to wait after a passenger action.
+   */
+  #waitTimePerPassenger: number = 0;
+  #passengerTimeProcessed: number = 0;
   #slowdown: boolean;
   followingCars: TrainFollowingCar[] = [];
   #previousSegments: { segment: TrackSegment; reversing: boolean }[] = [];
@@ -55,6 +62,7 @@ class Train implements GameObject {
     this.#speed = speed || Math.random() + 0.5;
     this.#waitTime = movementOptions.waitTime || 1000;
     this.#slowdown = movementOptions.slowdown || false;
+    this.#waitTimePerPassenger = movementOptions.waitTimePerPassenger || 0;
     this.followingCars.push(new TrainFollowingCar(this.position));
     this.followingCars.push(new TrainFollowingCar(this.position));
     this.followingCars.push(new TrainFollowingCar(this.position));
@@ -121,14 +129,12 @@ class Train implements GameObject {
         this.#currentDistanceEffort = stationDistanceEffort;
         this.state = TRAIN_STATE.STOPPED_AT_STATION;
         this.#stopTime = this.#waitTime - (deltaT - millisToStation);
-        this.processPassengers();
+
         if (this.#stopTime < 0) {
-          this.state = TRAIN_STATE.MOVING;
           // Cleared it in a single update!
           const excess = -this.#stopTime;
           this.#stopTime = 0;
-          this.state = TRAIN_STATE.MOVING;
-          this.#upcomingStations = [];
+          this.state = TRAIN_STATE.HANDLING_PASSENGERS;
           this.update(excess);
         } else {
           const newPos = this.#currentSegment.getPositionAlong(
@@ -168,10 +174,39 @@ class Train implements GameObject {
     if (this.#stopTime <= 0) {
       const excessTime = -this.#stopTime;
       this.#stopTime = 0;
-      this.state = TRAIN_STATE.MOVING;
-      this.#upcomingStations = [];
+      this.state = TRAIN_STATE.HANDLING_PASSENGERS;
       this.update(excessTime);
     }
+  }
+
+  #handlePassengers(deltaT: number) {
+    const station = this.#upcomingStations[0];
+    this.#passengerTimeProcessed += deltaT;
+
+    while (
+      this.#passengerTimeProcessed > this.#waitTimePerPassenger &&
+      this.state === TRAIN_STATE.HANDLING_PASSENGERS
+    ) {
+      const passengerToDropOff = this.passengers.find(
+        (p) => p.destination === station,
+      );
+      if (passengerToDropOff) {
+        this.passengers.splice(this.passengers.indexOf(passengerToDropOff), 1);
+        this.#passengerTimeProcessed -= this.#waitTimePerPassenger;
+      } else if (
+        station.waitingPassengers.length &&
+        this.passengers.length < this.capacity
+      ) {
+        this.passengers.push(station.waitingPassengers.splice(0, 1)[0]);
+        this.#passengerTimeProcessed -= this.#waitTimePerPassenger;
+      } else {
+        this.state = TRAIN_STATE.MOVING;
+      }
+    }
+    this.state = TRAIN_STATE.MOVING;
+    this.#stopTime = 0;
+    this.#upcomingStations = [];
+    this.update(this.#passengerTimeProcessed);
   }
 
   #selectNewTrackSegment(excess: number) {
@@ -246,6 +281,8 @@ class Train implements GameObject {
       this.#waitAtStation(deltaT);
     } else if (this.state === TRAIN_STATE.MOVING) {
       this.#moveAlongTrackSegment(deltaT);
+    } else if (this.state === TRAIN_STATE.HANDLING_PASSENGERS) {
+      this.#handlePassengers(deltaT);
     }
     this.followingCars.forEach((car, idx) => {
       let remainingDistance =
