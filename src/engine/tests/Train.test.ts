@@ -281,6 +281,7 @@ describe("passenger pickup and dropoff", () => {
   it("does not pick up passengers beyond capacity", () => {
     const train = new Train(network.segments[0], 10, { slowdown: true });
     train.capacity = 1;
+    network.stations[0].waitingPassengers = [];
     network.stations[0].waitingPassengers.push(
       new Passenger(network.stations[0], badStation),
     );
@@ -301,6 +302,7 @@ describe("wait time per-passenger", () => {
       waitTime: 2000,
       waitTimePerPassenger: 1000,
     });
+    network.stations[0].waitingPassengers = [];
     network.stations[0].waitingPassengers.push(
       new Passenger(network.stations[0], {} as any),
     );
@@ -319,6 +321,7 @@ describe("wait time per-passenger", () => {
       waitTime: 2000,
       waitTimePerPassenger: 1000,
     });
+    network.stations[0].waitingPassengers = [];
     network.stations[0].waitingPassengers.push(
       new Passenger(network.stations[0], {} as any),
     );

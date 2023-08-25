@@ -182,14 +182,15 @@ class Train implements GameObject {
   #handlePassengers(deltaT: number) {
     if (this.#isPassengerToHandle()) {
       this.#handleOnePassenger();
+      this.state = TRAIN_STATE.STOPPED_AT_STATION;
+      this.#stopTime = this.#waitTimePerPassenger;
+      this.update(deltaT);
+    } else {
+      this.state = TRAIN_STATE.MOVING;
+      this.#stopTime = 0;
+      this.#upcomingStations = [];
+      this.update(deltaT);
     }
-    if (!this.#isPassengerToHandle) {
-      // no more
-    }
-    this.state = TRAIN_STATE.MOVING;
-    this.#stopTime = 0;
-    this.#upcomingStations = [];
-    this.update(deltaT);
   }
 
   #isPassengerToHandle() {
@@ -200,7 +201,10 @@ class Train implements GameObject {
     const atStation = station.waitingPassengers.length
       ? station.waitingPassengers[0]
       : undefined;
-    return passengerToDropOff || atStation;
+    return (
+      passengerToDropOff ||
+      (atStation && this.passengers.length < this.capacity)
+    );
   }
 
   #handleOnePassenger() {
