@@ -19,7 +19,12 @@ class Game {
 
   constructor(network: Network) {
     this.network = network;
-    network.trains.push(new Train(network.segments[0], 40, { slowdown: true }));
+    network.trains.push(
+      new Train(network.segments[0], 30, {
+        slowdown: true,
+        waitTimePerPassenger: 1000,
+      }),
+    );
     // network.trains.push(new Train(network.segments[0], 60, { slowdown: true }));
     this.selectedTrain = network.trains[0];
     network.trains.forEach((train) => {

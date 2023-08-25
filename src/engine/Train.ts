@@ -180,33 +180,42 @@ class Train implements GameObject {
   }
 
   #handlePassengers(deltaT: number) {
-    const station = this.#upcomingStations[0];
-    this.#passengerTimeProcessed += deltaT;
-
-    while (
-      this.#passengerTimeProcessed > this.#waitTimePerPassenger &&
-      this.state === TRAIN_STATE.HANDLING_PASSENGERS
-    ) {
-      const passengerToDropOff = this.passengers.find(
-        (p) => p.destination === station,
-      );
-      if (passengerToDropOff) {
-        this.passengers.splice(this.passengers.indexOf(passengerToDropOff), 1);
-        this.#passengerTimeProcessed -= this.#waitTimePerPassenger;
-      } else if (
-        station.waitingPassengers.length &&
-        this.passengers.length < this.capacity
-      ) {
-        this.passengers.push(station.waitingPassengers.splice(0, 1)[0]);
-        this.#passengerTimeProcessed -= this.#waitTimePerPassenger;
-      } else {
-        this.state = TRAIN_STATE.MOVING;
-      }
+    if (this.#isPassengerToHandle()) {
+      this.#handleOnePassenger();
+    }
+    if (!this.#isPassengerToHandle) {
+      // no more
     }
     this.state = TRAIN_STATE.MOVING;
     this.#stopTime = 0;
     this.#upcomingStations = [];
-    this.update(this.#passengerTimeProcessed);
+    this.update(deltaT);
+  }
+
+  #isPassengerToHandle() {
+    const station = this.#upcomingStations[0];
+    const passengerToDropOff = this.passengers.find(
+      (p) => p.destination === station,
+    );
+    const atStation = station.waitingPassengers.length
+      ? station.waitingPassengers[0]
+      : undefined;
+    return passengerToDropOff || atStation;
+  }
+
+  #handleOnePassenger() {
+    const station = this.#upcomingStations[0];
+    const passengerToDropOff = this.passengers.find(
+      (p) => p.destination === station,
+    );
+    if (passengerToDropOff) {
+      this.passengers.splice(this.passengers.indexOf(passengerToDropOff), 1);
+    } else if (
+      station.waitingPassengers.length &&
+      this.passengers.length < this.capacity
+    ) {
+      this.passengers.push(station.waitingPassengers.splice(0, 1)[0]);
+    }
   }
 
   #selectNewTrackSegment(excess: number) {

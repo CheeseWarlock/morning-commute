@@ -311,6 +311,27 @@ describe("wait time per-passenger", () => {
     expect(train.passengers.length).toBe(1);
     expect(train.position.x).toBeCloseTo(60);
   });
+
+  it("waits extra time per passenger processed at any update rate", () => {
+    const network = SimpleStation;
+
+    const train = new Train(network.segments[0], 10, {
+      waitTime: 2000,
+      waitTimePerPassenger: 1000,
+    });
+    network.stations[0].waitingPassengers.push(
+      new Passenger(network.stations[0], {} as any),
+    );
+
+    // Station is at 50
+    // Get to station, wait, wait for passenger, move again
+    for (let i = 0; i < 20; i++) {
+      train.update(9000 / 20);
+    }
+
+    expect(train.passengers.length).toBe(1);
+    expect(train.position.x).toBeCloseTo(60);
+  });
 });
 
 describe("turn strategies", () => {
