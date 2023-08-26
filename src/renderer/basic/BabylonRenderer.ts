@@ -6,6 +6,27 @@ import LinearTrackSegment from "../../engine/LinearTrackSegment";
 import CircularTrackSegment from "../../engine/CircularTrackSegment";
 import { ALIGNMENT } from "../../engine/Station";
 
+const PATHS = {
+  GROUND: [
+    new BABYLON.Vector3(9, -1, 0),
+    new BABYLON.Vector3(-9, -1, 0),
+    new BABYLON.Vector3(-6, 0, 0),
+    new BABYLON.Vector3(6, 0, 0),
+  ],
+  LEFT_TRACK: [
+    new BABYLON.Vector3(2.75, 0, 0),
+    new BABYLON.Vector3(4, 0, 0),
+    new BABYLON.Vector3(4, 1, 0),
+    new BABYLON.Vector3(2.75, 1, 0),
+  ],
+  RIGHT_TRACK: [
+    new BABYLON.Vector3(-2.75, 0, 0),
+    new BABYLON.Vector3(-4, 0, 0),
+    new BABYLON.Vector3(-4, 1, 0),
+    new BABYLON.Vector3(-2.75, 1, 0),
+  ],
+};
+
 class BabylonRenderer implements IRenderer {
   spheres: BABYLON.Mesh[][] = [];
   game: Game;
@@ -36,9 +57,14 @@ class BabylonRenderer implements IRenderer {
     //   new BABYLON.Vector3(0, 1, 0),
     //   scene,
     // );
-    const light = new BABYLON.DirectionalLight(
-      "light2",
-      new BABYLON.Vector3(1, -20, 2),
+    // const light = new BABYLON.DirectionalLight(
+    //   "light2",
+    //   new BABYLON.Vector3(1, -20, 2),
+    //   scene,
+    // );
+    const light2 = new BABYLON.HemisphericLight(
+      "HemiLight",
+      new BABYLON.Vector3(0, 1, 0),
       scene,
     );
     const trainMaterial = new BABYLON.StandardMaterial("trainMaterial");
@@ -76,6 +102,13 @@ class BabylonRenderer implements IRenderer {
       this.spheres.push(theseSpheres);
       sphere.position.y = 2;
     });
+
+    const whiteMaterial = new BABYLON.StandardMaterial("");
+    whiteMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+    whiteMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+    // whiteMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+    whiteMaterial.ambientColor = new BABYLON.Color3(1, 1, 1);
+    this.materials.set("white", whiteMaterial);
 
     const stationMaterial = new BABYLON.StandardMaterial("");
 
@@ -177,6 +210,19 @@ class BabylonRenderer implements IRenderer {
     window.addEventListener("resize", function () {
       engine.resize();
     });
+
+    const trackGroundMaterial = new BABYLON.StandardMaterial("");
+    trackGroundMaterial.diffuseColor = new BABYLON.Color3(0.55, 0.52, 0.5);
+    trackGroundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+    trackGroundMaterial.ambientColor = new BABYLON.Color3(1, 1, 1);
+    this.materials.set("trackGround", trackGroundMaterial);
+
+    const trackMaterial = new BABYLON.StandardMaterial("");
+    trackMaterial.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.7);
+    trackMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+    trackMaterial.ambientColor = new BABYLON.Color3(1, 1, 1);
+    this.materials.set("track", trackMaterial);
+
     this.game.network.segments.forEach((segment) => {
       this.#convertTrackSegmentToGeometry(segment);
     });
@@ -185,30 +231,13 @@ class BabylonRenderer implements IRenderer {
   #setupScene() {}
 
   #convertTrackSegmentToGeometry(segment: TrackSegment) {
-    const myShape = [
-      new BABYLON.Vector3(0, 0, 0),
-      new BABYLON.Vector3(2, 0, 0),
-      new BABYLON.Vector3(2, 1, 0),
-      new BABYLON.Vector3(4, 1, 0),
-      new BABYLON.Vector3(4, 0, 0),
-      new BABYLON.Vector3(6, 0, 0),
-      new BABYLON.Vector3(6, -1, 0),
-
-      new BABYLON.Vector3(-6, -1, 0),
-
-      new BABYLON.Vector3(-6, 0, 0),
-      new BABYLON.Vector3(-4, 0, 0),
-      new BABYLON.Vector3(-4, 1, 0),
-      new BABYLON.Vector3(-2, 1, 0),
-      new BABYLON.Vector3(-2, 0, 0),
-    ];
     let myPath: BABYLON.Vector3[] = [];
-    myShape.push(myShape[0]); //close profile
     if (segment instanceof LinearTrackSegment) {
-      myPath = [
-        new BABYLON.Vector3(segment.start.x, 0, -segment.start.y),
-        new BABYLON.Vector3(segment.end.x, 0, -segment.end.y),
-      ];
+      const segmentCount = Math.floor(segment.length / 3);
+      for (let i = 0; i <= segmentCount; i++) {
+        const p = segment.getPositionAlong((segment.length * i) / segmentCount);
+        myPath.push(new BABYLON.Vector3(p.point.x, 0, -p.point.y));
+      }
     } else if (segment instanceof CircularTrackSegment) {
       const start = segment.getPositionAlong(0);
       const startAngle = segment.initialAngle;
@@ -235,30 +264,75 @@ class BabylonRenderer implements IRenderer {
       );
     }
 
-    const extrusion = BABYLON.MeshBuilder.ExtrudeShape(
+    const flatExtrustion = BABYLON.MeshBuilder.ExtrudeShape(
       "squareb",
       {
-        shape: myShape,
-        path: myPath,
+        shape: PATHS.GROUND,
+        path: myPath.map((p, idx) => {
+          if (idx < 2 || idx > myPath.length - 4) {
+            return p;
+          }
+          return new BABYLON.Vector3(
+            p.x + Math.random() - 0.5,
+            0,
+            p.z + Math.random() - 0.5,
+          );
+        }),
         sideOrientation: BABYLON.Mesh.DOUBLESIDE,
         scale: 0.3,
+        closePath: false,
+        closeShape: true,
       },
       this.#scene,
     );
-    var myMaterial = new BABYLON.StandardMaterial("");
+    flatExtrustion.convertToFlatShadedMesh();
+    flatExtrustion.material = this.materials.get("trackGround")!;
 
-    extrusion.convertToFlatShadedMesh();
-    myMaterial.diffuseColor = new BABYLON.Color3(0.65, 0.65, 0.65);
-    myMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
-    // myMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
-    myMaterial.ambientColor = new BABYLON.Color3(0.87, 0.87, 0.87);
+    const lExtru = BABYLON.MeshBuilder.ExtrudeShape(
+      "squareb",
+      {
+        shape: PATHS.LEFT_TRACK,
+        path: myPath,
+        sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+        scale: 0.3,
+        closePath: false,
+        closeShape: true,
+      },
+      this.#scene,
+    );
+    lExtru.convertToFlatShadedMesh();
+    lExtru.material = this.materials.get("track")!;
 
-    extrusion.material = myMaterial;
+    const rExtru = BABYLON.MeshBuilder.ExtrudeShape(
+      "squareb",
+      {
+        shape: PATHS.RIGHT_TRACK,
+        path: myPath,
+        sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+        scale: 0.3,
+        closePath: false,
+        closeShape: true,
+      },
+      this.#scene,
+    );
+    rExtru.convertToFlatShadedMesh();
+    rExtru.material = this.materials.get("track")!;
   }
 
   update() {
     this.game.network.trains.forEach((train, i) => {
       const theseSpheres = this.spheres[i];
+      if (train === this.game.selectedTrain) {
+        theseSpheres.forEach((s) => {
+          s.renderOutline = true;
+          s.outlineWidth = 2;
+          s.outlineColor = new BABYLON.Color3(1, 1, 1);
+        });
+      } else {
+        theseSpheres.forEach((s) => {
+          s.renderOutline = false;
+        });
+      }
       theseSpheres[0].position.x = train.position.x;
       theseSpheres[0].position.z = -train.position.y;
       train.followingCars.forEach((car, i) => {
