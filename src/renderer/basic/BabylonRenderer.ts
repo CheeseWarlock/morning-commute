@@ -334,9 +334,6 @@ class BabylonRenderer implements IRenderer {
   }
 
   update() {
-    console.log(
-      ((this.camera as BABYLON.ArcRotateCamera).alpha * 180) / Math.PI,
-    );
     this.game.network.trains.forEach((train, i) => {
       const theseSpheres = this.spheres[i];
       if (train === this.game.selectedTrain) {
@@ -359,8 +356,12 @@ class BabylonRenderer implements IRenderer {
         const direction = this.game.turnStrategies.get(this.game.selectedTrain);
         if (direction === TRAIN_STRATEGIES.TURN_LEFT) {
           this.turnArrowSprite!.angle = 1;
+          this.turnArrowSprite!.isVisible = true;
         } else if (direction === TRAIN_STRATEGIES.TURN_RIGHT) {
           this.turnArrowSprite!.angle = -1;
+          this.turnArrowSprite!.isVisible = true;
+        } else {
+          this.turnArrowSprite!.isVisible = false;
         }
         this.turnArrowSprite!.angle -= (
           this.camera as BABYLON.ArcRotateCamera

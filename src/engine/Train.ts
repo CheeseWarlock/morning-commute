@@ -49,6 +49,10 @@ class Train implements GameObject {
   #slowdown: boolean;
   followingCars: TrainFollowingCar[] = [];
   #previousSegments: { segment: TrackSegment; reversing: boolean }[] = [];
+  /**
+   * The amount of time left to process in the current update cycle.
+   */
+  #timeLeftToProcess: number = 0;
   strategy: () => TRAIN_STRATEGIES = () => TRAIN_STRATEGIES.TURN_LEFT;
   constructor(
     segment: TrackSegment,
@@ -91,7 +95,7 @@ class Train implements GameObject {
     }
   }
 
-  #moveAlongTrackSegment(deltaT: number) {
+  #moveAlongTrackSegment() {
     /**
      * Turn distance-effort into distance.
      */
@@ -111,7 +115,7 @@ class Train implements GameObject {
       }
     };
 
-    const distanceEffortToMove = (this.#speed * deltaT) / 1000;
+    const distanceEffortToMove = (this.#speed * this.#timeLeftToProcess) / 1000;
     this.#currentDistanceEffort += distanceEffortToMove;
 
     let physicalDistance = distanceEffortFunction(this.#currentDistanceEffort);
@@ -135,14 +139,15 @@ class Train implements GameObject {
         const millisToStation = (1000 * distanceEffortToStation) / this.#speed;
         this.#currentDistanceEffort = stationDistanceEffort;
         this.state = TRAIN_STATE.STOPPED_AT_STATION;
-        this.#stopTime = this.#waitTime - (deltaT - millisToStation);
+        this.#stopTime =
+          this.#waitTime - (this.#timeLeftToProcess - millisToStation);
 
         if (this.#stopTime < 0) {
           // Cleared it in a single update!
           const excess = -this.#stopTime;
           this.#stopTime = 0;
           this.state = TRAIN_STATE.HANDLING_PASSENGERS;
-          this.update(excess);
+          this.#timeLeftToProcess = excess;
         } else {
           const newPos = this.#currentSegment.getPositionAlong(
             stationDistance,
@@ -151,6 +156,7 @@ class Train implements GameObject {
           this.#currentDistance = stationDistance;
           this.position.x = newPos.point.x;
           this.position.y = newPos.point.y;
+          this.#timeLeftToProcess = 0;
         }
       } else {
         const newPos = this.#currentSegment.getPositionAlong(
@@ -160,6 +166,7 @@ class Train implements GameObject {
         this.#currentDistance = physicalDistance;
         this.position.x = newPos.point.x;
         this.position.y = newPos.point.y;
+        this.#timeLeftToProcess = 0;
       }
     } else {
       const newPos = this.#currentSegment.getPositionAlong(
@@ -170,33 +177,34 @@ class Train implements GameObject {
       this.position.x = newPos.point.x;
       this.position.y = newPos.point.y;
       const excess = newPos.excess;
+      this.#timeLeftToProcess = excess;
       if (excess > 0) {
         this.#selectNewTrackSegment(excess);
       }
     }
   }
 
-  #waitAtStation(deltaT: number) {
-    this.#stopTime -= deltaT;
+  #waitAtStation() {
+    this.#stopTime -= this.#timeLeftToProcess;
     if (this.#stopTime <= 0) {
       const excessTime = -this.#stopTime;
       this.#stopTime = 0;
       this.state = TRAIN_STATE.HANDLING_PASSENGERS;
-      this.update(excessTime);
+      this.#timeLeftToProcess = excessTime;
+    } else {
+      this.#timeLeftToProcess = 0;
     }
   }
 
-  #handlePassengers(deltaT: number) {
+  #handlePassengers() {
     if (this.#isPassengerToHandle()) {
       this.#handleOnePassenger();
       this.state = TRAIN_STATE.STOPPED_AT_STATION;
       this.#stopTime = this.#waitTimePerPassenger;
-      this.update(deltaT);
     } else {
       this.state = TRAIN_STATE.MOVING;
       this.#stopTime = 0;
       this.#upcomingStations = [];
-      this.update(deltaT);
     }
   }
 
@@ -290,20 +298,36 @@ class Train implements GameObject {
     this.#currentSegment = selectedTrack;
     this.#upcomingStations = selectedTrack.stations.slice();
     this.#currentlyReversing = newPos.reversing;
-    this.update(millisToProcess);
+    this.#timeLeftToProcess = millisToProcess;
   }
 
   /**
    * Update position and status
    */
   update(deltaT: number) {
-    if (this.state === TRAIN_STATE.STOPPED_AT_STATION) {
-      this.#waitAtStation(deltaT);
-    } else if (this.state === TRAIN_STATE.MOVING) {
-      this.#moveAlongTrackSegment(deltaT);
-    } else if (this.state === TRAIN_STATE.HANDLING_PASSENGERS) {
-      this.#handlePassengers(deltaT);
+    this.#timeLeftToProcess = deltaT;
+    let safetyValve = 100;
+
+    while (this.#timeLeftToProcess > 0 && safetyValve > 0) {
+      safetyValve -= 1;
+      if (this.state === TRAIN_STATE.STOPPED_AT_STATION) {
+        this.#waitAtStation();
+      } else if (this.state === TRAIN_STATE.MOVING) {
+        this.#moveAlongTrackSegment();
+      } else if (this.state === TRAIN_STATE.HANDLING_PASSENGERS) {
+        this.#handlePassengers();
+      }
     }
+    if (safetyValve === 0) {
+      console.log(
+        "Bad things have happened - this should only appear in very long updates",
+      );
+    }
+    this.position = this.#currentSegment.getPositionAlong(
+      this.#currentDistance,
+      this.#currentlyReversing,
+    ).point;
+
     this.followingCars.forEach((car, idx) => {
       let remainingDistance =
         this.#currentSegment.length - this.#currentDistance + 5 * (idx + 1);
