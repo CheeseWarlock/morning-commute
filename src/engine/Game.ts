@@ -15,7 +15,7 @@ class Game {
   network: Network;
   selectedTrain: Train;
   #selectedTrainIndex: number = 0;
-  turnStrategies: Map<Train, any> = new Map();
+  turnStrategies: Map<Train, TRAIN_STRATEGIES> = new Map();
 
   constructor(network: Network) {
     this.network = network;

@@ -1,10 +1,11 @@
 import * as BABYLON from "babylonjs";
 import IRenderer from "./IRenderer";
-import Game from "../../engine/Game";
+import Game, { TRAIN_STRATEGIES } from "../../engine/Game";
 import TrackSegment from "../../engine/TrackSegment";
 import LinearTrackSegment from "../../engine/LinearTrackSegment";
 import CircularTrackSegment from "../../engine/CircularTrackSegment";
 import { ALIGNMENT } from "../../engine/Station";
+import arrowImage from "../images/arrow.png";
 
 const PATHS = {
   GROUND: [
@@ -32,6 +33,8 @@ class BabylonRenderer implements IRenderer {
   game: Game;
   #scene: BABYLON.Scene;
   materials: Map<string, BABYLON.Material> = new Map();
+  arrowSpriteManager: BABYLON.SpriteManager;
+  turnArrowSprite?: BABYLON.Sprite;
 
   constructor(element: HTMLElement, game: Game) {
     this.game = game;
@@ -176,7 +179,7 @@ class BabylonRenderer implements IRenderer {
       false,
     );
     const groundMaterial = new BABYLON.StandardMaterial("");
-    groundMaterial.diffuseColor = new BABYLON.Color3(0.4, 0.6, 0.3);
+    groundMaterial.diffuseColor = new BABYLON.Color3(0.41, 0.61, 0.32);
     groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     groundMaterial.ambientColor = new BABYLON.Color3(0.77, 0.77, 0.77);
     ground.material = groundMaterial;
@@ -226,6 +229,15 @@ class BabylonRenderer implements IRenderer {
     this.game.network.segments.forEach((segment) => {
       this.#convertTrackSegmentToGeometry(segment);
     });
+
+    this.arrowSpriteManager = new BABYLON.SpriteManager(
+      "treesManager",
+      arrowImage,
+      2000,
+      { width: 64, height: 64 },
+      scene,
+    );
+    this.arrowSpriteManager.renderingGroupId = 1;
   }
 
   #setupScene() {}
@@ -323,9 +335,32 @@ class BabylonRenderer implements IRenderer {
     this.game.network.trains.forEach((train, i) => {
       const theseSpheres = this.spheres[i];
       if (train === this.game.selectedTrain) {
+        if (!this.turnArrowSprite) {
+          const tree = new BABYLON.Sprite("tree", this.arrowSpriteManager);
+          tree.position = new BABYLON.Vector3(
+            train.position.x,
+            2,
+            -train.position.y,
+          );
+          tree.width = 10;
+          tree.height = 10;
+          this.turnArrowSprite = tree;
+        }
+        this.turnArrowSprite!.position = new BABYLON.Vector3(
+          train.position.x,
+          2,
+          -train.position.y,
+        );
+        const direction = this.game.turnStrategies.get(this.game.selectedTrain);
+        if (direction === TRAIN_STRATEGIES.TURN_LEFT) {
+          this.turnArrowSprite!.angle = 1;
+        } else if (direction === TRAIN_STRATEGIES.TURN_RIGHT) {
+          this.turnArrowSprite!.angle = -1;
+        }
+
         theseSpheres.forEach((s) => {
           s.renderOutline = true;
-          s.outlineWidth = 2;
+          s.outlineWidth = 1;
           s.outlineColor = new BABYLON.Color3(1, 1, 1);
         });
       } else {
