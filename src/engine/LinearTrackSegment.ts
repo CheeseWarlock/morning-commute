@@ -89,7 +89,7 @@ class LinearTrackSegment extends TrackSegment {
   }
 
   getAngleAlong(_distance: number, _reverse: boolean = false) {
-    return this.initialAngle;
+    return this.initialAngle + (_reverse ? Math.PI : 0);
   }
 }
 

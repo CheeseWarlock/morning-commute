@@ -101,4 +101,10 @@ describe("angleAlong", () => {
     angleAlong = segmentC.getAngleAlong(1);
     expect(angleAlong).toBeCloseTo((-3 / 4) * Math.PI, 4);
   });
+
+  it("returns the inverted angle when reversing", () => {
+    const segmentA = new LinearTrackSegment(pointA, pointB);
+    let angleAlong = segmentA.getAngleAlong(5, true);
+    expect(angleAlong).toBeCloseTo(Math.PI, 4);
+  });
 });

@@ -68,6 +68,13 @@ class Train implements GameObject {
     this.followingCars.push(new TrainFollowingCar(this.position));
   }
 
+  get heading() {
+    return this.#currentSegment.getAngleAlong(
+      this.#currentDistance,
+      this.#currentlyReversing,
+    );
+  }
+
   processPassengers() {
     // TODO: don't rely on this as the source of truth
     const station = this.#upcomingStations[0];

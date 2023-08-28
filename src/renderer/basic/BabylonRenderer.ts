@@ -35,6 +35,7 @@ class BabylonRenderer implements IRenderer {
   materials: Map<string, BABYLON.Material> = new Map();
   arrowSpriteManager: BABYLON.SpriteManager;
   turnArrowSprite?: BABYLON.Sprite;
+  camera: BABYLON.Camera;
 
   constructor(element: HTMLElement, game: Game) {
     this.game = game;
@@ -206,6 +207,7 @@ class BabylonRenderer implements IRenderer {
     // );
     // camera.position = ;
     // camera.upVector = new BABYLON.Vector3(0, -1, 0);
+    this.camera = camera;
 
     engine.runRenderLoop(function () {
       scene.render();
@@ -332,6 +334,9 @@ class BabylonRenderer implements IRenderer {
   }
 
   update() {
+    console.log(
+      ((this.camera as BABYLON.ArcRotateCamera).alpha * 180) / Math.PI,
+    );
     this.game.network.trains.forEach((train, i) => {
       const theseSpheres = this.spheres[i];
       if (train === this.game.selectedTrain) {
@@ -357,6 +362,11 @@ class BabylonRenderer implements IRenderer {
         } else if (direction === TRAIN_STRATEGIES.TURN_RIGHT) {
           this.turnArrowSprite!.angle = -1;
         }
+        this.turnArrowSprite!.angle -= (
+          this.camera as BABYLON.ArcRotateCamera
+        ).alpha;
+        this.turnArrowSprite!.angle -= train.heading;
+        this.turnArrowSprite!.angle += Math.PI;
 
         theseSpheres.forEach((s) => {
           s.renderOutline = true;
