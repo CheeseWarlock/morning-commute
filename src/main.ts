@@ -3,7 +3,7 @@ import Map from "./renderer/basic/CanvasRenderer.ts";
 import network from "./engine/networks/Complex.ts";
 import Game from "./engine/Game.ts";
 import RendererCoordinator from "./renderer/RendererCoordinator.ts";
-import BabylonRenderer from "./renderer/basic/BabylonRenderer.ts";
+import BabylonRenderer from "./renderer/basic/babylon/BabylonRenderer.ts";
 
 // document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 //   <div>

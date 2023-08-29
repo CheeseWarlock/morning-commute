@@ -28,6 +28,13 @@ class Station {
     this.distanceAlong = distanceAlong;
     this.alignment = alignment;
   }
+
+  get position() {
+    const positionAlong = this.trackSegment.getPositionAlong(
+      this.distanceAlong,
+    );
+    return { x: positionAlong.point.x, y: positionAlong.point.y };
+  }
 }
 
 export default Station;

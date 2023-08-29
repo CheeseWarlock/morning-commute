@@ -53,6 +53,10 @@ class Train implements GameObject {
    * The amount of time left to process in the current update cycle.
    */
   #timeLeftToProcess: number = 0;
+  /**
+   * The segments this train moved across during the last update.
+   */
+  collisionSegments: { segment: TrackSegment; from: number; to: number }[] = [];
   strategy: () => TRAIN_STRATEGIES = () => TRAIN_STRATEGIES.TURN_LEFT;
   constructor(
     segment: TrackSegment,
@@ -305,6 +309,7 @@ class Train implements GameObject {
    * Update position and status
    */
   update(deltaT: number) {
+    this.collisionSegments = [];
     this.#timeLeftToProcess = deltaT;
     let safetyValve = 100;
 

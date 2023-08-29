@@ -1,11 +1,12 @@
 import * as BABYLON from "babylonjs";
-import IRenderer from "./IRenderer";
-import Game, { TRAIN_STRATEGIES } from "../../engine/Game";
-import TrackSegment from "../../engine/TrackSegment";
-import LinearTrackSegment from "../../engine/LinearTrackSegment";
-import CircularTrackSegment from "../../engine/CircularTrackSegment";
-import { ALIGNMENT } from "../../engine/Station";
-import arrowImage from "../images/arrow.png";
+import IRenderer from "../IRenderer";
+import Game, { TRAIN_STRATEGIES } from "../../../engine/Game";
+import TrackSegment from "../../../engine/TrackSegment";
+import LinearTrackSegment from "../../../engine/LinearTrackSegment";
+import CircularTrackSegment from "../../../engine/CircularTrackSegment";
+import { ALIGNMENT } from "../../../engine/Station";
+import arrowImage from "../../images/arrow.png";
+import numberImage from "../../images/numbers.png";
 
 const PATHS = {
   GROUND: [
@@ -34,7 +35,9 @@ class BabylonRenderer implements IRenderer {
   #scene: BABYLON.Scene;
   materials: Map<string, BABYLON.Material> = new Map();
   arrowSpriteManager: BABYLON.SpriteManager;
+  numberSpriteManager: BABYLON.SpriteManager;
   turnArrowSprite?: BABYLON.Sprite;
+  stationNumberSprites: BABYLON.Sprite[][] = [];
   camera: BABYLON.Camera;
 
   constructor(element: HTMLElement, game: Game) {
@@ -240,6 +243,36 @@ class BabylonRenderer implements IRenderer {
       scene,
     );
     this.arrowSpriteManager.renderingGroupId = 1;
+    this.numberSpriteManager = new BABYLON.SpriteManager(
+      "arrowManager",
+      numberImage,
+      10,
+      { width: 32, height: 64 },
+      scene,
+    );
+    this.numberSpriteManager.renderingGroupId = 1;
+    this.game.network.stations.forEach((station, i) => {
+      const sprites: BABYLON.Sprite[] = [];
+      const a = new BABYLON.Sprite("", this.numberSpriteManager);
+      const b = new BABYLON.Sprite("", this.numberSpriteManager);
+      sprites.push(a);
+      sprites.push(b);
+      this.stationNumberSprites.push(sprites);
+      a.position = new BABYLON.Vector3(
+        station.position.x,
+        2,
+        -station.position.y,
+      );
+      a.height = 10;
+      a.width = 5;
+      b.position = new BABYLON.Vector3(
+        station.position.x - 4,
+        2,
+        -station.position.y,
+      );
+      b.height = 10;
+      b.width = 5;
+    });
   }
 
   #setupScene() {}
@@ -334,6 +367,24 @@ class BabylonRenderer implements IRenderer {
   }
 
   update() {
+    this.game.network.stations.forEach((station, i) => {
+      this.stationNumberSprites[i][0].cellIndex =
+        (station.waitingPassengers.length + 9) % 10;
+      this.stationNumberSprites[i][1].cellIndex =
+        (Math.floor(station.waitingPassengers.length / 10) + 9) % 10;
+
+      this.stationNumberSprites[i][0].position = new BABYLON.Vector3(
+        station.position.x - 4,
+        2,
+        -station.position.y,
+      );
+      const aa = (this.camera as BABYLON.ArcRotateCamera).alpha;
+      this.stationNumberSprites[i][1].position = new BABYLON.Vector3(
+        station.position.x - 4 + Math.sin(aa) * 5,
+        2,
+        -station.position.y - Math.cos(aa) * 5,
+      );
+    });
     this.game.network.trains.forEach((train, i) => {
       const theseSpheres = this.spheres[i];
       if (train === this.game.selectedTrain) {
