@@ -32,8 +32,14 @@ class Station {
   get position() {
     const positionAlong = this.trackSegment.getPositionAlong(
       this.distanceAlong,
-    );
-    return { x: positionAlong.point.x, y: positionAlong.point.y };
+    ).point;
+    let angleFromForward = this.trackSegment.getAngleAlong(this.distanceAlong);
+    angleFromForward +=
+      this.alignment === ALIGNMENT.LEFT ? -Math.PI / 2 : Math.PI / 2;
+
+    positionAlong.x += Math.cos(angleFromForward) * 5;
+    positionAlong.y += Math.sin(angleFromForward) * 5;
+    return { x: positionAlong.x, y: positionAlong.y };
   }
 }
 

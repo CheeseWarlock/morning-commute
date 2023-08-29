@@ -183,7 +183,7 @@ class BabylonRenderer implements IRenderer {
       false,
     );
     const groundMaterial = new BABYLON.StandardMaterial("");
-    groundMaterial.diffuseColor = new BABYLON.Color3(0.41, 0.61, 0.32);
+    groundMaterial.diffuseColor = new BABYLON.Color3(0.41, 0.65, 0.29);
     groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     groundMaterial.ambientColor = new BABYLON.Color3(0.77, 0.77, 0.77);
     ground.material = groundMaterial;
@@ -220,13 +220,13 @@ class BabylonRenderer implements IRenderer {
     });
 
     const trackGroundMaterial = new BABYLON.StandardMaterial("");
-    trackGroundMaterial.diffuseColor = new BABYLON.Color3(0.55, 0.52, 0.5);
+    trackGroundMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.46, 0.44);
     trackGroundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     trackGroundMaterial.ambientColor = new BABYLON.Color3(1, 1, 1);
     this.materials.set("trackGround", trackGroundMaterial);
 
     const trackMaterial = new BABYLON.StandardMaterial("");
-    trackMaterial.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.7);
+    trackMaterial.diffuseColor = new BABYLON.Color3(0.73, 0.73, 0.73);
     trackMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     trackMaterial.ambientColor = new BABYLON.Color3(1, 1, 1);
     this.materials.set("track", trackMaterial);
@@ -374,13 +374,13 @@ class BabylonRenderer implements IRenderer {
         (Math.floor(station.waitingPassengers.length / 10) + 9) % 10;
 
       this.stationNumberSprites[i][0].position = new BABYLON.Vector3(
-        station.position.x - 4,
+        station.position.x,
         2,
         -station.position.y,
       );
       const aa = (this.camera as BABYLON.ArcRotateCamera).alpha;
       this.stationNumberSprites[i][1].position = new BABYLON.Vector3(
-        station.position.x - 4 + Math.sin(aa) * 5,
+        station.position.x + Math.sin(aa) * 5,
         2,
         -station.position.y - Math.cos(aa) * 5,
       );
