@@ -60,7 +60,6 @@ class Network implements GameObject {
   update(deltaT: number) {
     this.generatePassengers();
     this.trains.forEach((t) => t.update(deltaT));
-    this.detectCollisions();
   }
 
   /**

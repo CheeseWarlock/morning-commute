@@ -15,7 +15,7 @@ class RendererCoordinator {
   }
 
   update(deltaT: number) {
-    this.game.network.update(deltaT);
+    this.game.update(deltaT);
     this.renderers.forEach((renderer) => {
       renderer.update();
     });

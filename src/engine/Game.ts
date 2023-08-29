@@ -68,6 +68,28 @@ class Game {
         TRAIN_STRATEGIES.TURN_RIGHT;
     });
   }
+
+  update(deltaT: number) {
+    this.network.update(deltaT);
+    this.#detectCollisions();
+  }
+
+  #detectCollisions() {
+    this.network.trains.forEach((t1) => {
+      this.network.trains.forEach((t2) => {
+        if (t1 !== t2) {
+          const d = Math.sqrt(
+            (t1.position.x - t2.position.x) ** 2 +
+              (t1.position.y - t2.position.y) ** 2,
+          );
+          if (d < 10) {
+            t1.passengers = [];
+            t2.passengers = [];
+          }
+        }
+      });
+    });
+  }
 }
 
 export default Game;

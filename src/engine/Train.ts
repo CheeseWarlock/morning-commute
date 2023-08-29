@@ -57,6 +57,11 @@ class Train implements GameObject {
    * The segments this train moved across during the last update.
    */
   collisionSegments: { segment: TrackSegment; from: number; to: number }[] = [];
+  /**
+   * The segments this Train (and its following cars) occupied during the last update.
+   */
+  lastUpdateCollisionSegments: Map<TrackSegment, { from: number; to: number }> =
+    new Map();
   strategy: () => TRAIN_STRATEGIES = () => TRAIN_STRATEGIES.TURN_LEFT;
   constructor(
     segment: TrackSegment,
