@@ -1,4 +1,4 @@
-import Controller, { KEYS } from "./Controller";
+import Controller, { IController, KEYS } from "./Controller";
 import Network from "./Network";
 import Train from "./Train";
 
@@ -15,9 +15,11 @@ class Game {
   network: Network;
   selectedTrain: Train;
   #selectedTrainIndex: number = 0;
+  #controller: IController;
   turnStrategies: Map<Train, TRAIN_STRATEGIES> = new Map();
 
-  constructor(network: Network) {
+  constructor(network: Network, controller: IController) {
+    this.#controller = controller;
     this.network = network;
     network.trains.push(
       new Train(network.segments[0], 30, {
@@ -40,7 +42,7 @@ class Game {
       train.strategy = () => TRAIN_STRATEGIES.RANDOM;
     });
 
-    const c = new Controller();
+    const c = this.#controller;
     c.on(KEYS.UP, () => {
       this.#selectedTrainIndex =
         (this.#selectedTrainIndex + 1) % this.network.trains.length;

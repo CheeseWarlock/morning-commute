@@ -5,10 +5,15 @@ export enum KEYS {
   RIGHT = "d",
 }
 
+export interface IController {
+  subscribers: Map<KEYS, (() => void)[]>;
+  on(key: KEYS, func: () => void): void;
+}
+
 /**
  * Controller as in how one controls the game.
  */
-class Controller {
+class Controller implements IController {
   subscribers: Map<KEYS, (() => void)[]> = new Map();
   constructor() {
     Object.values(KEYS).forEach((val) => {
@@ -32,6 +37,11 @@ class Controller {
     if (!this.subscribers.get(key)) this.subscribers.set(key, []);
     this.subscribers.get(key)?.push(func);
   }
+}
+
+export class FakeController implements IController {
+  subscribers: Map<KEYS, (() => void)[]> = new Map();
+  on(key: KEYS, func: () => void) {}
 }
 
 export default Controller;

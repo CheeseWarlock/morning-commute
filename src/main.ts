@@ -4,6 +4,7 @@ import network from "./engine/networks/Complex.ts";
 import Game from "./engine/Game.ts";
 import RendererCoordinator from "./renderer/RendererCoordinator.ts";
 import BabylonRenderer from "./renderer/basic/babylon/BabylonRenderer.ts";
+import Controller from "./engine/Controller.ts";
 
 // document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 //   <div>
@@ -29,7 +30,8 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   </div>
 `;
 network.autoConnect();
-const game = new Game(network);
+const controller = new Controller();
+const game = new Game(network, controller);
 const map = new Map(
   document.querySelector("#map-holder")!,
   game,
