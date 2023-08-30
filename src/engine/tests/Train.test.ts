@@ -7,7 +7,9 @@ import Station, { ALIGNMENT } from "../Station";
 import Train from "../Train";
 import SimpleJoin from "../networks/SimpleJoin";
 import SimpleStation, { build } from "../networks/SimpleStation";
+import { build as buildComplex } from "../networks/Complex";
 import LotsOfSplits from "../networks/TestingNetworks/LotsOfSplits";
+import CircularTrackSegment from "../CircularTrackSegment";
 
 describe("train motion", () => {
   const pointA = { x: 0, y: 0 };
@@ -458,5 +460,46 @@ describe("nextJunction", () => {
     expect(trainA.nextJunction.indexOf(network.segments[2])).toBeGreaterThan(
       -1,
     );
+  });
+
+  it("finds the next junction when reversing", () => {
+    const segment = new LinearTrackSegment({ x: 40, y: 20 }, { x: 0, y: 20 });
+    const segment2 = new CircularTrackSegment(
+      { x: 60, y: 0 },
+      { x: 40, y: 20 },
+      { x: 40, y: 0 },
+    );
+    const segment3 = new LinearTrackSegment({ x: 60, y: 20 }, { x: 40, y: 20 });
+    segment2.connect(segment);
+    segment3.connect(segment);
+
+    const train = new Train(segment, 10, {}, true);
+    expect(train.nextJunction.length).toBe(2);
+  });
+
+  it("skips a potential junction when it's going the wrong way", () => {
+    const segment = new LinearTrackSegment({ x: 0, y: 20 }, { x: 20, y: 20 });
+    const segment2 = new CircularTrackSegment(
+      { x: 0, y: 0 },
+      { x: 20, y: 20 },
+      { x: 20, y: 0 },
+      true,
+    );
+    const segment3 = new LinearTrackSegment({ x: 20, y: 20 }, { x: 40, y: 20 });
+    const segment4 = new CircularTrackSegment(
+      { x: 40, y: 20 },
+      { x: 60, y: 0 },
+      { x: 40, y: 0 },
+      true,
+    );
+    const segment5 = new LinearTrackSegment({ x: 40, y: 20 }, { x: 60, y: 20 });
+    segment.connect(segment3);
+    segment2.connect(segment3);
+    segment3.connect(segment4);
+    segment3.connect(segment5);
+
+    const train = new Train(segment);
+    expect(train.nextJunction.indexOf(segment2)).toBe(-1);
+    expect(train.nextJunction.indexOf(segment4)).toBeGreaterThan(-1);
   });
 });
