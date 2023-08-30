@@ -322,6 +322,7 @@ class Train implements GameObject {
     );
     const millisToProcess = (1000 * excess) / this.#speed;
     this.#currentDistanceEffort = 0;
+    this.#currentDistance = 0;
     this.#previousSegments.push({
       segment: this.#currentSegment,
       reversing: this.#currentlyReversing,
