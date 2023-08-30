@@ -106,6 +106,8 @@ class Game {
               if (s1.from < s2.to && s2.from < s1.to) {
                 // Collision!
                 this.collision = true;
+                t1.passengers = [];
+                t2.passengers = [];
               }
             }
           });

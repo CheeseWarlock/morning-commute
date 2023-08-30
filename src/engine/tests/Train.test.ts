@@ -441,6 +441,17 @@ describe("collision segments", () => {
       trainA.lastUpdateCollisionSegments.get(game.network.segments[1])?.to,
     ).toBe(80);
   });
+
+  it("reports collision segments of following cars", () => {
+    const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 50, y: 0 });
+    const train = new Train(segment, 10);
+    train.update(3000);
+    train.update(1000);
+    expect(train.position.x).toBeCloseTo(40);
+    expect(train.lastUpdateCollisionSegments.get(segment)!.from).toBeCloseTo(
+      25,
+    );
+  });
 });
 
 describe("nextJunction", () => {

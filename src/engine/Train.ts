@@ -414,6 +414,19 @@ class Train implements GameObject {
         !wasReversing,
       );
       remainingDistance = attemptedPosition.excess;
+      if (this.#currentlyReversing) {
+        this.#addToCollisionSegments(
+          this.#currentSegment,
+          this.#currentDistance,
+          this.#currentDistance + 5 * (idx + 1),
+        );
+      } else {
+        this.#addToCollisionSegments(
+          this.#currentSegment,
+          this.#currentDistance - 5 * (idx + 1),
+          this.#currentDistance,
+        );
+      }
 
       while (remainingDistance > 0) {
         const target = this.#previousSegments[targetSegmentIndex];
