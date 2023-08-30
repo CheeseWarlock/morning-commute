@@ -412,4 +412,31 @@ describe("collision segments", () => {
       trainA.lastUpdateCollisionSegments.get(game.network.segments[1])?.to,
     ).toBe(10);
   });
+
+  it("reports correct collision segments in reverse", () => {
+    const network = build().network;
+    const game = new Game(network, new FakeController());
+    const trainA = new Train(
+      game.network.segments[1],
+      10,
+      {
+        waitTime: 0,
+        waitTimePerPassenger: 0,
+      },
+      true,
+    );
+
+    game.network.trains.push(trainA);
+
+    game.update(1000);
+
+    expect(trainA.position.x).toBeCloseTo(90);
+
+    expect(
+      trainA.lastUpdateCollisionSegments.get(game.network.segments[1])?.from,
+    ).toBe(70);
+    expect(
+      trainA.lastUpdateCollisionSegments.get(game.network.segments[1])?.to,
+    ).toBe(80);
+  });
 });

@@ -45,7 +45,6 @@ class Train implements GameObject {
    * How long to wait after a passenger action.
    */
   #waitTimePerPassenger: number = 0;
-  #passengerTimeProcessed: number = 0;
   #slowdown: boolean;
   followingCars: TrainFollowingCar[] = [];
   #previousSegments: { segment: TrackSegment; reversing: boolean }[] = [];
@@ -63,6 +62,7 @@ class Train implements GameObject {
     segment: TrackSegment,
     speed?: number,
     movementOptions: TMovementOptions = {},
+    reversing: boolean = false,
   ) {
     this.position = { x: segment.start.x, y: segment.start.y };
     this.#currentSegment = segment;
@@ -75,6 +75,7 @@ class Train implements GameObject {
     this.followingCars.push(new TrainFollowingCar(this.position));
     this.followingCars.push(new TrainFollowingCar(this.position));
     this.followingCars.push(new TrainFollowingCar(this.position));
+    this.#currentlyReversing = reversing;
   }
 
   get heading() {
@@ -206,12 +207,22 @@ class Train implements GameObject {
   }
 
   #addToCollisionSegments(segment: TrackSegment, from: number, to: number) {
+    // If we're reversing, to and from are inverted
+    const realFrom = this.#currentlyReversing
+      ? this.#currentSegment.length - to
+      : from;
+    const realTo = this.#currentlyReversing
+      ? this.#currentSegment.length - from
+      : to;
     const current = this.lastUpdateCollisionSegments.get(segment);
     if (current) {
-      current.from = Math.min(current.from, from);
-      current.to = Math.max(current.to, to);
+      current.from = Math.min(current.from, realFrom);
+      current.to = Math.max(current.to, realTo);
     } else {
-      this.lastUpdateCollisionSegments.set(segment, { from, to });
+      this.lastUpdateCollisionSegments.set(segment, {
+        from: realFrom,
+        to: realTo,
+      });
     }
   }
 
