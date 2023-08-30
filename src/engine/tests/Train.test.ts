@@ -7,9 +7,9 @@ import Station, { ALIGNMENT } from "../Station";
 import Train from "../Train";
 import SimpleJoin from "../networks/SimpleJoin";
 import SimpleStation, { build } from "../networks/SimpleStation";
-import { build as buildComplex } from "../networks/Complex";
 import LotsOfSplits from "../networks/TestingNetworks/LotsOfSplits";
 import CircularTrackSegment from "../CircularTrackSegment";
+import { build as buildComplex } from "../networks/Complex";
 
 describe("train motion", () => {
   const pointA = { x: 0, y: 0 };
@@ -453,13 +453,35 @@ describe("nextJunction", () => {
     });
     game.network.trains.push(trainA);
 
-    expect(trainA.nextJunction.length).toBe(2);
-    expect(trainA.nextJunction.indexOf(network.segments[6])).toBeGreaterThan(
-      -1,
+    expect(trainA.nextJunction.segments.length).toBe(2);
+    expect(
+      trainA.nextJunction.segments.indexOf(network.segments[6]),
+    ).toBeGreaterThan(-1);
+    expect(
+      trainA.nextJunction.segments.indexOf(network.segments[2]),
+    ).toBeGreaterThan(-1);
+    expect(trainA.nextJunction.position).toEqual({ x: 100, y: 10 });
+  });
+
+  it("finds the next junction across many segments", () => {
+    const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 10, y: 0 });
+    const segment2 = new LinearTrackSegment({ x: 10, y: 0 }, { x: 20, y: 0 });
+    const segment3 = new LinearTrackSegment({ x: 20, y: 0 }, { x: 30, y: 0 });
+    const segment4 = new LinearTrackSegment({ x: 30, y: 0 }, { x: 40, y: 0 });
+    const segment5 = new LinearTrackSegment({ x: 40, y: 0 }, { x: 50, y: 0 });
+    const segment6 = new CircularTrackSegment(
+      { x: 40, y: 0 },
+      { x: 50, y: 10 },
+      { x: 40, y: 10 },
     );
-    expect(trainA.nextJunction.indexOf(network.segments[2])).toBeGreaterThan(
-      -1,
-    );
+    segment.connect(segment2);
+    segment2.connect(segment3);
+    segment3.connect(segment4);
+    segment4.connect(segment5);
+    segment4.connect(segment6);
+
+    const train = new Train(segment, 10);
+    expect(train.nextJunction.position).toEqual({ x: 40, y: 0 });
   });
 
   it("finds the next junction when reversing", () => {
@@ -474,10 +496,12 @@ describe("nextJunction", () => {
     segment3.connect(segment);
 
     const train = new Train(segment, 10, {}, true);
-    expect(train.nextJunction.length).toBe(2);
+    expect(train.nextJunction.segments.length).toBe(2);
+    expect(train.nextJunction.position).toEqual({ x: 40, y: 20 });
   });
 
   it("skips a potential junction when it's going the wrong way", () => {
+    const segment0 = new LinearTrackSegment({ x: -20, y: 20 }, { x: 0, y: 20 });
     const segment = new LinearTrackSegment({ x: 0, y: 20 }, { x: 20, y: 20 });
     const segment2 = new CircularTrackSegment(
       { x: 0, y: 0 },
@@ -493,13 +517,21 @@ describe("nextJunction", () => {
       true,
     );
     const segment5 = new LinearTrackSegment({ x: 40, y: 20 }, { x: 60, y: 20 });
+    segment0.connect(segment);
     segment.connect(segment3);
     segment2.connect(segment3);
     segment3.connect(segment4);
     segment3.connect(segment5);
 
-    const train = new Train(segment);
-    expect(train.nextJunction.indexOf(segment2)).toBe(-1);
-    expect(train.nextJunction.indexOf(segment4)).toBeGreaterThan(-1);
+    const train = new Train(segment0);
+    expect(train.nextJunction.segments.indexOf(segment2)).toBe(-1);
+    expect(train.nextJunction.segments.indexOf(segment4)).toBeGreaterThan(-1);
+    expect(train.nextJunction.position).toEqual({ x: 40, y: 20 });
+  });
+
+  it("skips a potential junction when directions differ?", () => {
+    const network = buildComplex().network;
+    const train = new Train(network.segments[13], 10);
+    expect(train.nextJunction.position).toEqual({ x: 60, y: 20 });
   });
 });

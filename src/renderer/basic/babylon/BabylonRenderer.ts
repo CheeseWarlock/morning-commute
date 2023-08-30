@@ -400,9 +400,9 @@ class BabylonRenderer implements IRenderer {
           this.turnArrowSprite = tree;
         }
         this.turnArrowSprite!.position = new BABYLON.Vector3(
-          train.position.x,
+          train.nextJunction.position.x,
           2,
-          -train.position.y,
+          -train.nextJunction.position.y,
         );
         const direction = this.game.turnStrategies.get(this.game.selectedTrain);
         if (direction === TRAIN_STRATEGIES.TURN_LEFT) {

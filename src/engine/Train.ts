@@ -3,6 +3,7 @@ import CircularTrackSegment from "./CircularTrackSegment";
 import { TRAIN_STRATEGIES } from "./Game";
 import GameObject from "./GameObject";
 import Passenger from "./Passenger";
+import Point from "./Point";
 import Station from "./Station";
 import TrackSegment from "./TrackSegment";
 import TrainFollowingCar from "./TrainFollowingCar";
@@ -349,20 +350,23 @@ class Train implements GameObject {
     let reversing = this.#currentlyReversing;
     let upcoming = reversing ? segment.atStart : segment.atEnd;
     let safetyValve = 100;
+    let currentConnectionPoint = reversing ? segment.start : segment.end;
     while (safetyValve > 0 && upcoming.length === 1) {
       safetyValve -= 1;
-      // figure out if we'll be reversing on this segment
-      const currentConnectionPoint = this.#currentlyReversing
-        ? this.#currentSegment.start
-        : this.#currentSegment.end;
+
       const connectsAtStart =
         upcoming[0].start.x === currentConnectionPoint.x &&
         upcoming[0].start.y === currentConnectionPoint.y;
       reversing = !connectsAtStart;
       segment = upcoming[0];
       upcoming = reversing ? segment.atStart : segment.atEnd;
+      // figure out if we'll be reversing on this segment
+      currentConnectionPoint = reversing ? segment.start : segment.end;
     }
-    return upcoming;
+    return {
+      segments: upcoming,
+      position: currentConnectionPoint,
+    };
   }
 
   /**
