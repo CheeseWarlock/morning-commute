@@ -13,7 +13,7 @@ export enum TRAIN_STRATEGIES {
  */
 class Game {
   network: Network;
-  selectedTrain: Train;
+  selectedTrain?: Train;
   #selectedTrainIndex: number = 0;
   #controller: IController;
   turnStrategies: Map<Train, TRAIN_STRATEGIES> = new Map();
@@ -21,22 +21,7 @@ class Game {
   constructor(network: Network, controller: IController) {
     this.#controller = controller;
     this.network = network;
-    network.trains.push(
-      new Train(network.segments[0], 30, {
-        slowdown: true,
-        waitTime: 500,
-        waitTimePerPassenger: 500,
-      }),
-    );
-    network.trains.push(
-      new Train(network.segments[1], 30, {
-        slowdown: true,
-        waitTime: 500,
-        waitTimePerPassenger: 500,
-      }),
-    );
-    // network.trains.push(new Train(network.segments[0], 60, { slowdown: true }));
-    this.selectedTrain = network.trains[0];
+
     network.trains.forEach((train) => {
       this.turnStrategies.set(train, TRAIN_STRATEGIES.RANDOM);
       train.strategy = () => TRAIN_STRATEGIES.RANDOM;
@@ -69,6 +54,25 @@ class Game {
       this.network.trains[this.#selectedTrainIndex].strategy = () =>
         TRAIN_STRATEGIES.TURN_RIGHT;
     });
+  }
+
+  initialize() {
+    const network = this.network;
+    network.trains.push(
+      new Train(network.segments[0], 30, {
+        slowdown: true,
+        waitTime: 500,
+        waitTimePerPassenger: 500,
+      }),
+    );
+    network.trains.push(
+      new Train(network.segments[1], 30, {
+        slowdown: true,
+        waitTime: 500,
+        waitTimePerPassenger: 500,
+      }),
+    );
+    this.selectedTrain = network.trains[0];
   }
 
   update(deltaT: number) {

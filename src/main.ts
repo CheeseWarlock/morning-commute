@@ -32,6 +32,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 network.autoConnect();
 const controller = new Controller();
 const game = new Game(network, controller);
+game.initialize();
 const map = new Map(
   document.querySelector("#map-holder")!,
   game,
