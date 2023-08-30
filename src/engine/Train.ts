@@ -351,6 +351,7 @@ class Train implements GameObject {
     let upcoming = reversing ? segment.atStart : segment.atEnd;
     let safetyValve = 100;
     let currentConnectionPoint = reversing ? segment.start : segment.end;
+    let angleAt = reversing ? segment.initialAngle : segment.finalAngle;
     while (safetyValve > 0 && upcoming.length === 1) {
       safetyValve -= 1;
 
@@ -362,10 +363,12 @@ class Train implements GameObject {
       upcoming = reversing ? segment.atStart : segment.atEnd;
       // figure out if we'll be reversing on this segment
       currentConnectionPoint = reversing ? segment.start : segment.end;
+      angleAt = reversing ? segment.initialAngle : segment.finalAngle;
     }
     return {
       segments: upcoming,
       position: currentConnectionPoint,
+      angle: angleAt,
     };
   }
 

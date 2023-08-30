@@ -417,7 +417,7 @@ class BabylonRenderer implements IRenderer {
         this.turnArrowSprite!.angle -= (
           this.camera as BABYLON.ArcRotateCamera
         ).alpha;
-        this.turnArrowSprite!.angle -= train.heading;
+        this.turnArrowSprite!.angle -= train.nextJunction.angle;
         this.turnArrowSprite!.angle += Math.PI;
 
         theseSpheres.forEach((s) => {
