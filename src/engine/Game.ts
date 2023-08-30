@@ -1,5 +1,6 @@
 import Controller, { IController, KEYS } from "./Controller";
 import Network from "./Network";
+import TrackSegment from "./TrackSegment";
 import Train from "./Train";
 
 export enum TRAIN_STRATEGIES {
@@ -17,6 +18,7 @@ class Game {
   #selectedTrainIndex: number = 0;
   #controller: IController;
   turnStrategies: Map<Train, TRAIN_STRATEGIES> = new Map();
+  collision: boolean = false;
 
   constructor(network: Network, controller: IController) {
     this.#controller = controller;
@@ -81,17 +83,32 @@ class Game {
   }
 
   #detectCollisions() {
+    this.collision = false;
     this.network.trains.forEach((t1) => {
       this.network.trains.forEach((t2) => {
         if (t1 !== t2) {
-          const d = Math.sqrt(
-            (t1.position.x - t2.position.x) ** 2 +
-              (t1.position.y - t2.position.y) ** 2,
-          );
-          if (d < 10) {
-            t1.passengers = [];
-            t2.passengers = [];
-          }
+          const p1 = t1.lastUpdateCollisionSegments;
+          const p2 = t2.lastUpdateCollisionSegments;
+          const allSegments: Set<TrackSegment> = new Set();
+
+          Array.from(p1.keys()).forEach((segment) => {
+            allSegments.add(segment);
+          });
+          Array.from(p2.keys()).forEach((segment) => {
+            allSegments.add(segment);
+          });
+
+          allSegments.forEach((segment) => {
+            const s1 = p1.get(segment);
+            const s2 = p2.get(segment);
+
+            if (s1 && s2) {
+              if (s1.from < s2.to && s2.from < s1.to) {
+                // Collision!
+                this.collision = true;
+              }
+            }
+          });
         }
       });
     });

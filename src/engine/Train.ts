@@ -54,10 +54,6 @@ class Train implements GameObject {
    */
   #timeLeftToProcess: number = 0;
   /**
-   * The segments this train moved across during the last update.
-   */
-  collisionSegments: { segment: TrackSegment; from: number; to: number }[] = [];
-  /**
    * The segments this Train (and its following cars) occupied during the last update.
    */
   lastUpdateCollisionSegments: Map<TrackSegment, { from: number; to: number }> =
@@ -73,7 +69,7 @@ class Train implements GameObject {
     this.#currentDistanceEffort = 0;
     this.#currentlyReversing = false;
     this.#speed = speed || Math.random() + 0.5;
-    this.#waitTime = movementOptions.waitTime || 1000;
+    this.#waitTime = movementOptions.waitTime ?? 1000;
     this.#slowdown = movementOptions.slowdown || false;
     this.#waitTimePerPassenger = movementOptions.waitTimePerPassenger || 0;
     this.followingCars.push(new TrainFollowingCar(this.position));
@@ -108,6 +104,7 @@ class Train implements GameObject {
     /**
      * Turn distance-effort into distance.
      */
+    const currentPositionAlong = this.#currentDistance;
     const distanceEffortFunction = (dE: number) => {
       const slowDownAmount = this.#slowdown ? 16 : 0;
       if (!this.#slowdown) {
@@ -150,6 +147,11 @@ class Train implements GameObject {
         this.state = TRAIN_STATE.STOPPED_AT_STATION;
         this.#stopTime =
           this.#waitTime - (this.#timeLeftToProcess - millisToStation);
+        this.#addToCollisionSegments(
+          this.#currentSegment,
+          currentPositionAlong,
+          stationDistance,
+        );
 
         if (this.#stopTime < 0) {
           // Cleared it in a single update!
@@ -172,6 +174,11 @@ class Train implements GameObject {
           physicalDistance,
           this.#currentlyReversing,
         );
+        this.#addToCollisionSegments(
+          this.#currentSegment,
+          currentPositionAlong,
+          physicalDistance,
+        );
         this.#currentDistance = physicalDistance;
         this.position.x = newPos.point.x;
         this.position.y = newPos.point.y;
@@ -187,9 +194,24 @@ class Train implements GameObject {
       this.position.y = newPos.point.y;
       const excess = newPos.excess;
       this.#timeLeftToProcess = excess;
+      this.#addToCollisionSegments(
+        this.#currentSegment,
+        currentPositionAlong,
+        Math.min(physicalDistance, this.#currentSegment.length),
+      );
       if (excess > 0) {
         this.#selectNewTrackSegment(excess);
       }
+    }
+  }
+
+  #addToCollisionSegments(segment: TrackSegment, from: number, to: number) {
+    const current = this.lastUpdateCollisionSegments.get(segment);
+    if (current) {
+      current.from = Math.min(current.from, from);
+      current.to = Math.max(current.to, to);
+    } else {
+      this.lastUpdateCollisionSegments.set(segment, { from, to });
     }
   }
 
@@ -314,7 +336,7 @@ class Train implements GameObject {
    * Update position and status
    */
   update(deltaT: number) {
-    this.collisionSegments = [];
+    this.lastUpdateCollisionSegments = new Map();
     this.#timeLeftToProcess = deltaT;
     let safetyValve = 100;
 

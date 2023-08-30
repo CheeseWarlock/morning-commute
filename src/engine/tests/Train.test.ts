@@ -1,11 +1,12 @@
-import { TRAIN_STRATEGIES } from "../Game";
+import { FakeController } from "../Controller";
+import Game, { TRAIN_STRATEGIES } from "../Game";
 import LinearTrackSegment from "../LinearTrackSegment";
 import Passenger from "../Passenger";
 import Point from "../Point";
 import Station, { ALIGNMENT } from "../Station";
 import Train from "../Train";
 import SimpleJoin from "../networks/SimpleJoin";
-import SimpleStation from "../networks/SimpleStation";
+import SimpleStation, { build } from "../networks/SimpleStation";
 import LotsOfSplits from "../networks/TestingNetworks/LotsOfSplits";
 
 describe("train motion", () => {
@@ -294,7 +295,24 @@ describe("passenger pickup and dropoff", () => {
   });
 });
 
-describe("wait time per-passenger", () => {
+describe("wait time, including per-passenger", () => {
+  it("allows zero wait times", () => {
+    const network = build().network;
+    const game = new Game(network, new FakeController());
+    const trainA = new Train(game.network.segments[0], 10, {
+      waitTime: 0,
+      waitTimePerPassenger: 0,
+    });
+
+    game.network.trains.push(trainA);
+
+    game.update(2000 + 1000 * Math.PI * 2);
+
+    expect(game.network.trains[0].position.x).toBeCloseTo(
+      20 + 10 * Math.PI * 2,
+    );
+  });
+
   it("waits extra time per passenger processed when specified", () => {
     const network = SimpleStation;
 
@@ -353,5 +371,45 @@ describe("turn strategies", () => {
 
     train.update(1000);
     expect(train.position.y).toBeGreaterThan(10);
+  });
+});
+
+describe("collision segments", () => {
+  it("reports correct collision segments", () => {
+    const network = build().network;
+    const game = new Game(network, new FakeController());
+    const trainA = new Train(game.network.segments[0], 10, {
+      waitTime: 0,
+      waitTimePerPassenger: 0,
+    });
+
+    game.network.trains.push(trainA);
+
+    game.update(1000);
+
+    expect(
+      trainA.lastUpdateCollisionSegments.get(game.network.segments[0])?.from,
+    ).toBe(0);
+    expect(
+      trainA.lastUpdateCollisionSegments.get(game.network.segments[0])?.to,
+    ).toBe(10);
+
+    game.update(2000);
+
+    expect(
+      trainA.lastUpdateCollisionSegments.get(game.network.segments[0])?.from,
+    ).toBe(10);
+    expect(
+      trainA.lastUpdateCollisionSegments.get(game.network.segments[0])?.to,
+    ).toBe(20);
+    expect(
+      trainA.lastUpdateCollisionSegments.get(game.network.segments[1]),
+    ).toBeDefined();
+    expect(
+      trainA.lastUpdateCollisionSegments.get(game.network.segments[1])?.from,
+    ).toBe(0);
+    expect(
+      trainA.lastUpdateCollisionSegments.get(game.network.segments[1])?.to,
+    ).toBe(10);
   });
 });
