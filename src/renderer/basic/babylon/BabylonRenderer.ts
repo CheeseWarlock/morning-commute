@@ -406,10 +406,10 @@ class BabylonRenderer implements IRenderer {
         );
         const direction = this.game.turnStrategies.get(this.game.selectedTrain);
         if (direction === TRAIN_STRATEGIES.TURN_LEFT) {
-          this.turnArrowSprite!.angle = 1;
+          this.turnArrowSprite!.angle = 0.8;
           this.turnArrowSprite!.isVisible = true;
         } else if (direction === TRAIN_STRATEGIES.TURN_RIGHT) {
-          this.turnArrowSprite!.angle = -1;
+          this.turnArrowSprite!.angle = -0.8;
           this.turnArrowSprite!.isVisible = true;
         } else {
           this.turnArrowSprite!.isVisible = false;
