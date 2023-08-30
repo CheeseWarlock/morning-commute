@@ -344,6 +344,27 @@ class Train implements GameObject {
     this.#timeLeftToProcess = millisToProcess;
   }
 
+  get nextJunction() {
+    let segment = this.#currentSegment;
+    let reversing = this.#currentlyReversing;
+    let upcoming = reversing ? segment.atStart : segment.atEnd;
+    let safetyValve = 100;
+    while (safetyValve > 0 && upcoming.length === 1) {
+      safetyValve -= 1;
+      // figure out if we'll be reversing on this segment
+      const currentConnectionPoint = this.#currentlyReversing
+        ? this.#currentSegment.start
+        : this.#currentSegment.end;
+      const connectsAtStart =
+        upcoming[0].start.x === currentConnectionPoint.x &&
+        upcoming[0].start.y === currentConnectionPoint.y;
+      reversing = !connectsAtStart;
+      segment = upcoming[0];
+      upcoming = reversing ? segment.atStart : segment.atEnd;
+    }
+    return upcoming;
+  }
+
   /**
    * Update position and status
    */

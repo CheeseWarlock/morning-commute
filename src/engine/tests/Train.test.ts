@@ -440,3 +440,23 @@ describe("collision segments", () => {
     ).toBe(80);
   });
 });
+
+describe("nextJunction", () => {
+  it("finds the next junction", () => {
+    const network = build().network;
+    const game = new Game(network, new FakeController());
+    const trainA = new Train(game.network.segments[1], 10, {
+      waitTime: 0,
+      waitTimePerPassenger: 0,
+    });
+    game.network.trains.push(trainA);
+
+    expect(trainA.nextJunction.length).toBe(2);
+    expect(trainA.nextJunction.indexOf(network.segments[6])).toBeGreaterThan(
+      -1,
+    );
+    expect(trainA.nextJunction.indexOf(network.segments[2])).toBeGreaterThan(
+      -1,
+    );
+  });
+});
