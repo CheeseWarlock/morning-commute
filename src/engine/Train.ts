@@ -417,14 +417,17 @@ class Train implements GameObject {
       if (this.#currentlyReversing) {
         this.#addToCollisionSegments(
           this.#currentSegment,
-          this.#currentDistance,
-          this.#currentDistance + 5 * (idx + 1),
+          Math.max(0, this.#currentDistance),
+          Math.min(
+            this.#currentDistance + 5 * (idx + 1),
+            this.#currentSegment.length,
+          ),
         );
       } else {
         this.#addToCollisionSegments(
           this.#currentSegment,
-          this.#currentDistance - 5 * (idx + 1),
-          this.#currentDistance,
+          Math.max(this.#currentDistance - 5 * (idx + 1), 0),
+          Math.min(this.#currentDistance, this.#currentSegment.length),
         );
       }
 
