@@ -388,6 +388,13 @@ class Train implements GameObject {
 
     // First, add the entirety of the current train to collision data
     const distanceBack = this.followingCars.length * 5;
+    this.#addToCollisionSegments(
+      this.#currentSegment,
+      Math.max(0, this.#currentDistance - distanceBack),
+      this.#currentDistance,
+      this.#currentlyReversing,
+    );
+
     let remainingDistance = distanceBack;
 
     let targetSegmentIndex = this.#previousSegments.length - 1;
@@ -416,21 +423,12 @@ class Train implements GameObject {
           targetSegment,
           targetSegment.length - remainingDistance,
           targetSegment.length,
-          false,
+          wasReversing,
         );
 
         remainingDistance = attemptedPosition.excess;
       }
     }
-
-    /// ....
-
-    this.#addToCollisionSegments(
-      this.#currentSegment,
-      Math.max(0, this.#currentDistance - distanceBack),
-      this.#currentDistance,
-      false,
-    );
 
     while (this.#timeLeftToProcess > 0 && safetyValve > 0) {
       safetyValve -= 1;

@@ -456,33 +456,61 @@ describe("collision segments", () => {
     );
     expect(train.lastUpdateCollisionSegments.get(segment)!.to).toBeCloseTo(40);
   });
-});
 
-it("reports collision segments of following cars across segments", () => {
-  const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 50, y: 0 });
-  const segment2 = new LinearTrackSegment({ x: 50, y: 0 }, { x: 100, y: 0 });
-  segment.connect(segment2);
-  const train = new Train(segment, 10);
-  train.update(3000);
-  train.update(2500);
-  expect(train.position.x).toBeCloseTo(55);
-  expect(train.lastUpdateCollisionSegments.get(segment)!).toEqual({
-    from: 15,
-    to: 50,
+  it("reports collision segments of following cars across segments", () => {
+    const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 50, y: 0 });
+    const segment2 = new LinearTrackSegment({ x: 50, y: 0 }, { x: 100, y: 0 });
+    segment.connect(segment2);
+    const train = new Train(segment, 10);
+    train.update(3000);
+    train.update(2500);
+    expect(train.position.x).toBeCloseTo(55);
+    expect(train.lastUpdateCollisionSegments.get(segment)!).toEqual({
+      from: 15,
+      to: 50,
+    });
+    expect(train.lastUpdateCollisionSegments.get(segment2)!).toEqual({
+      from: 0,
+      to: 5,
+    });
+    train.update(500);
+    expect(train.position.x).toBeCloseTo(60);
+    expect(train.lastUpdateCollisionSegments.get(segment)!).toEqual({
+      from: 40,
+      to: 50,
+    });
+    expect(train.lastUpdateCollisionSegments.get(segment2)!).toEqual({
+      from: 0,
+      to: 10,
+    });
   });
-  expect(train.lastUpdateCollisionSegments.get(segment2)!).toEqual({
-    from: 0,
-    to: 5,
-  });
-  train.update(500);
-  expect(train.position.x).toBeCloseTo(60);
-  expect(train.lastUpdateCollisionSegments.get(segment)!).toEqual({
-    from: 40,
-    to: 50,
-  });
-  expect(train.lastUpdateCollisionSegments.get(segment2)!).toEqual({
-    from: 0,
-    to: 10,
+
+  it("reports collision segments of following cars across segments in reverse", () => {
+    const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 50, y: 0 });
+    const segment2 = new LinearTrackSegment({ x: 50, y: 0 }, { x: 100, y: 0 });
+    segment.connect(segment2);
+    const train = new Train(segment2, 10, {}, true);
+    train.update(3000);
+    train.update(2500);
+    expect(train.position.x).toBeCloseTo(45);
+    expect(train.lastUpdateCollisionSegments.get(segment)!).toEqual({
+      from: 45,
+      to: 50,
+    });
+    expect(train.lastUpdateCollisionSegments.get(segment2)!).toEqual({
+      from: 0,
+      to: 35,
+    });
+    train.update(500);
+    expect(train.position.x).toBeCloseTo(40);
+    expect(train.lastUpdateCollisionSegments.get(segment)!).toEqual({
+      from: 40,
+      to: 50,
+    });
+    expect(train.lastUpdateCollisionSegments.get(segment2)!).toEqual({
+      from: 0,
+      to: 10,
+    });
   });
 });
 
