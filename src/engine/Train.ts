@@ -153,6 +153,7 @@ class Train implements GameObject {
           this.#currentSegment,
           currentPositionAlong,
           stationDistance,
+          this.#currentlyReversing,
         );
 
         if (this.#stopTime < 0) {
@@ -180,6 +181,7 @@ class Train implements GameObject {
           this.#currentSegment,
           currentPositionAlong,
           physicalDistance,
+          this.#currentlyReversing,
         );
         this.#currentDistance = physicalDistance;
         this.position.x = newPos.point.x;
@@ -200,6 +202,7 @@ class Train implements GameObject {
         this.#currentSegment,
         currentPositionAlong,
         Math.min(physicalDistance, this.#currentSegment.length),
+        this.#currentlyReversing,
       );
       if (excess > 0) {
         this.#selectNewTrackSegment(excess);
@@ -207,14 +210,15 @@ class Train implements GameObject {
     }
   }
 
-  #addToCollisionSegments(segment: TrackSegment, from: number, to: number) {
+  #addToCollisionSegments(
+    segment: TrackSegment,
+    from: number,
+    to: number,
+    reversing: boolean,
+  ) {
     // If we're reversing, to and from are inverted
-    const realFrom = this.#currentlyReversing
-      ? this.#currentSegment.length - to
-      : from;
-    const realTo = this.#currentlyReversing
-      ? this.#currentSegment.length - from
-      : to;
+    const realFrom = reversing ? this.#currentSegment.length - to : from;
+    const realTo = reversing ? this.#currentSegment.length - from : to;
     const current = this.lastUpdateCollisionSegments.get(segment);
     if (current) {
       current.from = Math.min(current.from, realFrom);
@@ -382,6 +386,52 @@ class Train implements GameObject {
     this.#timeLeftToProcess = deltaT;
     let safetyValve = 100;
 
+    // First, add the entirety of the current train to collision data
+    const distanceBack = this.followingCars.length * 5;
+    let remainingDistance = distanceBack;
+
+    let targetSegmentIndex = this.#previousSegments.length - 1;
+    let targetSegment = this.#currentSegment;
+    let wasReversing = this.#currentlyReversing;
+
+    let attemptedPosition = targetSegment.getPositionAlong(
+      this.#currentDistance - remainingDistance,
+      !wasReversing,
+    );
+    remainingDistance = attemptedPosition.excess;
+
+    while (remainingDistance > 0) {
+      const target = this.#previousSegments[targetSegmentIndex];
+      targetSegmentIndex -= 1;
+      if (!target) {
+        remainingDistance = 0;
+      } else {
+        wasReversing = target.reversing;
+        targetSegment = target.segment;
+        attemptedPosition = targetSegment.getPositionAlong(
+          remainingDistance,
+          !wasReversing,
+        );
+        this.#addToCollisionSegments(
+          targetSegment,
+          targetSegment.length - remainingDistance,
+          targetSegment.length,
+          false,
+        );
+
+        remainingDistance = attemptedPosition.excess;
+      }
+    }
+
+    /// ....
+
+    this.#addToCollisionSegments(
+      this.#currentSegment,
+      Math.max(0, this.#currentDistance - distanceBack),
+      this.#currentDistance,
+      false,
+    );
+
     while (this.#timeLeftToProcess > 0 && safetyValve > 0) {
       safetyValve -= 1;
       if (this.state === TRAIN_STATE.STOPPED_AT_STATION) {
@@ -414,22 +464,6 @@ class Train implements GameObject {
         !wasReversing,
       );
       remainingDistance = attemptedPosition.excess;
-      if (this.#currentlyReversing) {
-        this.#addToCollisionSegments(
-          this.#currentSegment,
-          Math.max(0, this.#currentDistance),
-          Math.min(
-            this.#currentDistance + 5 * (idx + 1),
-            this.#currentSegment.length,
-          ),
-        );
-      } else {
-        this.#addToCollisionSegments(
-          this.#currentSegment,
-          Math.max(this.#currentDistance - 5 * (idx + 1), 0),
-          Math.min(this.#currentDistance, this.#currentSegment.length),
-        );
-      }
 
       while (remainingDistance > 0) {
         const target = this.#previousSegments[targetSegmentIndex];
