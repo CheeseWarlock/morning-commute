@@ -238,6 +238,40 @@ describe("train motion", () => {
   });
 });
 
+describe("train constructor options", () => {
+  const network = build().network;
+
+  it("uses distance along when passed in", () => {
+    const train = new Train(
+      {
+        segment: network.segments[1],
+        distanceAlong: 20,
+        reversing: false,
+      },
+      { speed: 10 },
+    );
+
+    expect(train.position.x).toBeCloseTo(40);
+    train.update(1000);
+    expect(train.position.x).toBeCloseTo(50);
+  });
+
+  it("uses reverse and distance along when passed in", () => {
+    const train = new Train(
+      {
+        segment: network.segments[1],
+        distanceAlong: 20,
+        reversing: true,
+      },
+      { speed: 10 },
+    );
+
+    expect(train.position.x).toBeCloseTo(80);
+    train.update(1000);
+    expect(train.position.x).toBeCloseTo(70);
+  });
+});
+
 describe("train following cars", () => {
   const network = SimpleJoin;
 

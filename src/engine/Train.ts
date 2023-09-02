@@ -86,12 +86,13 @@ class Train implements GameObject {
     };
     const movementOptionsWithDefaults: TTrainConfigurationOptions =
       Object.assign({}, DEFAULT_MOVEMENT_OPTIONS, movementOptions);
-    const { segment, reversing } = initialPosition;
+    const { segment, reversing, distanceAlong } = initialPosition;
 
-    this.position = { x: segment.start.x, y: segment.start.y };
     this.#currentSegment = segment;
-    this.#currentDistanceEffort = 0;
-    this.#currentlyReversing = false;
+    this.#currentDistance = distanceAlong;
+    this.#currentDistanceEffort = distanceAlong;
+    this.#currentlyReversing = reversing;
+    this.position = segment.getPositionAlong(distanceAlong, reversing).point;
     this.#speed = movementOptionsWithDefaults.speed;
     this.#waitTime = movementOptionsWithDefaults.waitTime;
     this.#slowdown = movementOptionsWithDefaults.slowdown;
@@ -106,8 +107,6 @@ class Train implements GameObject {
       this.followingCars.push(new TrainFollowingCar(this.position));
       _followingCarCount -= 1;
     }
-
-    this.#currentlyReversing = reversing;
   }
 
   get heading() {
@@ -115,22 +114,6 @@ class Train implements GameObject {
       this.#currentDistance,
       this.#currentlyReversing,
     );
-  }
-
-  processPassengers() {
-    // TODO: don't rely on this as the source of truth
-    const station = this.#upcomingStations[0];
-
-    // Dropoff
-    this.passengers = this.passengers.filter((p) => p.destination !== station);
-
-    // Pickup
-    while (
-      station.waitingPassengers.length &&
-      this.passengers.length < this.capacity
-    ) {
-      this.passengers.push(station.waitingPassengers.splice(0, 1)[0]);
-    }
   }
 
   #moveAlongTrackSegment() {
