@@ -38,6 +38,7 @@ class BabylonRenderer implements IRenderer {
   numberSpriteManager: BABYLON.SpriteManager;
   turnArrowSprite?: BABYLON.Sprite;
   stationNumberSprites: BABYLON.Sprite[][] = [];
+  trainNumberSprites: BABYLON.Sprite[] = [];
   camera: BABYLON.Camera;
 
   constructor(element: HTMLElement, game: Game) {
@@ -273,6 +274,12 @@ class BabylonRenderer implements IRenderer {
       b.height = 10;
       b.width = 5;
     });
+
+    this.game.network.trains.forEach((train) => {
+      this.trainNumberSprites.push(
+        new BABYLON.Sprite("", this.numberSpriteManager),
+      );
+    });
   }
 
   #setupScene() {}
@@ -387,14 +394,19 @@ class BabylonRenderer implements IRenderer {
     });
     this.game.network.trains.forEach((train, i) => {
       const theseSpheres = this.spheres[i];
+      const thisNumber = this.trainNumberSprites[i];
+      thisNumber.position = new BABYLON.Vector3(
+        train.position.x,
+        10,
+        -train.position.y,
+      );
+      thisNumber.width = 5;
+      thisNumber.height = 10;
+      thisNumber.cellIndex = (train.passengers.length + 9) % 10;
       if (train === this.game.selectedTrain) {
         if (!this.turnArrowSprite) {
           const tree = new BABYLON.Sprite("tree", this.arrowSpriteManager);
-          tree.position = new BABYLON.Vector3(
-            train.position.x,
-            2,
-            -train.position.y,
-          );
+
           tree.width = 10;
           tree.height = 10;
           this.turnArrowSprite = tree;
