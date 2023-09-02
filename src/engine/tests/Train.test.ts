@@ -448,7 +448,7 @@ describe("turn strategies", () => {
 });
 
 describe("collision segments", () => {
-  it.skip("reports correct collision segments", () => {
+  it("reports correct collision segments", () => {
     const network = build().network;
     const game = new Game(network, new FakeController());
 
@@ -458,6 +458,7 @@ describe("collision segments", () => {
         waitTime: 0,
         waitTimePerPassenger: 0,
         speed: 10,
+        followingCarCount: 0,
       },
     );
 
@@ -491,7 +492,7 @@ describe("collision segments", () => {
     ).toBe(10);
   });
 
-  it.skip("reports correct collision segments in reverse", () => {
+  it("reports correct collision segments in reverse", () => {
     const network = build().network;
     const game = new Game(network, new FakeController());
     const trainA = new Train(
@@ -500,6 +501,7 @@ describe("collision segments", () => {
         waitTime: 0,
         waitTimePerPassenger: 0,
         speed: 10,
+        followingCarCount: 0,
       },
     );
 
@@ -514,7 +516,7 @@ describe("collision segments", () => {
     ).toBe(30);
     expect(
       trainA.lastUpdateCollisionSegments.get(game.network.segments[1])?.to,
-    ).toBe(45);
+    ).toBe(80);
   });
 
   it("reports collision segments of following cars", () => {
