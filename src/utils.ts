@@ -148,3 +148,29 @@ export function generateName(p: number) {
   };
   return f(c).toUpperCase() + f(v) + f(c) + f(v) + f(c);
 }
+
+export function getNextJunction(segment: TrackSegment, reversing: boolean) {
+  let upcoming = reversing ? segment.atStart : segment.atEnd;
+  let safetyValve = 100;
+  let currentConnectionPoint = reversing ? segment.start : segment.end;
+  let angleAt = reversing ? segment.initialAngle + Math.PI : segment.finalAngle;
+  while (safetyValve > 0 && upcoming.length === 1) {
+    safetyValve -= 1;
+
+    const connectsAtStart =
+      upcoming[0].start.x === currentConnectionPoint.x &&
+      upcoming[0].start.y === currentConnectionPoint.y;
+    reversing = !connectsAtStart;
+    segment = upcoming[0];
+    upcoming = reversing ? segment.atStart : segment.atEnd;
+    // figure out if we'll be reversing on this segment
+    currentConnectionPoint = reversing ? segment.start : segment.end;
+    angleAt = reversing ? segment.initialAngle + Math.PI : segment.finalAngle;
+  }
+
+  return {
+    segments: upcoming,
+    position: currentConnectionPoint,
+    angle: angleAt,
+  };
+}
