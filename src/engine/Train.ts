@@ -14,14 +14,28 @@ export enum TRAIN_STATE {
   HANDLING_PASSENGERS = "handling-passengers",
 }
 
-export type TMovementOptions = {
-  slowdown?: boolean;
-  waitTime?: number;
-  waitTimePerPassenger?: number;
+/**
+ * Defines a Train's position on the game board.
+ */
+export type TTrainPosition = {
+  segment: TrackSegment;
+  distanceAlong: number;
+  reversing: boolean;
 };
 
 /**
- * A train, currently single car...
+ * Train configuration options.
+ */
+export type TTrainConfigurationOptions = {
+  speed: number;
+  slowdown: boolean;
+  waitTime: number;
+  waitTimePerPassenger: number;
+  followingCarCount: number;
+};
+
+/**
+ * A Train.
  */
 class Train implements GameObject {
   position: { x: number; y: number };
@@ -60,22 +74,39 @@ class Train implements GameObject {
     new Map();
   strategy: () => TRAIN_STRATEGIES = () => TRAIN_STRATEGIES.TURN_LEFT;
   constructor(
-    segment: TrackSegment,
-    speed?: number,
-    movementOptions: TMovementOptions = {},
-    reversing: boolean = false,
+    initialPosition: TTrainPosition,
+    movementOptions: Partial<TTrainConfigurationOptions> = {},
   ) {
+    const DEFAULT_MOVEMENT_OPTIONS: TTrainConfigurationOptions = {
+      speed: 10,
+      slowdown: false,
+      waitTime: 1000,
+      waitTimePerPassenger: 0,
+      followingCarCount: 3,
+    };
+    const movementOptionsWithDefaults: TTrainConfigurationOptions =
+      Object.assign({}, DEFAULT_MOVEMENT_OPTIONS, movementOptions);
+    const { segment, reversing } = initialPosition;
+
     this.position = { x: segment.start.x, y: segment.start.y };
     this.#currentSegment = segment;
     this.#currentDistanceEffort = 0;
     this.#currentlyReversing = false;
-    this.#speed = speed || Math.random() + 0.5;
-    this.#waitTime = movementOptions.waitTime ?? 1000;
-    this.#slowdown = movementOptions.slowdown || false;
-    this.#waitTimePerPassenger = movementOptions.waitTimePerPassenger || 0;
-    this.followingCars.push(new TrainFollowingCar(this.position));
-    this.followingCars.push(new TrainFollowingCar(this.position));
-    this.followingCars.push(new TrainFollowingCar(this.position));
+    this.#speed = movementOptionsWithDefaults.speed;
+    this.#waitTime = movementOptionsWithDefaults.waitTime;
+    this.#slowdown = movementOptionsWithDefaults.slowdown;
+    this.#waitTimePerPassenger =
+      movementOptionsWithDefaults.waitTimePerPassenger;
+    let _followingCarCount: number = 3;
+
+    if (movementOptions?.followingCarCount != null) {
+      _followingCarCount = movementOptions?.followingCarCount;
+    }
+    while (_followingCarCount > 0) {
+      this.followingCars.push(new TrainFollowingCar(this.position));
+      _followingCarCount -= 1;
+    }
+
     this.#currentlyReversing = reversing;
   }
 
