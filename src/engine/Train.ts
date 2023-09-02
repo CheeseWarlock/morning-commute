@@ -3,7 +3,6 @@ import CircularTrackSegment from "./CircularTrackSegment";
 import { TRAIN_STRATEGIES } from "./Game";
 import GameObject from "./GameObject";
 import Passenger from "./Passenger";
-import Point from "./Point";
 import Station from "./Station";
 import TrackSegment from "./TrackSegment";
 import TrainFollowingCar from "./TrainFollowingCar";

@@ -1,4 +1,4 @@
-import Controller, { IController, KEYS } from "./Controller";
+import { IController, KEYS } from "./Controller";
 import Network from "./Network";
 import TrackSegment from "./TrackSegment";
 import Train from "./Train";
@@ -61,18 +61,28 @@ class Game {
   initialize() {
     const network = this.network;
     network.trains.push(
-      new Train(network.segments[0], 30, {
-        slowdown: true,
-        waitTime: 500,
-        waitTimePerPassenger: 500,
-      }),
+      new Train(
+        { segment: network.segments[0], distanceAlong: 0, reversing: false },
+        {
+          slowdown: true,
+          waitTime: 500,
+          waitTimePerPassenger: 500,
+          speed: 30,
+          followingCarCount: 4,
+        },
+      ),
     );
     network.trains.push(
-      new Train(network.segments[1], 30, {
-        slowdown: true,
-        waitTime: 500,
-        waitTimePerPassenger: 500,
-      }),
+      new Train(
+        { segment: network.segments[1], distanceAlong: 0, reversing: false },
+        {
+          slowdown: true,
+          waitTime: 500,
+          waitTimePerPassenger: 500,
+          speed: 30,
+          followingCarCount: 4,
+        },
+      ),
     );
     this.selectedTrain = network.trains[0];
   }
