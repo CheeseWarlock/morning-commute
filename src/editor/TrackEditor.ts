@@ -1,0 +1,238 @@
+import CircularTrackSegment from "../engine/CircularTrackSegment";
+import Game from "../engine/Game";
+import LinearTrackSegment from "../engine/LinearTrackSegment";
+import Network from "../engine/Network";
+import Point from "../engine/Point";
+import { ALIGNMENT } from "../engine/Station";
+
+/**
+ * Draws the game to an HTMLCanvasElement.
+ */
+class TrackEditor {
+  #canvas: HTMLCanvasElement;
+  #network: Network;
+  #offset: { x: number; y: number };
+  #size: { x: number; y: number };
+  #scale: number;
+  #context: CanvasRenderingContext2D | null;
+  _testingOptions = {
+    randomizeFramerate: false,
+  };
+  constructor(
+    element: HTMLElement,
+    network: Network,
+    offset = { x: 0, y: 0 },
+    scale = 2,
+    size = { x: 800, y: 600 },
+  ) {
+    this.#offset = offset;
+    this.#scale = scale;
+    this.#size = size;
+    const canvas = document.createElement("canvas");
+    canvas.width = size.x;
+    canvas.height = size.y;
+    canvas.style.background = "black";
+    element.appendChild(canvas);
+    this.#canvas = canvas;
+    this.#context = canvas.getContext("2d");
+    this.#network = network;
+
+    const gameBounds = network.getBounds();
+
+    const padding = 100;
+    // The max fittable scale along X
+    const scaleX =
+      (this.#size.x - padding) / (gameBounds.max.x - gameBounds.min.x);
+    // The max fittable scale along Y
+    const scaleY =
+      (this.#size.y - padding) / (gameBounds.max.y - gameBounds.min.y);
+
+    if (scaleX < scaleY) {
+      this.#scale = scaleX;
+      const excessY =
+        (this.#size.y -
+          padding -
+          (gameBounds.max.y - gameBounds.min.y) * this.#scale) /
+        2;
+      this.#offset = {
+        x: -gameBounds.min.x + padding / (this.#scale * 2),
+        y:
+          -gameBounds.min.y +
+          excessY / this.#scale +
+          padding / (this.#scale * 2),
+      };
+    } else {
+      this.#scale = scaleY;
+      const excessX =
+        (this.#size.x -
+          padding -
+          (gameBounds.max.x - gameBounds.min.x) * this.#scale) /
+        2;
+
+      this.#offset = {
+        x:
+          -gameBounds.min.x +
+          excessX / this.#scale +
+          padding / (this.#scale * 2),
+        y: -gameBounds.min.y + padding / (this.#scale * 2),
+      };
+    }
+  }
+
+  transformPosition(p: Point): Point {
+    return {
+      x: (p.x + this.#offset.x) * this.#scale,
+      y: (p.y + this.#offset.y) * this.#scale,
+    };
+  }
+
+  drawTrackSections() {
+    if (!this.#context) return;
+    this.#context.lineWidth = 2;
+    this.#network.segments.forEach((segment) => {
+      if (!this.#context) return;
+      this.#context.strokeStyle = "rgb(200, 200, 200)";
+
+      if (segment instanceof LinearTrackSegment) {
+        this.#context.beginPath();
+        this.#context.moveTo(
+          (segment.start.x + this.#offset.x) * this.#scale,
+          (segment.start.y + this.#offset.y) * this.#scale,
+        );
+        this.#context.lineTo(
+          (segment.end.x + this.#offset.x) * this.#scale,
+          (segment.end.y + this.#offset.y) * this.#scale,
+        );
+        this.#context.stroke();
+      } else if (segment instanceof CircularTrackSegment) {
+        this.#context.beginPath();
+        this.#context.arc(
+          (segment.center.x + this.#offset.x) * this.#scale,
+          (segment.center.y + this.#offset.y) * this.#scale,
+          segment.radius * this.#scale,
+          segment.initialAngle +
+            (segment.counterClockWise ? Math.PI / 2 : -Math.PI / 2),
+          segment.finalAngle +
+            (segment.counterClockWise ? Math.PI / 2 : -Math.PI / 2),
+          segment.counterClockWise,
+        );
+        this.#context.stroke();
+      }
+
+      // Draw a dot at the start and end
+      let canvasPosition = this.transformPosition(segment.start);
+      this.#context.fillStyle = "rgba(200, 0, 0)";
+      this.#context.beginPath();
+      this.#context.arc(canvasPosition.x, canvasPosition.y, 5, 0, Math.PI * 2);
+      this.#context.closePath();
+      this.#context.fill();
+
+      canvasPosition = this.transformPosition(segment.end);
+      this.#context.fillStyle = "rgba(200, 0, 0)";
+      this.#context.beginPath();
+      this.#context.arc(canvasPosition.x, canvasPosition.y, 5, 0, Math.PI * 2);
+      this.#context.closePath();
+      this.#context.fill();
+
+      // Draw an arrow in the middle
+      canvasPosition = this.transformPosition(
+        segment.getPositionAlong(segment.length / 2).point,
+      );
+      const angle = segment.getAngleAlong(segment.length / 2) + Math.PI;
+      this.#context.strokeStyle = "rgba(255, 255, 0)";
+      this.#context.beginPath();
+      this.#context.moveTo(canvasPosition.x, canvasPosition.y);
+      this.#context.lineTo(
+        canvasPosition.x + Math.cos(angle + Math.PI / 4) * 10,
+        canvasPosition.y + Math.sin(angle + Math.PI / 4) * 10,
+      );
+      this.#context.stroke();
+      this.#context.beginPath();
+      this.#context.moveTo(canvasPosition.x, canvasPosition.y);
+      this.#context.lineTo(
+        canvasPosition.x + Math.cos(angle - Math.PI / 4) * 10,
+        canvasPosition.y + Math.sin(angle - Math.PI / 4) * 10,
+      );
+      this.#context.stroke();
+
+      this.#context.closePath();
+      this.#context.fill();
+    });
+  }
+
+  drawStations() {
+    this.#network.stations.forEach((station) => {
+      if (!this.#context) return;
+      this.#context.fillStyle = "rgb(40, 100, 255)";
+      const SIZE = 10;
+
+      const targetPosition = station.trackSegment.getPositionAlong(
+        station.distanceAlong,
+      ).point;
+      let angleFromForward = station.trackSegment.getAngleAlong(
+        station.distanceAlong,
+      );
+      angleFromForward +=
+        station.alignment === ALIGNMENT.LEFT ? -Math.PI / 2 : Math.PI / 2;
+
+      targetPosition.x += Math.cos(angleFromForward) * 5;
+      targetPosition.y += Math.sin(angleFromForward) * 5;
+      targetPosition.x += this.#offset.x;
+      targetPosition.y += this.#offset.y;
+      targetPosition.x *= this.#scale;
+      targetPosition.y *= this.#scale;
+
+      const targetRotation = -station.trackSegment.getAngleAlong(
+        station.distanceAlong,
+      );
+      this.#context.beginPath();
+      this.#context.moveTo(
+        targetPosition.x +
+          (-SIZE * Math.cos(targetRotation) -
+            (SIZE / 2) * Math.sin(targetRotation)),
+        targetPosition.y +
+          (-(SIZE / 2) * Math.cos(targetRotation) +
+            SIZE * Math.sin(targetRotation)),
+      );
+      this.#context.lineTo(
+        targetPosition.x +
+          (SIZE * Math.cos(targetRotation) -
+            (SIZE / 2) * Math.sin(targetRotation)),
+        targetPosition.y +
+          (-(SIZE / 2) * Math.cos(targetRotation) -
+            SIZE * Math.sin(targetRotation)),
+      );
+      this.#context.lineTo(
+        targetPosition.x +
+          (SIZE * Math.cos(targetRotation) +
+            (SIZE / 2) * Math.sin(targetRotation)),
+        targetPosition.y +
+          ((SIZE / 2) * Math.cos(targetRotation) -
+            SIZE * Math.sin(targetRotation)),
+      );
+      this.#context.lineTo(
+        targetPosition.x +
+          (-SIZE * Math.cos(targetRotation) +
+            (SIZE / 2) * Math.sin(targetRotation)),
+        targetPosition.y +
+          ((SIZE / 2) * Math.cos(targetRotation) +
+            SIZE * Math.sin(targetRotation)),
+      );
+
+      this.#context.closePath();
+      this.#context.fill();
+    });
+  }
+
+  update() {
+    this.#context = this.#canvas.getContext("2d");
+    if (!this.#context) return;
+
+    // Render
+    this.#context.clearRect(0, 0, this.#size.x, this.#size.y);
+    this.drawTrackSections();
+    this.drawStations();
+  }
+}
+
+export default TrackEditor;
