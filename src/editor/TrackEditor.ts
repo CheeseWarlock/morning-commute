@@ -4,6 +4,7 @@ import LinearTrackSegment from "../engine/LinearTrackSegment";
 import Network from "../engine/Network";
 import Point from "../engine/Point";
 import { ALIGNMENT } from "../engine/Station";
+import TrackSegment from "../engine/TrackSegment";
 
 /**
  * Draws the game to an HTMLCanvasElement.
@@ -15,9 +16,11 @@ class TrackEditor {
   #size: { x: number; y: number };
   #scale: number;
   #context: CanvasRenderingContext2D | null;
+  #hoverSegment?: TrackSegment;
   _testingOptions = {
     randomizeFramerate: false,
   };
+  mousePos?: { x: number; y: number };
   constructor(
     element: HTMLElement,
     network: Network,
@@ -77,6 +80,18 @@ class TrackEditor {
         y: -gameBounds.min.y + padding / (this.#scale * 2),
       };
     }
+
+    this.#scale = 1;
+    this.#offset = { x: 0, y: 0 };
+
+    canvas.onmousemove = (ev) => {
+      this.mousePos = { x: ev.offsetX, y: ev.offsetY };
+    };
+
+    setInterval(() => {
+      this.updateSelection();
+      this.update();
+    }, 50);
   }
 
   transformPosition(p: Point): Point {
@@ -91,7 +106,13 @@ class TrackEditor {
     this.#context.lineWidth = 2;
     this.#network.segments.forEach((segment) => {
       if (!this.#context) return;
-      this.#context.strokeStyle = "rgb(200, 200, 200)";
+      if (segment === this.#hoverSegment) {
+        this.#context.strokeStyle = "rgb(160, 160, 255)";
+        this.#context.lineWidth = 4;
+      } else {
+        this.#context.strokeStyle = "rgb(200, 200, 200)";
+        this.#context.lineWidth = 2;
+      }
 
       if (segment instanceof LinearTrackSegment) {
         this.#context.beginPath();
@@ -222,6 +243,75 @@ class TrackEditor {
       this.#context.closePath();
       this.#context.fill();
     });
+  }
+
+  updateSelection() {
+    const selectionPoint: Point = {
+      x: this.mousePos?.x || 0,
+      y: this.mousePos?.y || 0,
+    };
+    console.log(selectionPoint);
+    const dist = (a: Point, b: Point) =>
+      Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+
+    const distToLine = (a: Point, b: Point, p: Point) => {
+      // const length = dist(a, b);
+      // if (length === 0) return dist(a, p);
+
+      // let t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / length;
+      // t = Math.max(0, Math.min(1, t));
+
+      // return Math.sqrt(
+      //   dist(p, { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) }),
+      // );
+
+      const x = p.x;
+      const y = p.x;
+      const x1 = a.x;
+      const x2 = b.x;
+      const y1 = a.y;
+      const y2 = b.y;
+
+      var A = x - x1;
+      var B = y - y1;
+      var C = x2 - x1;
+      var D = y2 - y1;
+
+      var dot = A * C + B * D;
+      var len_sq = C * C + D * D;
+      var param = -1;
+      if (len_sq != 0)
+        //in case of 0 length line
+        param = dot / len_sq;
+
+      var xx, yy;
+
+      if (param < 0) {
+        xx = x1;
+        yy = y1;
+      } else if (param > 1) {
+        xx = x2;
+        yy = y2;
+      } else {
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+      }
+
+      var dx = x - xx;
+      var dy = y - yy;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+    let closest = Infinity;
+    let closestSegment = this.#network.segments[0];
+    this.#network.segments.forEach((seg, i) => {
+      const distToThis = distToLine(seg.start, seg.end, selectionPoint);
+      console.log(i, distToThis);
+      if (distToThis < closest) {
+        closestSegment = seg;
+        closest = distToThis;
+      }
+    }, Infinity);
+    this.#hoverSegment = closestSegment;
   }
 
   update() {

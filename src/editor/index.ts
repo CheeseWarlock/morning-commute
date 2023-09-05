@@ -1,5 +1,5 @@
 import TrackEditor from "./TrackEditor";
-import { build as buildComplex } from "../engine/networks/Complex";
+import { build as buildComplex } from "../engine/networks/TestingNetworks/DisconnectedLinear";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div id="editor-holder">
