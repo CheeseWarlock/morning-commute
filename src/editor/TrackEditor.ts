@@ -8,7 +8,7 @@ import TrackSegment from "../engine/TrackSegment";
 
 class TrackEditor {
   #canvas: HTMLCanvasElement;
-  #network: Network;
+  network: Network;
   #offset: { x: number; y: number };
   #size: { x: number; y: number };
   #scale: number;
@@ -39,7 +39,7 @@ class TrackEditor {
     element.appendChild(canvas);
     this.#canvas = canvas;
     this.#context = canvas.getContext("2d");
-    this.#network = network;
+    this.network = network;
     this.#onSelect = onSelect;
 
     const gameBounds = network.getBounds();
@@ -101,6 +101,17 @@ class TrackEditor {
     };
   }
 
+  setNetwork(network: Network) {
+    this.#hoverSegment = undefined;
+    if (this.#selectedSegment) {
+      const selection = this.network.segments.indexOf(this.#selectedSegment);
+      this.network = network;
+      this.#selectedSegment = network.segments[selection];
+    } else {
+      this.network = network;
+    }
+  }
+
   transformPosition(p: Point): Point {
     return {
       x: (p.x + this.#offset.x) * this.#scale,
@@ -118,7 +129,7 @@ class TrackEditor {
   drawTrackSections() {
     if (!this.#context) return;
     this.#context.lineWidth = 2;
-    this.#network.segments.forEach((segment) => {
+    this.network.segments.forEach((segment) => {
       if (!this.#context) return;
       if (segment === this.#selectedSegment) {
         this.#context.strokeStyle = "rgb(255, 255, 255)";
@@ -199,7 +210,7 @@ class TrackEditor {
   }
 
   drawStations() {
-    this.#network.stations.forEach((station) => {
+    this.network.stations.forEach((station) => {
       if (!this.#context) return;
       this.#context.fillStyle = "rgb(40, 100, 255)";
       const SIZE = 10;
@@ -269,7 +280,7 @@ class TrackEditor {
     };
     let closest = Infinity;
     let closestSegment: TrackSegment | undefined;
-    this.#network.segments.forEach((seg) => {
+    this.network.segments.forEach((seg) => {
       const distToThis = seg.distanceToPosition(selectionPoint);
       if (distToThis < closest && distToThis < 100) {
         closestSegment = seg;
