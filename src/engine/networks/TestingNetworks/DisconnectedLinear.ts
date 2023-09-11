@@ -1,4 +1,3 @@
-import { ALIGNMENT } from "../../Station";
 import NetworkBuilder from "../NetworkBuilder";
 
 export const build = () => {
@@ -9,6 +8,8 @@ export const build = () => {
   builder.lineTo({ x: 110, y: 50 });
   builder.moveTo({ x: 40, y: 80 });
   builder.lineTo({ x: 90, y: 80 });
+  builder.moveTo({ x: 200, y: 100 });
+  builder.curveTo({ x: 300, y: 100 }, { x: 250, y: 100 });
   return builder;
 };
 
