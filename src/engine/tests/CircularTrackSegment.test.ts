@@ -169,9 +169,46 @@ describe("distanceToPosition", () => {
     expect(outerDistance).toBeCloseTo(30);
   });
 
-  it("returns the distance to the src when the closest point is somewhere along the arc", () => {
+  it("returns the distance to the arc when the closest point is somewhere along the arc", () => {
     const innerDistance = smallerArc.distanceToPosition({ x: 40, y: 20 });
     const outerDistance = largerArc.distanceToPosition({ x: 40, y: 20 });
+
+    expect(innerDistance).toBeCloseTo(20 - Math.sqrt(200));
+    expect(outerDistance).toBeCloseTo(30 - Math.sqrt(200));
+  });
+
+  it("returns the distance to the start when that's the closest point", () => {
+    const innerDistance = smallerArc.distanceToPosition({ x: 20, y: 50 });
+    const outerDistance = largerArc.distanceToPosition({ x: 20, y: 50 });
+
+    expect(innerDistance).toBeCloseTo(Math.sqrt(500));
+    expect(outerDistance).toBeCloseTo(Math.sqrt(800));
+  });
+
+  it("returns the distance to the end when that's the closest point", () => {
+    const innerDistance = smallerArc.distanceToPosition({ x: 70, y: 50 });
+    const outerDistance = largerArc.distanceToPosition({ x: 70, y: 50 });
+
+    expect(innerDistance).toBeCloseTo(Math.sqrt(800));
+    expect(outerDistance).toBeCloseTo(Math.sqrt(500));
+  });
+
+  it("returns the correct distance for a counterclockwise arc", () => {
+    const smallerArc = new CircularTrackSegment(
+      { x: 10, y: 30 },
+      { x: 50, y: 30 },
+      { x: 30, y: 30 },
+      true,
+    );
+    const largerArc = new CircularTrackSegment(
+      { x: 0, y: 30 },
+      { x: 60, y: 30 },
+      { x: 30, y: 30 },
+      true,
+    );
+
+    const innerDistance = smallerArc.distanceToPosition({ x: 20, y: 40 });
+    const outerDistance = largerArc.distanceToPosition({ x: 20, y: 40 });
 
     expect(innerDistance).toBeCloseTo(20 - Math.sqrt(200));
     expect(outerDistance).toBeCloseTo(30 - Math.sqrt(200));

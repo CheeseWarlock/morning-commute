@@ -114,8 +114,15 @@ class CircularTrackSegment extends TrackSegment {
       }
     }
 
-    // This is insufficient
-    if (angleToStart < angleToPoint && angleToPoint < angleToEnd) {
+    const isInsideCone =
+      (!this.counterClockWise &&
+        angleToStart < angleToPoint &&
+        angleToPoint < angleToEnd) ||
+      (this.counterClockWise &&
+        angleToEnd < angleToPoint &&
+        angleToPoint < angleToStart);
+
+    if (isInsideCone) {
       // Inside the cone
       const distanceToCenter = Math.sqrt(
         (this.center.x - point.x) ** 2 + (this.center.y - point.y) ** 2,

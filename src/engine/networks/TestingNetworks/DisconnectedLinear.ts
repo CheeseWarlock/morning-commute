@@ -12,6 +12,11 @@ export const build = () => {
   builder.curveTo({ x: 300, y: 100 }, { x: 250, y: 100 });
   builder.moveTo({ x: 150, y: 100 });
   builder.curveTo({ x: 350, y: 100 }, { x: 250, y: 100 });
+
+  builder.moveTo({ x: 450, y: 0 });
+  builder.curveTo({ x: 550, y: 0 }, { x: 500, y: 0 }, true);
+  builder.moveTo({ x: 400, y: 0 });
+  builder.curveTo({ x: 600, y: 0 }, { x: 500, y: 0 }, true);
   return builder;
 };
 
