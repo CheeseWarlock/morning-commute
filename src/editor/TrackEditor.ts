@@ -1,5 +1,4 @@
 import CircularTrackSegment from "../engine/CircularTrackSegment";
-import Game from "../engine/Game";
 import LinearTrackSegment from "../engine/LinearTrackSegment";
 import Network from "../engine/Network";
 import Point from "../engine/Point";
@@ -98,6 +97,13 @@ class TrackEditor {
     return {
       x: (p.x + this.#offset.x) * this.#scale,
       y: (p.y + this.#offset.y) * this.#scale,
+    };
+  }
+
+  untransformPosition(p: Point): Point {
+    return {
+      x: p.x / this.#scale - this.#offset.x,
+      y: p.y / this.#scale - this.#offset.y,
     };
   }
 
@@ -266,7 +272,7 @@ class TrackEditor {
       // );
 
       const x = p.x;
-      const y = p.x;
+      const y = p.y;
       const x1 = a.x;
       const x2 = b.x;
       const y1 = a.y;
