@@ -10,6 +10,8 @@ export const build = () => {
   builder.lineTo({ x: 90, y: 80 });
   builder.moveTo({ x: 200, y: 100 });
   builder.curveTo({ x: 300, y: 100 }, { x: 250, y: 100 });
+  builder.moveTo({ x: 150, y: 100 });
+  builder.curveTo({ x: 350, y: 100 }, { x: 250, y: 100 });
   return builder;
 };
 

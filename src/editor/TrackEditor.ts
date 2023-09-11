@@ -1,3 +1,4 @@
+import React from "react";
 import CircularTrackSegment from "../engine/CircularTrackSegment";
 import LinearTrackSegment from "../engine/LinearTrackSegment";
 import Network from "../engine/Network";
@@ -13,29 +14,33 @@ class TrackEditor {
   #scale: number;
   #context: CanvasRenderingContext2D | null;
   #hoverSegment?: TrackSegment;
+  #onSelect?: (segment?: TrackSegment) => void;
   _testingOptions = {
     randomizeFramerate: false,
   };
   mousePos?: { x: number; y: number };
   #selectedSegment: TrackSegment | undefined;
-  constructor(
-    element: HTMLElement,
-    network: Network,
-    offset = { x: 0, y: 0 },
-    scale = 2,
-    size = { x: 800, y: 600 },
-  ) {
-    this.#offset = offset;
-    this.#scale = scale;
-    this.#size = size;
+  constructor(options: {
+    element: HTMLElement;
+    network: Network;
+    offset?: Point;
+    scale?: number;
+    size?: Point;
+    onSelect: (segment?: TrackSegment) => void;
+  }) {
+    const { element, network, offset, scale, size, onSelect } = options;
+    this.#offset = offset || { x: 0, y: 0 };
+    this.#scale = scale || 1;
+    this.#size = size || { x: 800, y: 600 };
     const canvas = document.createElement("canvas");
-    canvas.width = size.x;
-    canvas.height = size.y;
+    canvas.width = this.#size.x;
+    canvas.height = this.#size.y;
     canvas.style.background = "black";
     element.appendChild(canvas);
     this.#canvas = canvas;
     this.#context = canvas.getContext("2d");
     this.#network = network;
+    this.#onSelect = onSelect;
 
     const gameBounds = network.getBounds();
 
@@ -91,6 +96,7 @@ class TrackEditor {
     canvas.onclick = (ev) => {
       this.#selectedSegment = this.#hoverSegment;
       console.log(this.#selectedSegment);
+      this.#onSelect?.(this.#selectedSegment);
       this.update();
     };
   }
