@@ -82,8 +82,55 @@ class CircularTrackSegment extends TrackSegment {
   }
 
   distanceToPosition(point: Point): number {
-    // get the direction from centre to the point
-    return 10000;
+    let angleToPoint = Math.atan2(
+      point.y - this.center.y,
+      point.x - this.center.x,
+    );
+
+    let angleToStart = Math.atan2(
+      this.start.y - this.center.y,
+      this.start.x - this.center.x,
+    );
+
+    let angleToEnd = Math.atan2(
+      this.end.y - this.center.y,
+      this.end.x - this.center.x,
+    );
+
+    // Convert angles to range of [0 - 2*Pi]
+    angleToPoint = (angleToPoint + 2 * Math.PI) % (2 * Math.PI);
+    angleToStart = (angleToStart + 2 * Math.PI) % (2 * Math.PI);
+    angleToEnd = (angleToEnd + 2 * Math.PI) % (2 * Math.PI);
+
+    // Then make the correct one larger based on CCW
+    if (this.counterClockWise) {
+      // Final should be less
+      if (angleToEnd > angleToStart) {
+        angleToStart += 2 * Math.PI;
+      }
+    } else {
+      if (angleToStart > angleToEnd) {
+        angleToEnd += 2 * Math.PI;
+      }
+    }
+
+    // This is insufficient
+    if (angleToStart < angleToPoint && angleToPoint < angleToEnd) {
+      // Inside the cone
+      const distanceToCenter = Math.sqrt(
+        (this.center.x - point.x) ** 2 + (this.center.y - point.y) ** 2,
+      );
+      return Math.abs(distanceToCenter - this.radius);
+    } else {
+      const distanceToStart = Math.sqrt(
+        (this.start.x - point.x) ** 2 + (this.start.y - point.y) ** 2,
+      );
+      const distanceToEnd = Math.sqrt(
+        (this.end.x - point.x) ** 2 + (this.end.y - point.y) ** 2,
+      );
+
+      return Math.min(distanceToStart, distanceToEnd);
+    }
   }
 
   getPositionAlong(

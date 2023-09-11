@@ -17,7 +17,7 @@ const TrackEditorComponent = (props: any) => {
 
   return <>
     <div ref={divRef} {...props}/>
-    {selectedSegment && <TrackSegmentDetail className="segment-info" segment={selectedSegment}/>}
+    {selectedSegment && <TrackSegmentDetail segment={selectedSegment}/>}
   </>;
 }
 
