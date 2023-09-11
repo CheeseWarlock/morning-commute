@@ -81,6 +81,11 @@ class CircularTrackSegment extends TrackSegment {
     return this._length;
   }
 
+  distanceToPosition(point: Point): number {
+    // get the direction from centre to the point
+    return 10000;
+  }
+
   getPositionAlong(
     distance: number,
     reverse: boolean = false,

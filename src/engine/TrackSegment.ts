@@ -30,6 +30,7 @@ abstract class TrackSegment {
     distance: number,
     reverse?: boolean,
   ): { point: Point; excess: number };
+  abstract distanceToPosition(point: Point): number;
 
   abstract getAngleAlong(distance: number, reverse?: boolean): number;
 

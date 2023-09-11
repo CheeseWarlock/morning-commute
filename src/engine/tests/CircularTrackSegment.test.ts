@@ -148,3 +148,32 @@ describe("a single CircularTrackSegment", () => {
     expect(angleAlong).toBeCloseTo((Math.PI * 2) / 4, 4);
   });
 });
+
+describe("distanceToPosition", () => {
+  const smallerArc = new CircularTrackSegment(
+    { x: 10, y: 30 },
+    { x: 50, y: 30 },
+    { x: 30, y: 30 },
+  );
+  const largerArc = new CircularTrackSegment(
+    { x: 0, y: 30 },
+    { x: 60, y: 30 },
+    { x: 30, y: 30 },
+  );
+
+  it("returns the radius of the circle when the point is the origin of the curve", () => {
+    const innerDistance = smallerArc.distanceToPosition({ x: 30, y: 30 });
+    const outerDistance = largerArc.distanceToPosition({ x: 30, y: 30 });
+
+    expect(innerDistance).toBeCloseTo(20);
+    expect(outerDistance).toBeCloseTo(30);
+  });
+
+  it("returns the distance to the src when the closest point is somewhere along the arc", () => {
+    const innerDistance = smallerArc.distanceToPosition({ x: 40, y: 20 });
+    const outerDistance = largerArc.distanceToPosition({ x: 40, y: 20 });
+
+    expect(innerDistance).toBeCloseTo(20 - Math.sqrt(200));
+    expect(outerDistance).toBeCloseTo(30 - Math.sqrt(200));
+  });
+});
