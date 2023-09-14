@@ -11,11 +11,6 @@ class CircularTrackSegment extends TrackSegment {
   atEnd: TrackSegment[];
   center: Point;
   counterClockWise: boolean;
-  _length: number;
-  #theta: number;
-  radius: number;
-  initialAngle: number;
-  finalAngle: number;
 
   constructor(
     start: Point,
@@ -28,7 +23,57 @@ class CircularTrackSegment extends TrackSegment {
     this.end = end;
     this.center = center;
     this.counterClockWise = counterClockWise;
+    this.atStart = [];
+    this.atEnd = [];
+  }
 
+  get radius() {
+    const radius = Math.sqrt(
+      (this.center.x - this.start.x) ** 2 + (this.center.y - this.start.y) ** 2,
+    );
+    return radius;
+  }
+
+  /**
+   * Initial angle (direction of travel)
+   */
+  get initialAngle() {
+    // Angles from start/end to center...
+    let initialAngle = Math.atan2(
+      this.start.y - this.center.y,
+      this.start.x - this.center.x,
+    );
+
+    // So rotate by 90 degrees
+    if (this.counterClockWise) {
+      initialAngle -= Math.PI / 2;
+    } else {
+      initialAngle += Math.PI / 2;
+    }
+
+    return initialAngle;
+  }
+
+  /**
+   * Final angle (direction of travel)
+   */
+  get finalAngle() {
+    let finalAngle = Math.atan2(
+      this.end.y - this.center.y,
+      this.end.x - this.center.x,
+    );
+
+    // So rotate by 90 degrees
+    if (this.counterClockWise) {
+      finalAngle -= Math.PI / 2;
+    } else {
+      finalAngle += Math.PI / 2;
+    }
+
+    return finalAngle;
+  }
+
+  get length() {
     // Angles from start/end to center...
     let initialAngle = Math.atan2(
       this.start.y - this.center.y,
@@ -40,7 +85,7 @@ class CircularTrackSegment extends TrackSegment {
     );
 
     // So rotate by 90 degrees
-    if (counterClockWise) {
+    if (this.counterClockWise) {
       initialAngle -= Math.PI / 2;
       finalAngle -= Math.PI / 2;
     } else {
@@ -48,15 +93,12 @@ class CircularTrackSegment extends TrackSegment {
       finalAngle += Math.PI / 2;
     }
 
-    this.initialAngle = initialAngle;
-    this.finalAngle = finalAngle;
-
     // Convert angles to range of [0 - 2*Pi]
     initialAngle = (initialAngle + 2 * Math.PI) % (2 * Math.PI);
     finalAngle = (finalAngle + 2 * Math.PI) % (2 * Math.PI);
 
     // Then make the correct one larger based on CCW
-    if (counterClockWise) {
+    if (this.counterClockWise) {
       // Final should be less
       if (finalAngle > initialAngle) {
         initialAngle += 2 * Math.PI;
@@ -68,17 +110,9 @@ class CircularTrackSegment extends TrackSegment {
     }
 
     const radius = Math.sqrt(
-      (center.x - start.x) ** 2 + (center.y - start.y) ** 2,
+      (this.center.x - this.start.x) ** 2 + (this.center.y - this.start.y) ** 2,
     );
-    this.#theta = Math.abs(finalAngle - initialAngle);
-    this.radius = radius;
-    this._length = Math.abs(finalAngle - initialAngle) * radius;
-    this.atStart = [];
-    this.atEnd = [];
-  }
-
-  get length() {
-    return this._length;
+    return Math.abs(finalAngle - initialAngle) * radius;
   }
 
   distanceToPosition(point: Point): number {
