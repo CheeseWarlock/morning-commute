@@ -115,6 +115,10 @@ class CircularTrackSegment extends TrackSegment {
     return Math.abs(finalAngle - initialAngle) * radius;
   }
 
+  get theta() {
+    return this.length / this.radius;
+  }
+
   distanceToPosition(point: Point): number {
     let angleToPoint = Math.atan2(
       point.y - this.center.y,
