@@ -6,6 +6,15 @@ import Point from "../engine/Point";
 import { ALIGNMENT } from "../engine/Station";
 import TrackSegment from "../engine/TrackSegment";
 
+/**
+ * Which end of the segment is selected, or if it's just the whole thing
+ */
+export enum SELECTION_TYPE {
+  START,
+  END,
+  SEGMENT,
+}
+
 class TrackEditor {
   #canvas: HTMLCanvasElement;
   network: Network;
@@ -13,13 +22,16 @@ class TrackEditor {
   #size: { x: number; y: number };
   #scale: number;
   #context: CanvasRenderingContext2D | null;
-  #hoverSegment?: TrackSegment;
   #onSelect?: (segment?: TrackSegment) => void;
   _testingOptions = {
     randomizeFramerate: false,
   };
   mousePos?: { x: number; y: number };
+  #hoverSegment?: TrackSegment;
   #selectedSegment: TrackSegment | undefined;
+  #selectionType?: SELECTION_TYPE;
+  #hoverSelectionType?: SELECTION_TYPE;
+  #dragging: boolean;
   constructor(options: {
     element: HTMLElement;
     network: Network;
@@ -88,16 +100,41 @@ class TrackEditor {
     this.#offset = { x: 0, y: 0 };
 
     canvas.onmousemove = (ev) => {
-      this.mousePos = { x: ev.offsetX, y: ev.offsetY };
-      this.updateHoverState();
-      this.update();
+      if (this.#dragging) {
+        if (
+          this.#selectedSegment &&
+          this.#selectionType === SELECTION_TYPE.START
+        ) {
+          this.#selectedSegment.start.x = ev.offsetX;
+          this.#selectedSegment.start.y = ev.offsetY;
+          this.mousePos = { x: ev.offsetX, y: ev.offsetY };
+          this.update();
+        } else if (
+          this.#selectedSegment &&
+          this.#selectionType === SELECTION_TYPE.END
+        ) {
+          this.#selectedSegment.end.x = ev.offsetX;
+          this.#selectedSegment.end.y = ev.offsetY;
+          this.mousePos = { x: ev.offsetX, y: ev.offsetY };
+          this.update();
+        }
+      } else {
+        this.mousePos = { x: ev.offsetX, y: ev.offsetY };
+        this.updateHoverState();
+        this.update();
+      }
     };
 
-    canvas.onclick = (ev) => {
+    canvas.onmousedown = (ev) => {
       this.#selectedSegment = this.#hoverSegment;
-      console.log(this.#selectedSegment);
+      this.#selectionType = this.#hoverSelectionType;
       this.#onSelect?.(this.#selectedSegment);
       this.update();
+      this.#dragging = true;
+    };
+
+    canvas.onmouseup = (ev) => {
+      this.#dragging = false;
     };
   }
 
@@ -176,12 +213,52 @@ class TrackEditor {
       this.#context.closePath();
       this.#context.fill();
 
+      if (
+        (this.#hoverSelectionType === SELECTION_TYPE.START &&
+          segment === this.#hoverSegment) ||
+        (this.#selectionType === SELECTION_TYPE.START &&
+          segment === this.#selectedSegment)
+      ) {
+        this.#context.strokeStyle = "rgba(255,255,255)";
+        this.#context.lineWidth = 2;
+        this.#context.beginPath();
+        this.#context.arc(
+          canvasPosition.x,
+          canvasPosition.y,
+          8,
+          0,
+          Math.PI * 2,
+        );
+        this.#context.closePath();
+        this.#context.stroke();
+      }
+
       canvasPosition = this.transformPosition(segment.end);
       this.#context.fillStyle = "rgba(200, 0, 0)";
       this.#context.beginPath();
       this.#context.arc(canvasPosition.x, canvasPosition.y, 5, 0, Math.PI * 2);
       this.#context.closePath();
       this.#context.fill();
+
+      if (
+        (this.#hoverSelectionType === SELECTION_TYPE.END &&
+          segment === this.#hoverSegment) ||
+        (this.#selectionType === SELECTION_TYPE.END &&
+          segment === this.#selectedSegment)
+      ) {
+        this.#context.strokeStyle = "rgba(255,255,255)";
+        this.#context.lineWidth = 2;
+        this.#context.beginPath();
+        this.#context.arc(
+          canvasPosition.x,
+          canvasPosition.y,
+          8,
+          0,
+          Math.PI * 2,
+        );
+        this.#context.closePath();
+        this.#context.stroke();
+      }
 
       // Draw an arrow in the middle
       canvasPosition = this.transformPosition(
@@ -278,16 +355,41 @@ class TrackEditor {
       x: this.mousePos?.x || 0,
       y: this.mousePos?.y || 0,
     };
+    const _dist = (a: Point, b: Point) =>
+      Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
     let closest = Infinity;
     let closestSegment: TrackSegment | undefined;
+    let closestType: SELECTION_TYPE | undefined;
     this.network.segments.forEach((seg) => {
-      const distToThis = seg.distanceToPosition(selectionPoint);
-      if (distToThis < closest && distToThis < 100) {
+      const distanceToLine = seg.distanceToPosition(selectionPoint);
+      if (distanceToLine < closest && distanceToLine < 100) {
         closestSegment = seg;
-        closest = distToThis;
+        closest = distanceToLine;
+        closestType = SELECTION_TYPE.SEGMENT;
       }
-    }, Infinity);
+
+      const distanceToStart = _dist(seg.start, selectionPoint);
+      const distanceToEnd = _dist(seg.end, selectionPoint);
+
+      if (
+        (!closestType || closestType === SELECTION_TYPE.SEGMENT) &&
+        distanceToStart < 15
+      ) {
+        closestSegment = seg;
+        closest = distanceToLine;
+        closestType = SELECTION_TYPE.START;
+      }
+      if (
+        (!closestType || closestType === SELECTION_TYPE.SEGMENT) &&
+        distanceToEnd < 15
+      ) {
+        closestSegment = seg;
+        closest = distanceToLine;
+        closestType = SELECTION_TYPE.END;
+      }
+    });
     this.#hoverSegment = closestSegment;
+    this.#hoverSelectionType = closestType;
   }
 
   update() {
