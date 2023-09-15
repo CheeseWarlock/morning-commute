@@ -2,6 +2,7 @@ import React from "react";
 import TrackSegment from "../engine/TrackSegment";
 import CircularTrackSegment from "../engine/CircularTrackSegment";
 import Network from "../engine/Network";
+import { findCenter } from "./utils";
 
 const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, update: React.Dispatch<React.SetStateAction<Network>> }) => {
   const { update } = props;
@@ -37,21 +38,30 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
     update(aaaaa);
   }
 
-  const doUpdateCX : React.ChangeEventHandler<HTMLInputElement> = (ev) => {
+  const doUpdateTheta : React.ChangeEventHandler<HTMLInputElement> = (ev) => {
     const val = ev.target.value;
     const network = props.network;
     const aaaaa = new Network(network.segments);
-    (aaaaa.segments[props.segmentIndex] as CircularTrackSegment).center.x = Number.parseInt(val);
+    const thisSegment = (aaaaa.segments[props.segmentIndex] as CircularTrackSegment);
+    const newPos = findCenter(thisSegment.start,thisSegment.end,Number.parseFloat(val),thisSegment.counterClockWise);
+    thisSegment.center.x = newPos.x;
+    thisSegment.center.y = newPos.y;
     update(aaaaa);
   }
 
-  const doUpdateCY : React.ChangeEventHandler<HTMLInputElement> = (ev) => {
-    const val = ev.target.value;
+  const doUpdateCCW : React.ChangeEventHandler<HTMLInputElement> = (ev) => {
+    const boolVal = ev.target.checked;
     const network = props.network;
     const aaaaa = new Network(network.segments);
-    (aaaaa.segments[props.segmentIndex] as CircularTrackSegment).center.y = Number.parseInt(val);
+    const thisSegment = (aaaaa.segments[props.segmentIndex] as CircularTrackSegment);
+    const newPos = findCenter(thisSegment.start,thisSegment.end,thisSegment.theta,boolVal);
+    thisSegment.center.x = newPos.x;
+    thisSegment.center.y = newPos.y;
+    
+    thisSegment.counterClockWise = boolVal;
     update(aaaaa);
   }
+
   const segment = props.network.segments[props.segmentIndex];
 
   return <div className="segment-info">
@@ -71,12 +81,11 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
       <input type="number" value={segment.end.y} onChange={doUpdateEY}></input>
     </p>
     {segment instanceof CircularTrackSegment && <>
-      <h4>Around</h4>
+      <h4>Angle</h4>
       <p>
-      <span>X</span>
-      <input type="number" value={segment.center.x} onChange={doUpdateCX}></input>
-      <span>Y</span>
-      <input type="number" value={segment.center.y} onChange={doUpdateCY}></input>
+      <input type="number" value={segment.theta} step="any" onChange={doUpdateTheta}></input>
+      <span>CCW</span>
+      <input type="checkbox" checked={segment.counterClockWise} onChange={doUpdateCCW}></input>
     </p>
       </>
     }
