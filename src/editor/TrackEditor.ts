@@ -5,7 +5,7 @@ import Network from "../engine/Network";
 import Point from "../engine/Point";
 import { ALIGNMENT } from "../engine/Station";
 import TrackSegment from "../engine/TrackSegment";
-import { findCenter } from "./utils";
+import { connectSegments, findCenter } from "./utils";
 
 /**
  * Which end of the segment is selected, or if it's just the whole thing
@@ -164,6 +164,15 @@ class TrackEditor {
     canvas.onmouseup = (ev) => {
       this.#dragging = false;
     };
+
+    const ugggg = connectSegments(
+      network.segments[0],
+      true,
+      network.segments[1],
+      true,
+    );
+    network.segments.push(ugggg[0]);
+    network.segments.push(ugggg[1]);
   }
 
   setNetwork(network: Network) {
