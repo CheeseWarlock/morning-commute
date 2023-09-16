@@ -5,6 +5,7 @@ import Network from "../engine/Network";
 import Point from "../engine/Point";
 import { ALIGNMENT } from "../engine/Station";
 import TrackSegment from "../engine/TrackSegment";
+import { findCenter } from "./utils";
 
 /**
  * Which end of the segment is selected, or if it's just the whole thing
@@ -105,16 +106,43 @@ class TrackEditor {
           this.#selectedSegment &&
           this.#selectionType === SELECTION_TYPE.START
         ) {
-          this.#selectedSegment.start.x = ev.offsetX;
-          this.#selectedSegment.start.y = ev.offsetY;
+          if (this.#selectedSegment instanceof CircularTrackSegment) {
+            const newCenter = findCenter(
+              { x: ev.offsetX, y: ev.offsetY },
+              this.#selectedSegment.end,
+              this.#selectedSegment.theta,
+              this.#selectedSegment.counterClockWise,
+            );
+            this.#selectedSegment.start.x = ev.offsetX;
+            this.#selectedSegment.start.y = ev.offsetY;
+            this.#selectedSegment.center.x = newCenter.x;
+            this.#selectedSegment.center.y = newCenter.y;
+            console.log(this.#selectedSegment.theta);
+          } else {
+            this.#selectedSegment.start.x = ev.offsetX;
+            this.#selectedSegment.start.y = ev.offsetY;
+          }
           this.mousePos = { x: ev.offsetX, y: ev.offsetY };
           this.update();
         } else if (
           this.#selectedSegment &&
           this.#selectionType === SELECTION_TYPE.END
         ) {
-          this.#selectedSegment.end.x = ev.offsetX;
-          this.#selectedSegment.end.y = ev.offsetY;
+          if (this.#selectedSegment instanceof CircularTrackSegment) {
+            const newCenter = findCenter(
+              this.#selectedSegment.start,
+              { x: ev.offsetX, y: ev.offsetY },
+              this.#selectedSegment.theta,
+              this.#selectedSegment.counterClockWise,
+            );
+            this.#selectedSegment.end.x = ev.offsetX;
+            this.#selectedSegment.end.y = ev.offsetY;
+            this.#selectedSegment.center.x = newCenter.x;
+            this.#selectedSegment.center.y = newCenter.y;
+          } else {
+            this.#selectedSegment.end.x = ev.offsetX;
+            this.#selectedSegment.end.y = ev.offsetY;
+          }
           this.mousePos = { x: ev.offsetX, y: ev.offsetY };
           this.update();
         }
