@@ -165,7 +165,7 @@ class TrackEditor {
       this.#dragging = false;
     };
 
-    const ugggg = connectSegments(
+    let ugggg = connectSegments(
       network.segments[0],
       true,
       network.segments[1],
@@ -173,6 +173,15 @@ class TrackEditor {
     );
     network.segments.push(ugggg[0]);
     network.segments.push(ugggg[1]);
+
+    // let erreregsty = connectSegments(
+    //   network.segments[5],
+    //   false,
+    //   network.segments[4],
+    //   false,
+    // );
+    // network.segments.push(erreregsty[0]);
+    // network.segments.push(erreregsty[1]);
   }
 
   setNetwork(network: Network) {

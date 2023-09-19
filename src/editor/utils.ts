@@ -49,12 +49,12 @@ const lineIntersection = (
   const u = (dy * Math.cos(dB) - dx * Math.sin(dB)) / det;
   const v = (dy * Math.cos(dA) - dx * Math.sin(dA)) / det;
 
-  const m0 = Math.sin(dA) / Math.cos(dA);
-  const m1 = Math.sin(dB) / Math.cos(dB);
-  const b0 = a.y - m0 * a.x;
-  const b1 = b.y - m1 * b.x;
-  const x = (b1 - b0) / (m0 - m1);
-  const y = m0 * x + b0;
+  if (dA % (Math.PI / 2) === 0) {
+    // Ughhh workaround
+    console.log("ughh");
+  }
+  const x = a.x + u * Math.cos(dA);
+  const y = a.y + u * Math.sin(dA);
 
   return Number.isFinite(x)
     ? {
@@ -69,7 +69,7 @@ export const connectSegments = (
   segmentA: TrackSegment,
   isEndA: boolean,
   segmentB: TrackSegment,
-  isEndB: TrackSegment,
+  isEndB: boolean,
 ): TrackSegment[] => {
   // Find the intersection point of the two rays
   let angleFromA;
@@ -111,19 +111,19 @@ export const connectSegments = (
     };
     const segment = new LinearTrackSegment(pointA, addedPoint);
     segments.push(segment);
-    const aaaa = lineIntersection(
+    const intersection = lineIntersection(
       addedPoint,
       pointB,
       angleFromA + Math.PI / 2,
       angleFromB + Math.PI / 2,
     );
-    if (!aaaa) {
+    if (!intersection) {
       return [];
     }
     const circleSegment = new CircularTrackSegment(
       addedPoint,
       pointB,
-      aaaa.point,
+      intersection.point,
     );
     segments.push(circleSegment);
     return segments;
@@ -135,19 +135,19 @@ export const connectSegments = (
     };
     const segment = new LinearTrackSegment(pointB, addedPoint);
     segments.push(segment);
-    const aaaa = lineIntersection(
+    const intersection = lineIntersection(
       pointA,
       addedPoint,
       angleFromA + Math.PI / 2,
       angleFromB + Math.PI / 2,
     );
-    if (!aaaa) {
+    if (!intersection) {
       return [];
     }
     const circleSegment = new CircularTrackSegment(
       pointA,
       addedPoint,
-      aaaa.point,
+      intersection.point,
     );
     segments.push(circleSegment);
     return segments;
