@@ -3,6 +3,10 @@ import LinearTrackSegment from "../engine/LinearTrackSegment";
 import Point from "../engine/Point";
 import TrackSegment from "../engine/TrackSegment";
 
+const normalizeAngle = (angle: number) => {
+  return (angle + Math.PI * 2) % (Math.PI * 2);
+};
+
 export const findCenter = (
   start: Point,
   end: Point,
@@ -88,12 +92,14 @@ export const connectSegments = (
   const pointA = isEndA ? segmentA.end : segmentA.start;
   const pointB = isEndB ? segmentB.end : segmentB.start;
   const intersection = lineIntersection(pointA, pointB, angleFromA, angleFromB);
+  let intersectAhead = false;
 
   if (!intersection) return [];
   if ((intersection?.u || 0) > 0 && (intersection?.v || 0) > 0) {
-    // Rays intersect!
+    // Intersect ahead
+    intersectAhead = true;
   } else {
-    return [];
+    // Intersect behind
   }
 
   const segments: TrackSegment[] = [];
@@ -102,54 +108,67 @@ export const connectSegments = (
   const distA = distance(pointA, intersection.point);
   const distB = distance(pointB, intersection.point);
 
-  if (distA > distB) {
-    // Extend A
-    const dist = distA - distB;
+  let curvePointA = pointA;
+  let curvePointB = pointB;
+
+  if (distA > distB === intersectAhead) {
+    // Extend A if intersection is ahead
+    // Extend B if intersection behind
+    const dist = Math.abs(distA - distB);
     addedPoint = {
       x: pointA.x + dist * Math.cos(angleFromA),
       y: pointA.y + dist * Math.sin(angleFromA),
     };
     const segment = new LinearTrackSegment(pointA, addedPoint);
     segments.push(segment);
-    const intersection = lineIntersection(
-      addedPoint,
-      pointB,
-      angleFromA + Math.PI / 2,
-      angleFromB + Math.PI / 2,
-    );
-    if (!intersection) {
-      return [];
-    }
-    const circleSegment = new CircularTrackSegment(
-      addedPoint,
-      pointB,
-      intersection.point,
-    );
-    segments.push(circleSegment);
-    return segments;
+    curvePointA = addedPoint;
   } else {
-    const dist = distB - distA;
+    const dist = Math.abs(distB - distA);
     addedPoint = {
       x: pointB.x + dist * Math.cos(angleFromB),
       y: pointB.y + dist * Math.sin(angleFromB),
     };
     const segment = new LinearTrackSegment(pointB, addedPoint);
     segments.push(segment);
-    const intersection = lineIntersection(
-      pointA,
-      addedPoint,
-      angleFromA + Math.PI / 2,
-      angleFromB + Math.PI / 2,
-    );
-    if (!intersection) {
-      return [];
-    }
-    const circleSegment = new CircularTrackSegment(
-      pointA,
-      addedPoint,
-      intersection.point,
-    );
-    segments.push(circleSegment);
-    return segments;
+    curvePointB = addedPoint;
   }
+
+  const secondIntersection = lineIntersection(
+    curvePointA,
+    curvePointB,
+    angleFromA + Math.PI / 2,
+    angleFromB + Math.PI / 2,
+  );
+  if (!secondIntersection) {
+    return [];
+  }
+
+  // Try both?
+  const circleSegmentA = new CircularTrackSegment(
+    curvePointA,
+    curvePointB,
+    secondIntersection.point,
+  );
+  const circleSegmentB = new CircularTrackSegment(
+    curvePointA,
+    curvePointB,
+    secondIntersection.point,
+    true,
+  );
+
+  if (
+    normalizeAngle(circleSegmentA.initialAngle) ===
+    normalizeAngle(segmentA.initialAngle + (isEndA ? 0 : Math.PI))
+  ) {
+    segments.push(circleSegmentA);
+  } else if (
+    normalizeAngle(circleSegmentB.initialAngle) ===
+    normalizeAngle(segmentA.initialAngle + (isEndA ? 0 : Math.PI))
+  ) {
+    segments.push(circleSegmentB);
+  } else {
+    // Should not happen
+  }
+
+  return segments;
 };

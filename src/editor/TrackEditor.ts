@@ -171,17 +171,16 @@ class TrackEditor {
       network.segments[1],
       true,
     );
-    network.segments.push(ugggg[0]);
-    network.segments.push(ugggg[1]);
+    network.segments.push(...ugggg);
 
-    // let erreregsty = connectSegments(
-    //   network.segments[5],
-    //   false,
-    //   network.segments[4],
-    //   false,
-    // );
-    // network.segments.push(erreregsty[0]);
-    // network.segments.push(erreregsty[1]);
+    let erreregsty = connectSegments(
+      network.segments[1],
+      true,
+      network.segments[2],
+      true,
+    );
+    network.segments.push(erreregsty[0]);
+    network.segments.push(erreregsty[1]);
   }
 
   setNetwork(network: Network) {
