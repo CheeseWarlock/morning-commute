@@ -17,6 +17,12 @@ export const build = () => {
   builder.curveTo({ x: 550, y: 0 }, { x: 500, y: 0 }, true);
   builder.moveTo({ x: 400, y: 0 });
   builder.curveTo({ x: 600, y: 0 }, { x: 500, y: 0 }, true);
+
+  builder.moveTo({ x: 100, y: 200 });
+  builder.lineTo({ x: 150, y: 200 });
+
+  builder.moveTo({ x: 125, y: 300 });
+  builder.lineTo({ x: 175, y: 300 });
   return builder;
 };
 

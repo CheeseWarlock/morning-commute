@@ -7,6 +7,14 @@ const normalizeAngle = (angle: number) => {
   return (angle + Math.PI * 2) % (Math.PI * 2);
 };
 
+const normalizeAngleHalf = (angle: number) => {
+  return (angle + Math.PI) % Math.PI;
+};
+
+const almostEqual = (a: number, b: number) => {
+  return Math.abs(a - b) < 0.000001;
+};
+
 export const findCenter = (
   start: Point,
   end: Point,
@@ -93,20 +101,54 @@ export const connectSegments = (
   const pointB = isEndB ? segmentB.end : segmentB.start;
   const intersection = lineIntersection(pointA, pointB, angleFromA, angleFromB);
   let intersectAhead = false;
+  let parallel = false;
 
-  if (!intersection) return [];
+  if (normalizeAngle(angleFromA) === normalizeAngle(angleFromB)) {
+    parallel = true;
+  } else if (
+    normalizeAngleHalf(angleFromA) === normalizeAngleHalf(angleFromB)
+  ) {
+    return [];
+  }
+
+  if (!intersection) {
+    parallel = true;
+    // They're parallel
+  }
   if ((intersection?.u || 0) > 0 && (intersection?.v || 0) > 0) {
     // Intersect ahead
     intersectAhead = true;
-  } else {
-    // Intersect behind
   }
 
   const segments: TrackSegment[] = [];
   let addedPoint: Point | undefined;
   // Extend one until distances match
-  const distA = distance(pointA, intersection.point);
-  const distB = distance(pointB, intersection.point);
+  let distA;
+  let distB;
+
+  if (parallel) {
+    // Where does the 90 degree line from A hit B?
+    const inters = lineIntersection(
+      pointA,
+      pointB,
+      angleFromA + Math.PI / 2,
+      angleFromB,
+    );
+    console.log(inters);
+    if (!inters) return [];
+    if (inters.v < 0) {
+      // A is "ahead"
+      // Extend B by -v
+    } else {
+      // B is ahead
+      // Extend A by v
+    }
+    distA = inters.v;
+    distB = 0;
+  } else {
+    distA = distance(pointA, intersection!.point);
+    distB = distance(pointB, intersection!.point);
+  }
 
   let curvePointA = pointA;
   let curvePointB = pointB;
@@ -133,41 +175,59 @@ export const connectSegments = (
     curvePointB = addedPoint;
   }
 
-  const secondIntersection = lineIntersection(
-    curvePointA,
-    curvePointB,
-    angleFromA + Math.PI / 2,
-    angleFromB + Math.PI / 2,
-  );
-  if (!secondIntersection) {
-    return [];
+  let secondIntersection: Point;
+  if (parallel) {
+    secondIntersection = {
+      x: (curvePointA.x + curvePointB.x) / 2,
+      y: (curvePointA.y + curvePointB.y) / 2,
+    };
+  } else {
+    secondIntersection = lineIntersection(
+      curvePointA,
+      curvePointB,
+      angleFromA + Math.PI / 2,
+      angleFromB + Math.PI / 2,
+    )!.point;
+  }
+  if (secondIntersection == null) {
+    return segments;
   }
 
   // Try both?
   const circleSegmentA = new CircularTrackSegment(
     curvePointA,
     curvePointB,
-    secondIntersection.point,
+    secondIntersection,
   );
   const circleSegmentB = new CircularTrackSegment(
     curvePointA,
     curvePointB,
-    secondIntersection.point,
+    secondIntersection,
     true,
   );
 
   if (
-    normalizeAngle(circleSegmentA.initialAngle) ===
-    normalizeAngle(segmentA.initialAngle + (isEndA ? 0 : Math.PI))
+    almostEqual(
+      normalizeAngle(circleSegmentA.initialAngle),
+      normalizeAngle(
+        isEndA ? segmentA.finalAngle : segmentA.initialAngle + Math.PI,
+      ),
+    )
   ) {
     segments.push(circleSegmentA);
   } else if (
-    normalizeAngle(circleSegmentB.initialAngle) ===
-    normalizeAngle(segmentA.initialAngle + (isEndA ? 0 : Math.PI))
+    almostEqual(
+      normalizeAngle(circleSegmentB.initialAngle),
+      normalizeAngle(
+        isEndA ? segmentA.finalAngle : segmentA.initialAngle + Math.PI,
+      ),
+    )
   ) {
     segments.push(circleSegmentB);
   } else {
     // Should not happen
+    console.log("BAD");
+    return [];
   }
 
   return segments;
