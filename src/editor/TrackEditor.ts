@@ -166,37 +166,7 @@ class TrackEditor {
     };
 
     network.segments.push(
-      ...connectSegments(
-        network.segments[0],
-        false,
-        network.segments[1],
-        false,
-      ),
-    );
-
-    network.segments.push(
-      ...connectSegments(network.segments[2], true, network.segments[3], false),
-    );
-
-    network.segments.push(
-      ...connectSegments(network.segments[3], true, network.segments[0], true),
-    );
-
-    network.segments.push(
-      ...connectSegments(network.segments[1], true, network.segments[2], false),
-    );
-
-    network.segments.push(
-      ...connectSegments(network.segments[4], true, network.segments[5], true),
-    );
-
-    network.segments.push(
-      ...connectSegments(
-        network.segments[4],
-        false,
-        network.segments[5],
-        false,
-      ),
+      ...connectSegments(network.segments[0], true, network.segments[1], false),
     );
   }
 

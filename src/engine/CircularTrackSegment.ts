@@ -152,6 +152,10 @@ class CircularTrackSegment extends TrackSegment {
       }
     }
 
+    if (angleToPoint < angleToStart) {
+      angleToPoint += Math.PI * 2;
+    }
+
     const isInsideCone =
       (!this.counterClockWise &&
         angleToStart < angleToPoint &&
