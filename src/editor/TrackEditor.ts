@@ -214,6 +214,14 @@ class TrackEditor {
         false,
       ),
     );
+
+    network.segments.push(
+      ...connectSegments(network.segments[9], true, network.segments[10], true),
+    );
+
+    network.segments.push(
+      ...connectSegments(network.segments[10], true, network.segments[9], true),
+    );
   }
 
   setNetwork(network: Network) {

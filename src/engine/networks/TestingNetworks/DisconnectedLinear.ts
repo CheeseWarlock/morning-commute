@@ -23,6 +23,13 @@ export const build = () => {
 
   builder.moveTo({ x: 125, y: 300 });
   builder.lineTo({ x: 175, y: 300 });
+
+  // 9, 10
+  builder.moveTo({ x: 300, y: 300 });
+  builder.lineTo({ x: 350, y: 300 });
+
+  builder.moveTo({ x: 400, y: 350 });
+  builder.lineTo({ x: 420, y: 400 });
   return builder;
 };
 

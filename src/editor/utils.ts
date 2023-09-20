@@ -58,20 +58,12 @@ const lineIntersection = (
   dA: number,
   dB: number,
 ): { point: Point; u: number; v: number } | undefined => {
-  // p is points
-  // n is direction vectors
-  // n1 => [Math.cos(dB), Math.sin(dB)] ...
-
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const det = Math.cos(dB) * Math.sin(dA) - Math.sin(dB) * Math.cos(dA);
   const u = (dy * Math.cos(dB) - dx * Math.sin(dB)) / det;
   const v = (dy * Math.cos(dA) - dx * Math.sin(dA)) / det;
 
-  if (dA % (Math.PI / 2) === 0) {
-    // Ughhh workaround
-    console.log("ughh");
-  }
   const x = a.x + u * Math.cos(dA);
   const y = a.y + u * Math.sin(dA);
 
@@ -84,6 +76,14 @@ const lineIntersection = (
     : undefined;
 };
 
+/**
+ * Connect two track segments via one Linear segment and one Circular segment.
+ * @param segmentA
+ * @param isEndA
+ * @param segmentB
+ * @param isEndB
+ * @returns
+ */
 export const connectSegments = (
   segmentA: TrackSegment,
   isEndA: boolean,
@@ -159,6 +159,17 @@ export const connectSegments = (
 
   let curvePointA = pointA;
   let curvePointB = pointB;
+
+  // Under some cases...
+  if (intersection && intersection?.u > 0 && intersection?.v < 0) {
+    distA = distA + distB;
+    distB = 0;
+    intersectAhead = true;
+  } else if (intersection && intersection?.v > 0 && intersection?.u < 0) {
+    distB = distA + distB;
+    distA = 0;
+    intersectAhead = true;
+  }
 
   if (distA > distB === intersectAhead) {
     // Extend A if intersection is ahead
