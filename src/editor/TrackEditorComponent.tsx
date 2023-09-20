@@ -1,5 +1,5 @@
 import TrackEditor from "./TrackEditor";
-import { build as buildComplex } from "../engine/networks/TestingNetworks/DisconnectedLinear";
+import { build as buildComplex } from "../engine/networks/TestingNetworks/Linear";
 import React, { useRef, useEffect, useState } from "react";
 import TrackSegment from "../engine/TrackSegment";
 import TrackSegmentDetail from "./TrackSegmentDetail";

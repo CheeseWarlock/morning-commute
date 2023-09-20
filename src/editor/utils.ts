@@ -22,6 +22,16 @@ const anglesAlmostEqual = (a: number, b: number) => {
   );
 };
 
+const anglesAlmostHalfEqual = (a: number, b: number) => {
+  return (
+    almostEqual(normalizeAngleHalf(a), normalizeAngleHalf(b)) ||
+    almostEqual(
+      Math.abs(normalizeAngleHalf(a) - normalizeAngleHalf(b)),
+      Math.PI,
+    )
+  );
+};
+
 export const findCenter = (
   start: Point,
   end: Point,
@@ -112,9 +122,7 @@ export const connectSegments = (
 
   if (anglesAlmostEqual(angleFromA, angleFromB)) {
     parallel = true;
-  } else if (
-    normalizeAngleHalf(angleFromA) === normalizeAngleHalf(angleFromB)
-  ) {
+  } else if (anglesAlmostHalfEqual(angleFromA, angleFromB)) {
     return [];
   }
 
@@ -141,7 +149,6 @@ export const connectSegments = (
       angleFromA + Math.PI / 2,
       angleFromB,
     );
-    console.log(inters);
     if (!inters) return [];
     if (inters.v < 0) {
       // A is "ahead"
@@ -160,7 +167,8 @@ export const connectSegments = (
   let curvePointA = pointA;
   let curvePointB = pointB;
 
-  // Under some cases...
+  // If one is behind and the other is ahead, the curve will be > 180 degrees
+  //
   if (intersection && intersection?.u > 0 && intersection?.v < 0) {
     distA = distA + distB;
     distB = 0;
@@ -248,7 +256,7 @@ export const connectSegments = (
     segments.push(circleSegmentB);
   } else {
     // Should not happen
-    console.log("BAD");
+    console.log("Bad things have happened...");
     return [];
   }
 

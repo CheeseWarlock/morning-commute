@@ -19,8 +19,8 @@ class CircularTrackSegment extends TrackSegment {
     counterClockWise: boolean = false,
   ) {
     super();
-    this.start = start;
-    this.end = end;
+    this.start = { x: start.x, y: start.y };
+    this.end = { x: end.x, y: end.y };
     this.center = center;
     this.counterClockWise = counterClockWise;
     this.atStart = [];

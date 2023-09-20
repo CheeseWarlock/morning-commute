@@ -12,8 +12,8 @@ class LinearTrackSegment extends TrackSegment {
 
   constructor(start: Point, end: Point) {
     super();
-    this.start = start;
-    this.end = end;
+    this.start = { x: start.x, y: start.y };
+    this.end = { x: end.x, y: end.y };
     this.atStart = [];
     this.atEnd = [];
   }
