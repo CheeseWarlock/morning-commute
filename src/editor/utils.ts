@@ -15,6 +15,13 @@ const almostEqual = (a: number, b: number) => {
   return Math.abs(a - b) < 0.000001;
 };
 
+const anglesAlmostEqual = (a: number, b: number) => {
+  return (
+    almostEqual(normalizeAngle(a), normalizeAngle(b)) ||
+    almostEqual(Math.abs(normalizeAngle(a) - normalizeAngle(b)), Math.PI)
+  );
+};
+
 export const findCenter = (
   start: Point,
   end: Point,
@@ -103,7 +110,7 @@ export const connectSegments = (
   let intersectAhead = false;
   let parallel = false;
 
-  if (normalizeAngle(angleFromA) === normalizeAngle(angleFromB)) {
+  if (anglesAlmostEqual(angleFromA, angleFromB)) {
     parallel = true;
   } else if (
     normalizeAngleHalf(angleFromA) === normalizeAngleHalf(angleFromB)
@@ -157,22 +164,26 @@ export const connectSegments = (
     // Extend A if intersection is ahead
     // Extend B if intersection behind
     const dist = Math.abs(distA - distB);
-    addedPoint = {
-      x: pointA.x + dist * Math.cos(angleFromA),
-      y: pointA.y + dist * Math.sin(angleFromA),
-    };
-    const segment = new LinearTrackSegment(pointA, addedPoint);
-    segments.push(segment);
-    curvePointA = addedPoint;
+    if (!almostEqual(dist, 0)) {
+      addedPoint = {
+        x: pointA.x + dist * Math.cos(angleFromA),
+        y: pointA.y + dist * Math.sin(angleFromA),
+      };
+      const segment = new LinearTrackSegment(pointA, addedPoint);
+      segments.push(segment);
+      curvePointA = addedPoint;
+    }
   } else {
     const dist = Math.abs(distB - distA);
-    addedPoint = {
-      x: pointB.x + dist * Math.cos(angleFromB),
-      y: pointB.y + dist * Math.sin(angleFromB),
-    };
-    const segment = new LinearTrackSegment(pointB, addedPoint);
-    segments.push(segment);
-    curvePointB = addedPoint;
+    if (!almostEqual(dist, 0)) {
+      addedPoint = {
+        x: pointB.x + dist * Math.cos(angleFromB),
+        y: pointB.y + dist * Math.sin(angleFromB),
+      };
+      const segment = new LinearTrackSegment(pointB, addedPoint);
+      segments.push(segment);
+      curvePointB = addedPoint;
+    }
   }
 
   let secondIntersection: Point;

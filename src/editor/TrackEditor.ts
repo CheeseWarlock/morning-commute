@@ -173,14 +173,6 @@ class TrackEditor {
     );
     network.segments.push(...ugggg);
 
-    let erreregsty = connectSegments(
-      network.segments[7],
-      false,
-      network.segments[8],
-      true,
-    );
-    network.segments.push(...erreregsty);
-
     network.segments.push(
       ...connectSegments(network.segments[3], true, network.segments[4], false),
     );
