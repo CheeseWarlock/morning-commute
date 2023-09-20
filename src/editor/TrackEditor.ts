@@ -16,6 +16,24 @@ export enum SELECTION_TYPE {
   SEGMENT,
 }
 
+/**
+ * State of the editor.
+ */
+export enum EDITOR_STATE {
+  /**
+   * Select and unselect track segments.
+   */
+  SELECT,
+  /**
+   * Choose the first point for a linear track segment.
+   */
+  CREATE_LINEAR_SEGMENT_START,
+  /**
+   * Choose the second point for a linear track segment.
+   */
+  CREATE_LINEAR_SEGMENT_END,
+}
+
 class TrackEditor {
   #canvas: HTMLCanvasElement;
   network: Network;
@@ -32,7 +50,9 @@ class TrackEditor {
   #selectedSegment: TrackSegment | undefined;
   #selectionType?: SELECTION_TYPE;
   #hoverSelectionType?: SELECTION_TYPE;
-  #dragging: boolean;
+  #dragging: boolean = false;
+  #state: EDITOR_STATE = EDITOR_STATE.CREATE_LINEAR_SEGMENT_START;
+  #addingSegmentStartPosition: Point | undefined;
   constructor(options: {
     element: HTMLElement;
     network: Network;
@@ -154,11 +174,27 @@ class TrackEditor {
     };
 
     canvas.onmousedown = (ev) => {
-      this.#selectedSegment = this.#hoverSegment;
-      this.#selectionType = this.#hoverSelectionType;
-      this.#onSelect?.(this.#selectedSegment);
-      this.update();
-      this.#dragging = true;
+      if (this.#state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START) {
+        this.#addingSegmentStartPosition = {
+          x: this.mousePos!.x,
+          y: this.mousePos!.y,
+        };
+        this.#state = EDITOR_STATE.CREATE_LINEAR_SEGMENT_END;
+      } else if (this.#state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END) {
+        const aaaa = new LinearTrackSegment(this.#addingSegmentStartPosition!, {
+          x: this.mousePos!.x,
+          y: this.mousePos!.y,
+        });
+        this.network.segments.push(aaaa);
+        this.#state = EDITOR_STATE.CREATE_LINEAR_SEGMENT_START;
+        this.update();
+      } else if (this.#state === EDITOR_STATE.SELECT) {
+        this.#selectedSegment = this.#hoverSegment;
+        this.#selectionType = this.#hoverSelectionType;
+        this.#onSelect?.(this.#selectedSegment);
+        this.update();
+        this.#dragging = true;
+      }
     };
 
     canvas.onmouseup = (ev) => {
@@ -198,7 +234,20 @@ class TrackEditor {
   drawTrackSections() {
     if (!this.#context) return;
     this.#context.lineWidth = 2;
-    this.network.segments.forEach((segment) => {
+    const fakeSegmentsList = [...this.network.segments];
+    if (
+      this.#state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
+      this.mousePos
+    ) {
+      console.log("SADRHRSF");
+      fakeSegmentsList.push(
+        new LinearTrackSegment(
+          this.#addingSegmentStartPosition!,
+          this.mousePos!,
+        ),
+      );
+    }
+    fakeSegmentsList.forEach((segment) => {
       if (!this.#context) return;
       if (segment === this.#selectedSegment) {
         this.#context.strokeStyle = "rgb(255, 255, 255)";
