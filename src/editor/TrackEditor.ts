@@ -32,6 +32,14 @@ export enum EDITOR_STATE {
    * Choose the second point for a linear track segment.
    */
   CREATE_LINEAR_SEGMENT_END,
+  /**
+   * Choose the first point for a linear-and-circular connection.
+   */
+  CREATE_CONNECTION_START,
+  /**
+   * Choose the second point for a linear-and-circular connection.
+   */
+  CREATE_CONNECTION_END,
 }
 
 class TrackEditor {
@@ -53,6 +61,8 @@ class TrackEditor {
   #dragging: boolean = false;
   #state: EDITOR_STATE = EDITOR_STATE.CREATE_LINEAR_SEGMENT_START;
   #addingSegmentStartPosition: Point | undefined;
+  #addingConnectionFirstPoint: TrackSegment | undefined;
+  #addingConnectionFirstIsEnd: boolean | undefined;
   constructor(options: {
     element: HTMLElement;
     network: Network;
@@ -186,7 +196,7 @@ class TrackEditor {
           y: this.mousePos!.y,
         });
         this.network.segments.push(aaaa);
-        this.#state = EDITOR_STATE.CREATE_LINEAR_SEGMENT_START;
+        this.#state = EDITOR_STATE.CREATE_CONNECTION_START;
         this.update();
       } else if (this.#state === EDITOR_STATE.SELECT) {
         this.#selectedSegment = this.#hoverSegment;
@@ -194,6 +204,34 @@ class TrackEditor {
         this.#onSelect?.(this.#selectedSegment);
         this.update();
         this.#dragging = true;
+      } else if (this.#state === EDITOR_STATE.CREATE_CONNECTION_START) {
+        if (
+          this.#hoverSegment &&
+          (this.#hoverSelectionType === SELECTION_TYPE.START ||
+            this.#hoverSelectionType === SELECTION_TYPE.END)
+        ) {
+          this.#addingConnectionFirstPoint = this.#hoverSegment;
+          this.#addingConnectionFirstIsEnd =
+            this.#hoverSelectionType === SELECTION_TYPE.END;
+          this.#state = EDITOR_STATE.CREATE_CONNECTION_END;
+        }
+      } else if (this.#state === EDITOR_STATE.CREATE_CONNECTION_END) {
+        if (
+          this.#hoverSegment &&
+          (this.#hoverSelectionType === SELECTION_TYPE.START ||
+            this.#hoverSelectionType === SELECTION_TYPE.END)
+        ) {
+          const newSegments = connectSegments(
+            this.#addingConnectionFirstPoint!,
+            this.#addingConnectionFirstIsEnd!,
+            this.#hoverSegment,
+            this.#hoverSelectionType === SELECTION_TYPE.END,
+          );
+          this.network.segments.push(...newSegments);
+          this.update();
+          this.#state = EDITOR_STATE.CREATE_CONNECTION_END;
+        }
+        this.#state = EDITOR_STATE.CREATE_LINEAR_SEGMENT_START;
       }
     };
 
