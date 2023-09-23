@@ -42,6 +42,26 @@ export enum EDITOR_STATE {
   CREATE_CONNECTION_END,
 }
 
+type EDITOR_STATE_PAYLOADS =
+  | {
+      state: EDITOR_STATE.SELECT;
+    }
+  | {
+      state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_START;
+    }
+  | {
+      state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END;
+      segmentStart: Point;
+    }
+  | {
+      state: EDITOR_STATE.CREATE_CONNECTION_START;
+    }
+  | {
+      state: EDITOR_STATE.CREATE_CONNECTION_END;
+      connectionSegment: TrackSegment;
+      connectedAtEnd: boolean;
+    };
+
 class TrackEditor {
   #canvas: HTMLCanvasElement;
   network: Network;
@@ -63,6 +83,9 @@ class TrackEditor {
   #addingSegmentStartPosition: Point | undefined;
   #addingConnectionFirstPoint: TrackSegment | undefined;
   #addingConnectionFirstIsEnd: boolean | undefined;
+  #statePayload: EDITOR_STATE_PAYLOADS = {
+    state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_START,
+  };
   constructor(options: {
     element: HTMLElement;
     network: Network;
@@ -184,6 +207,76 @@ class TrackEditor {
     };
 
     canvas.onmousedown = (ev) => {
+      switch (this.#statePayload.state) {
+        case EDITOR_STATE.CREATE_LINEAR_SEGMENT_START:
+          this.#statePayload = {
+            state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END,
+            segmentStart: {
+              x: this.mousePos!.x,
+              y: this.mousePos!.y,
+            },
+          };
+          break;
+
+        case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END:
+          const newSegment = new LinearTrackSegment(
+            this.#statePayload.segmentStart,
+            {
+              x: this.mousePos!.x,
+              y: this.mousePos!.y,
+            },
+          );
+          this.network.segments.push(newSegment);
+          this.update();
+          this.#statePayload = {
+            state: EDITOR_STATE.CREATE_CONNECTION_START,
+          };
+          break;
+
+        case EDITOR_STATE.CREATE_CONNECTION_START:
+          if (
+            this.#hoverSegment &&
+            (this.#hoverSelectionType === SELECTION_TYPE.START ||
+              this.#hoverSelectionType === SELECTION_TYPE.END)
+          ) {
+            this.#statePayload = {
+              state: EDITOR_STATE.CREATE_CONNECTION_END,
+              connectionSegment: this.#hoverSegment,
+              connectedAtEnd: this.#hoverSelectionType === SELECTION_TYPE.END,
+            };
+          }
+          break;
+
+        case EDITOR_STATE.CREATE_CONNECTION_END:
+          if (
+            this.#hoverSegment &&
+            (this.#hoverSelectionType === SELECTION_TYPE.START ||
+              this.#hoverSelectionType === SELECTION_TYPE.END)
+          ) {
+            const newSegments = connectSegments(
+              this.#statePayload.connectionSegment,
+              this.#statePayload.connectedAtEnd,
+              this.#hoverSegment,
+              this.#hoverSelectionType === SELECTION_TYPE.END,
+            );
+            this.network.segments.push(...newSegments);
+            this.update();
+
+            this.#statePayload = {
+              state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_START,
+            };
+          }
+          break;
+
+        case EDITOR_STATE.SELECT:
+          this.#selectedSegment = this.#hoverSegment;
+          this.#selectionType = this.#hoverSelectionType;
+          this.#onSelect?.(this.#selectedSegment);
+          this.update();
+          this.#dragging = true;
+          break;
+      }
+      return;
       if (this.#state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START) {
         this.#addingSegmentStartPosition = {
           x: this.mousePos!.x,
