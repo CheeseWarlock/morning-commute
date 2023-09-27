@@ -89,6 +89,7 @@ class TrackEditor {
     state: EDITOR_STATE.SELECT,
   };
   onStateChanged?: (payload: EDITOR_STATE_PAYLOADS) => void;
+  onNetworkChanged?: () => void;
   constructor(options: {
     element: HTMLElement;
     network: Network;
@@ -166,6 +167,8 @@ class TrackEditor {
           1,
         );
         this.#selectedSegment = undefined;
+        this.network = new Network(this.network.segments);
+        this.onNetworkChanged?.();
         this.update();
       }
     };
@@ -192,6 +195,8 @@ class TrackEditor {
             this.#selectedSegment.start.y = ev.offsetY;
           }
           this.mousePos = { x: ev.offsetX, y: ev.offsetY };
+          this.network = new Network(this.network.segments);
+          this.onNetworkChanged?.();
           this.update();
         } else if (
           this.#selectedSegment &&
@@ -213,6 +218,8 @@ class TrackEditor {
             this.#selectedSegment.end.y = ev.offsetY;
           }
           this.mousePos = { x: ev.offsetX, y: ev.offsetY };
+          this.network = new Network(this.network.segments);
+          this.onNetworkChanged?.();
           this.update();
         }
       } else {
@@ -243,6 +250,8 @@ class TrackEditor {
             },
           );
           this.network.segments.push(newSegment);
+          this.network = new Network(this.network.segments);
+          this.onNetworkChanged?.();
           this.update();
           this.setStatePayload({
             state: EDITOR_STATE.SELECT,
@@ -284,6 +293,8 @@ class TrackEditor {
               newSegments[1].connect(this.statePayload.connectionSegment);
             }
             this.network.segments.push(...newSegments);
+            this.network = new Network(this.network.segments);
+            this.onNetworkChanged?.();
 
             this.update();
 
@@ -313,6 +324,8 @@ class TrackEditor {
     network.segments.push(
       ...connectSegments(network.segments[0], true, network.segments[1], false),
     );
+    this.network = new Network(this.network.segments);
+    this.onNetworkChanged?.();
   }
 
   setNetwork(network: Network) {
