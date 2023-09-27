@@ -15,9 +15,9 @@ import RendererCoordinator from "../renderer/RendererCoordinator";
  * Which end of the segment is selected, or if it's just the whole thing
  */
 export enum SELECTION_TYPE {
-  START,
-  END,
-  SEGMENT,
+  START = "start",
+  END = "end",
+  SEGMENT = "segment",
 }
 
 /**
