@@ -44,6 +44,7 @@ const TrackEditorComponent = (props: any) => {
     <input value={(editorState === EDITOR_STATE.SELECT ? ">" : "") + "Select"} type="button" onClick={() => setEditorState(EDITOR_STATE.SELECT)} />
     <input value={(editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END ? ">" : "") + "Add Linear"} type="button" onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)} />
     <input value={(editorState === EDITOR_STATE.CREATE_CONNECTION_START || editorState === EDITOR_STATE.CREATE_CONNECTION_END ? ">" : "") + "Add Connection"} type="button" onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)} />
+    <input value={"Finish"} type="button" onClick={() => trackEditor?.finish()} />
     <p>{network.segments.length}</p>
     {selectedSegment && <TrackSegmentDetail update={(n) => {
       setNetwork(n);

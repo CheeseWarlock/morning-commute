@@ -6,6 +6,10 @@ import Point from "../engine/Point";
 import { ALIGNMENT } from "../engine/Station";
 import TrackSegment from "../engine/TrackSegment";
 import { connectSegments, findCenter } from "./utils";
+import Controller from "../engine/Controller";
+import Game from "../engine/Game";
+import BabylonRenderer from "../renderer/basic/babylon/BabylonRenderer";
+import RendererCoordinator from "../renderer/RendererCoordinator";
 
 /**
  * Which end of the segment is selected, or if it's just the whole thing
@@ -604,6 +608,23 @@ class TrackEditor {
     this.#context.clearRect(0, 0, this.#size.x, this.#size.y);
     this.drawTrackSections();
     this.drawStations();
+  }
+
+  finish() {
+    document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
+  <div>
+    <p id="map-holder"></p><p id="map-holder-2"></p><p id="renderCanvasHolder"></p>
+  </div>
+`;
+    const controller = new Controller();
+    this.network.autoConnect();
+    const game = new Game(this.network, controller);
+    game.initialize();
+    const map3 = new BabylonRenderer(
+      document.querySelector("#renderCanvasHolder")!,
+      game,
+    );
+    const coordinator = new RendererCoordinator(game, [map3]);
   }
 }
 
