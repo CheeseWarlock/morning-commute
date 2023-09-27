@@ -62,6 +62,8 @@ type EDITOR_STATE_PAYLOADS =
       connectedAtEnd: boolean;
     };
 
+const SELECTION_DISTANCE_PIXELS = 15;
+
 class TrackEditor {
   #canvas: HTMLCanvasElement;
   network: Network;
@@ -79,13 +81,10 @@ class TrackEditor {
   #selectionType?: SELECTION_TYPE;
   #hoverSelectionType?: SELECTION_TYPE;
   #dragging: boolean = false;
-  #state: EDITOR_STATE = EDITOR_STATE.CREATE_LINEAR_SEGMENT_START;
-  #addingSegmentStartPosition: Point | undefined;
-  #addingConnectionFirstPoint: TrackSegment | undefined;
-  #addingConnectionFirstIsEnd: boolean | undefined;
-  #statePayload: EDITOR_STATE_PAYLOADS = {
-    state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_START,
+  statePayload: EDITOR_STATE_PAYLOADS = {
+    state: EDITOR_STATE.SELECT,
   };
+  onStateChanged?: (payload: EDITOR_STATE_PAYLOADS) => void;
   constructor(options: {
     element: HTMLElement;
     network: Network;
@@ -153,6 +152,20 @@ class TrackEditor {
     this.#scale = 1;
     this.#offset = { x: 0, y: 0 };
 
+    document.body.onkeydown = (ev) => {
+      if (
+        this.#selectedSegment &&
+        (ev.key === "Backspace" || ev.key === "Delete")
+      ) {
+        this.network.segments.splice(
+          this.network.segments.indexOf(this.#selectedSegment),
+          1,
+        );
+        this.#selectedSegment = undefined;
+        this.update();
+      }
+    };
+
     canvas.onmousemove = (ev) => {
       if (this.#dragging) {
         if (
@@ -170,7 +183,6 @@ class TrackEditor {
             this.#selectedSegment.start.y = ev.offsetY;
             this.#selectedSegment.center.x = newCenter.x;
             this.#selectedSegment.center.y = newCenter.y;
-            console.log(this.#selectedSegment.theta);
           } else {
             this.#selectedSegment.start.x = ev.offsetX;
             this.#selectedSegment.start.y = ev.offsetY;
@@ -207,20 +219,20 @@ class TrackEditor {
     };
 
     canvas.onmousedown = (ev) => {
-      switch (this.#statePayload.state) {
+      switch (this.statePayload.state) {
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_START:
-          this.#statePayload = {
+          this.setStatePayload({
             state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END,
             segmentStart: {
               x: this.mousePos!.x,
               y: this.mousePos!.y,
             },
-          };
+          });
           break;
 
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END:
           const newSegment = new LinearTrackSegment(
-            this.#statePayload.segmentStart,
+            this.statePayload.segmentStart,
             {
               x: this.mousePos!.x,
               y: this.mousePos!.y,
@@ -228,9 +240,9 @@ class TrackEditor {
           );
           this.network.segments.push(newSegment);
           this.update();
-          this.#statePayload = {
-            state: EDITOR_STATE.CREATE_CONNECTION_START,
-          };
+          this.setStatePayload({
+            state: EDITOR_STATE.SELECT,
+          });
           break;
 
         case EDITOR_STATE.CREATE_CONNECTION_START:
@@ -239,11 +251,11 @@ class TrackEditor {
             (this.#hoverSelectionType === SELECTION_TYPE.START ||
               this.#hoverSelectionType === SELECTION_TYPE.END)
           ) {
-            this.#statePayload = {
+            this.setStatePayload({
               state: EDITOR_STATE.CREATE_CONNECTION_END,
               connectionSegment: this.#hoverSegment,
               connectedAtEnd: this.#hoverSelectionType === SELECTION_TYPE.END,
-            };
+            });
           }
           break;
 
@@ -254,17 +266,17 @@ class TrackEditor {
               this.#hoverSelectionType === SELECTION_TYPE.END)
           ) {
             const newSegments = connectSegments(
-              this.#statePayload.connectionSegment,
-              this.#statePayload.connectedAtEnd,
+              this.statePayload.connectionSegment,
+              this.statePayload.connectedAtEnd,
               this.#hoverSegment,
               this.#hoverSelectionType === SELECTION_TYPE.END,
             );
             this.network.segments.push(...newSegments);
             this.update();
 
-            this.#statePayload = {
-              state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_START,
-            };
+            this.setStatePayload({
+              state: EDITOR_STATE.SELECT,
+            });
           }
           break;
 
@@ -277,55 +289,6 @@ class TrackEditor {
           break;
       }
       return;
-      if (this.#state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START) {
-        this.#addingSegmentStartPosition = {
-          x: this.mousePos!.x,
-          y: this.mousePos!.y,
-        };
-        this.#state = EDITOR_STATE.CREATE_LINEAR_SEGMENT_END;
-      } else if (this.#state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END) {
-        const aaaa = new LinearTrackSegment(this.#addingSegmentStartPosition!, {
-          x: this.mousePos!.x,
-          y: this.mousePos!.y,
-        });
-        this.network.segments.push(aaaa);
-        this.#state = EDITOR_STATE.CREATE_CONNECTION_START;
-        this.update();
-      } else if (this.#state === EDITOR_STATE.SELECT) {
-        this.#selectedSegment = this.#hoverSegment;
-        this.#selectionType = this.#hoverSelectionType;
-        this.#onSelect?.(this.#selectedSegment);
-        this.update();
-        this.#dragging = true;
-      } else if (this.#state === EDITOR_STATE.CREATE_CONNECTION_START) {
-        if (
-          this.#hoverSegment &&
-          (this.#hoverSelectionType === SELECTION_TYPE.START ||
-            this.#hoverSelectionType === SELECTION_TYPE.END)
-        ) {
-          this.#addingConnectionFirstPoint = this.#hoverSegment;
-          this.#addingConnectionFirstIsEnd =
-            this.#hoverSelectionType === SELECTION_TYPE.END;
-          this.#state = EDITOR_STATE.CREATE_CONNECTION_END;
-        }
-      } else if (this.#state === EDITOR_STATE.CREATE_CONNECTION_END) {
-        if (
-          this.#hoverSegment &&
-          (this.#hoverSelectionType === SELECTION_TYPE.START ||
-            this.#hoverSelectionType === SELECTION_TYPE.END)
-        ) {
-          const newSegments = connectSegments(
-            this.#addingConnectionFirstPoint!,
-            this.#addingConnectionFirstIsEnd!,
-            this.#hoverSegment,
-            this.#hoverSelectionType === SELECTION_TYPE.END,
-          );
-          this.network.segments.push(...newSegments);
-          this.update();
-          this.#state = EDITOR_STATE.CREATE_CONNECTION_END;
-        }
-        this.#state = EDITOR_STATE.CREATE_LINEAR_SEGMENT_START;
-      }
     };
 
     canvas.onmouseup = (ev) => {
@@ -348,6 +311,11 @@ class TrackEditor {
     }
   }
 
+  setStatePayload(payload: EDITOR_STATE_PAYLOADS) {
+    this.statePayload = payload;
+    this.onStateChanged?.(payload);
+  }
+
   transformPosition(p: Point): Point {
     return {
       x: (p.x + this.#offset.x) * this.#scale,
@@ -367,17 +335,29 @@ class TrackEditor {
     this.#context.lineWidth = 2;
     const fakeSegmentsList = [...this.network.segments];
     if (
-      this.#state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
+      this.statePayload.state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
       this.mousePos
     ) {
-      console.log("SADRHRSF");
       fakeSegmentsList.push(
-        new LinearTrackSegment(
-          this.#addingSegmentStartPosition!,
-          this.mousePos!,
-        ),
+        new LinearTrackSegment(this.statePayload.segmentStart, this.mousePos!),
       );
     }
+    if (
+      this.statePayload.state === EDITOR_STATE.CREATE_CONNECTION_END &&
+      this.#hoverSegment &&
+      (this.#hoverSelectionType === SELECTION_TYPE.START ||
+        this.#hoverSelectionType === SELECTION_TYPE.END)
+    ) {
+      // Draw the theoretical segment
+      const connection = connectSegments(
+        this.statePayload.connectionSegment,
+        this.statePayload.connectedAtEnd,
+        this.#hoverSegment,
+        this.#hoverSelectionType === SELECTION_TYPE.END,
+      );
+      fakeSegmentsList.push(...connection);
+    }
+
     fakeSegmentsList.forEach((segment) => {
       if (!this.#context) return;
       if (segment === this.#selectedSegment) {
@@ -574,7 +554,10 @@ class TrackEditor {
     let closestType: SELECTION_TYPE | undefined;
     this.network.segments.forEach((seg) => {
       const distanceToLine = seg.distanceToPosition(selectionPoint);
-      if (distanceToLine < closest && distanceToLine < 100) {
+      if (
+        distanceToLine < closest &&
+        distanceToLine < SELECTION_DISTANCE_PIXELS
+      ) {
         closestSegment = seg;
         closest = distanceToLine;
         closestType = SELECTION_TYPE.SEGMENT;
@@ -585,7 +568,7 @@ class TrackEditor {
 
       if (
         (!closestType || closestType === SELECTION_TYPE.SEGMENT) &&
-        distanceToStart < 15
+        distanceToStart < SELECTION_DISTANCE_PIXELS
       ) {
         closestSegment = seg;
         closest = distanceToLine;
@@ -593,7 +576,7 @@ class TrackEditor {
       }
       if (
         (!closestType || closestType === SELECTION_TYPE.SEGMENT) &&
-        distanceToEnd < 15
+        distanceToEnd < SELECTION_DISTANCE_PIXELS
       ) {
         closestSegment = seg;
         closest = distanceToLine;

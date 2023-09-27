@@ -1,4 +1,4 @@
-import TrackEditor from "./TrackEditor";
+import TrackEditor, { EDITOR_STATE } from "./TrackEditor";
 import { build as buildComplex } from "../engine/networks/TestingNetworks/Linear";
 import React, { useRef, useEffect, useState } from "react";
 import TrackSegment from "../engine/TrackSegment";
@@ -10,27 +10,38 @@ const TrackEditorComponent = (props: any) => {
   const [selectedSegment, setSelectedSegment] = useState<TrackSegment | null>(null);
   const [network, setNetwork] = useState<Network>(buildComplex().network);
   const [trackEditor, setTrackEditor] = useState<TrackEditor | undefined>(undefined);
+  const [editorState, setEditorState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
 
   useEffect(() => {
     const canvas = divRef.current;
     if (trackEditor) {
-      console.log('updatin');
       trackEditor.network = network;
       trackEditor.update();
     } else {
       const te = new TrackEditor({element: canvas!, network: network, onSelect: (seg) => {
         setSelectedSegment(seg || null);
       }});
+      te.onStateChanged = (payload) => {
+        setEditorState(payload.state);
+      }
       te.update();
       setTrackEditor(te);
     }
   }, [network]);
 
-  const fakeNet = new Network([network.segments[0]]);
+  useEffect(() => {
+    if (trackEditor && (editorState === EDITOR_STATE.SELECT || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_CONNECTION_START)) {
+      trackEditor.setStatePayload({
+        state: editorState
+      })
+    }
+  }, [editorState]);
 
   return <>
     <div ref={divRef} {...props}/>
-    <input value="dsfasdf" type="button" onClick={() => {setNetwork(fakeNet); console.log("Setting")}} />
+    <input value={(editorState === EDITOR_STATE.SELECT ? ">" : "") + "Select"} type="button" onClick={() => setEditorState(EDITOR_STATE.SELECT)} />
+    <input value={(editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END ? ">" : "") + "Add Linear"} type="button" onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)} />
+    <input value={(editorState === EDITOR_STATE.CREATE_CONNECTION_START || editorState === EDITOR_STATE.CREATE_CONNECTION_END ? ">" : "") + "Add Connection"} type="button" onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)} />
     <p>{network.segments.length}</p>
     {selectedSegment && <TrackSegmentDetail update={(n) => {
       setNetwork(n);
