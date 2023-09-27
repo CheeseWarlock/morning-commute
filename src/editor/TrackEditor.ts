@@ -290,6 +290,8 @@ class TrackEditor {
             this.setStatePayload({
               state: EDITOR_STATE.SELECT,
             });
+          } else if (this.#hoverSegment) {
+            this.#selectedSegment = this.#hoverSegment;
           }
           break;
 
@@ -567,9 +569,11 @@ class TrackEditor {
     let closestType: SELECTION_TYPE | undefined;
     this.network.segments.forEach((seg) => {
       const distanceToLine = seg.distanceToPosition(selectionPoint);
+      if (distanceToLine > SELECTION_DISTANCE_PIXELS) return;
       if (
         distanceToLine < closest &&
-        distanceToLine < SELECTION_DISTANCE_PIXELS
+        distanceToLine < SELECTION_DISTANCE_PIXELS &&
+        (!closestType || closestType === SELECTION_TYPE.SEGMENT)
       ) {
         closestSegment = seg;
         closest = distanceToLine;
@@ -580,19 +584,32 @@ class TrackEditor {
       const distanceToEnd = _dist(seg.end, selectionPoint);
 
       if (
-        (!closestType || closestType === SELECTION_TYPE.SEGMENT) &&
+        (!closestType ||
+          closestType === SELECTION_TYPE.SEGMENT ||
+          seg === this.#selectedSegment) &&
         distanceToStart < SELECTION_DISTANCE_PIXELS
       ) {
         closestSegment = seg;
-        closest = distanceToLine;
+        if (seg === this.#selectedSegment) {
+          closest = -1;
+        } else {
+          closest = distanceToLine;
+        }
+
         closestType = SELECTION_TYPE.START;
       }
       if (
-        (!closestType || closestType === SELECTION_TYPE.SEGMENT) &&
+        (!closestType ||
+          closestType === SELECTION_TYPE.SEGMENT ||
+          seg === this.#selectedSegment) &&
         distanceToEnd < SELECTION_DISTANCE_PIXELS
       ) {
         closestSegment = seg;
-        closest = distanceToLine;
+        if (seg === this.#selectedSegment) {
+          closest = -1;
+        } else {
+          closest = distanceToLine;
+        }
         closestType = SELECTION_TYPE.END;
       }
     });
