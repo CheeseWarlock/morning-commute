@@ -100,7 +100,7 @@ export function areAnglesEqual(angleA: number, angleB: number) {
       ((angleB + 2 * Math.PI) % (2 * Math.PI)),
   );
 
-  return angularDifference < 0.0001 || angularDifference > Math.PI - 0.0001;
+  return angularDifference < 0.0001 || angularDifference > Math.PI * 2 - 0.0001;
 }
 
 /**
