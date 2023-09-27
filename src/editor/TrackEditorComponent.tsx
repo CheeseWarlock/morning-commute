@@ -5,10 +5,12 @@ import TrackSegment from "../engine/TrackSegment";
 import TrackSegmentDetail from "./TrackSegmentDetail";
 import Network from "../engine/Network";
 
+const hm = buildComplex().network
+
 const TrackEditorComponent = (props: any) => {
   const divRef: React.MutableRefObject<HTMLDivElement | null> = useRef(null);
   const [selectedSegment, setSelectedSegment] = useState<TrackSegment | null>(null);
-  const [network, setNetwork] = useState<Network>(buildComplex().network);
+  const [network, setNetwork] = useState<Network>(hm);
   const [trackEditor, setTrackEditor] = useState<TrackEditor | undefined>(undefined);
   const [editorState, setEditorState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
 

@@ -271,7 +271,16 @@ class TrackEditor {
               this.#hoverSegment,
               this.#hoverSelectionType === SELECTION_TYPE.END,
             );
+
+            newSegments[0].connect(this.statePayload.connectionSegment);
+            newSegments[0].connect(this.#hoverSegment);
+            if (newSegments[1]) {
+              newSegments[0].connect(newSegments[1]);
+              newSegments[1].connect(this.#hoverSegment);
+              newSegments[1].connect(this.statePayload.connectionSegment);
+            }
             this.network.segments.push(...newSegments);
+
             this.update();
 
             this.setStatePayload({

@@ -95,10 +95,12 @@ export function isNetworkCoherent(segments: TrackSegment[]): boolean {
 }
 
 export function areAnglesEqual(angleA: number, angleB: number) {
-  return (
-    (angleA + 2 * Math.PI) % (2 * Math.PI) ===
-    (angleB + 2 * Math.PI) % (2 * Math.PI)
+  const angularDifference = Math.abs(
+    ((angleA + 2 * Math.PI) % (2 * Math.PI)) -
+      ((angleB + 2 * Math.PI) % (2 * Math.PI)),
   );
+
+  return angularDifference < 0.0001 || angularDifference > Math.PI - 0.0001;
 }
 
 /**

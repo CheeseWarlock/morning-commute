@@ -70,8 +70,8 @@ abstract class TrackSegment {
     ];
     const matchingPoints = groups.find(
       (group) =>
-        group.points[0].x === group.points[1].x &&
-        group.points[0].y === group.points[1].y,
+        Math.abs(group.points[0].x - group.points[1].x) < 0.0001 &&
+        Math.abs(group.points[0].y - group.points[1].y) < 0.0001,
     );
 
     if (!matchingPoints) return;
