@@ -287,7 +287,7 @@ class BabylonRenderer implements IRenderer {
   #convertTrackSegmentToGeometry(segment: TrackSegment) {
     let myPath: BABYLON.Vector3[] = [];
     if (segment instanceof LinearTrackSegment) {
-      const segmentCount = Math.floor(segment.length / 3);
+      const segmentCount = Math.max(Math.floor(segment.length / 3), 3);
       for (let i = 0; i <= segmentCount; i++) {
         const p = segment.getPositionAlong((segment.length * i) / segmentCount);
         myPath.push(new BABYLON.Vector3(p.point.x, 0, -p.point.y));
@@ -302,7 +302,7 @@ class BabylonRenderer implements IRenderer {
           -start.point.y + 0.01 * Math.sin(startAngle),
         ),
       );
-      const segmentCount = Math.floor(segment.length / 3);
+      const segmentCount = Math.max(Math.floor(segment.length / 3), 2);
       for (let i = 0; i <= segmentCount; i++) {
         const p = segment.getPositionAlong((segment.length * i) / segmentCount);
         myPath.push(new BABYLON.Vector3(p.point.x, 0, -p.point.y));
