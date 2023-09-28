@@ -162,6 +162,7 @@ class TrackEditor {
         this.#selectedSegment &&
         (ev.key === "Backspace" || ev.key === "Delete")
       ) {
+        this.#onSelect?.();
         this.network.segments.splice(
           this.network.segments.indexOf(this.#selectedSegment),
           1,

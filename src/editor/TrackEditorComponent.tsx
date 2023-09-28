@@ -15,7 +15,6 @@ const TrackEditorComponent = (props: any) => {
   const [editorState, setEditorState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
 
   useEffect(() => {
-    console.log("ASDASD");
     const canvas = divRef.current;
     if (trackEditor) {
       trackEditor.network = network;
@@ -28,7 +27,6 @@ const TrackEditorComponent = (props: any) => {
         setEditorState(payload.state);
       }
       te.onNetworkChanged = () => {
-        console.log("ASDFASDSDA");
         setNetwork(te.network);
       }
       te.update();
