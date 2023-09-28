@@ -18,7 +18,7 @@ const almostEqual = (a: number, b: number) => {
 const anglesAlmostEqual = (a: number, b: number) => {
   return (
     almostEqual(normalizeAngle(a), normalizeAngle(b)) ||
-    almostEqual(Math.abs(normalizeAngle(a) - normalizeAngle(b)), Math.PI)
+    almostEqual(Math.abs(normalizeAngle(a) - normalizeAngle(b)), Math.PI * 2)
   );
 };
 
@@ -123,6 +123,13 @@ export const connectSegments = (
   if (anglesAlmostEqual(angleFromA, angleFromB)) {
     parallel = true;
   } else if (anglesAlmostHalfEqual(angleFromA, angleFromB)) {
+    // They're facing each other- if they're collinear we can connect them, otherwise we can't
+    const aYAtX0 = pointA.y - Math.tan(angleFromA) * pointA.x;
+    const bYAtX0 = pointB.y - Math.tan(angleFromB) * pointB.x;
+    if (Math.abs(aYAtX0 - bYAtX0) < 0.0001) {
+      return [new LinearTrackSegment({ ...pointA }, { ...pointB })];
+    }
+
     return [];
   }
 
