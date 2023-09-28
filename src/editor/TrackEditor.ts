@@ -167,6 +167,26 @@ class TrackEditor {
           this.network.segments.indexOf(this.#selectedSegment),
           1,
         );
+        this.network.segments.forEach((segment) => {
+          if (
+            this.#selectedSegment &&
+            segment.atStart.indexOf(this.#selectedSegment) > -1
+          ) {
+            segment.atStart.splice(
+              segment.atStart.indexOf(this.#selectedSegment),
+              1,
+            );
+          }
+          if (
+            this.#selectedSegment &&
+            segment.atEnd.indexOf(this.#selectedSegment) > -1
+          ) {
+            segment.atEnd.splice(
+              segment.atEnd.indexOf(this.#selectedSegment),
+              1,
+            );
+          }
+        });
         this.#selectedSegment = undefined;
         this.network = new Network(this.network.segments);
         this.onNetworkChanged?.();
