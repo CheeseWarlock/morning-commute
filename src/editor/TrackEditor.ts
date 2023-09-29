@@ -609,7 +609,7 @@ class TrackEditor {
     let closestSegment: TrackSegment | undefined;
     let closestType: SELECTION_TYPE | undefined;
     this.network.segments.forEach((seg) => {
-      const distanceToLine = seg.distanceToPosition(selectionPoint);
+      const distanceToLine = seg.distanceToPosition(selectionPoint).distance;
       if (distanceToLine > SELECTION_DISTANCE_PIXELS) return;
       if (
         distanceToLine < closest &&

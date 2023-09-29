@@ -156,9 +156,15 @@ class CircularTrackSegment extends TrackSegment {
       if (angleToPoint > angleToStart) {
         angleToPoint -= Math.PI * 2;
       }
+      if (angleToPoint < angleToEnd) {
+        angleToPoint += Math.PI * 2;
+      }
     } else {
       if (angleToPoint < angleToStart) {
         angleToPoint += Math.PI * 2;
+      }
+      if (angleToPoint > angleToEnd) {
+        angleToPoint -= Math.PI * 2;
       }
     }
 
@@ -178,7 +184,6 @@ class CircularTrackSegment extends TrackSegment {
       const proportionAlong = this.counterClockWise
         ? (angleToPoint - angleToEnd) / (angleToStart - angleToEnd)
         : (angleToPoint - angleToStart) / (angleToEnd - angleToStart);
-      console.log(proportionAlong);
       return {
         point,
         distance: Math.abs(distanceToCenter - this.radius),
