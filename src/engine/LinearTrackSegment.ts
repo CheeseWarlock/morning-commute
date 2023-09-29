@@ -32,7 +32,7 @@ class LinearTrackSegment extends TrackSegment {
     return Math.atan2(this.end.y - this.start.y, this.end.x - this.start.x);
   }
 
-  distanceToPosition(point: Point): number {
+  distanceToPosition(point: Point) {
     const x = point.x;
     const y = point.y;
     const x1 = this.start.x;
@@ -67,7 +67,8 @@ class LinearTrackSegment extends TrackSegment {
 
     var dx = x - xx;
     var dy = y - yy;
-    return Math.sqrt(dx * dx + dy * dy);
+
+    return { point, distance: Math.sqrt(dx * dx + dy * dy) };
   }
 
   getPositionAlong(

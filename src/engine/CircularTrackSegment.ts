@@ -119,7 +119,7 @@ class CircularTrackSegment extends TrackSegment {
     return this.length / this.radius;
   }
 
-  distanceToPosition(point: Point): number {
+  distanceToPosition(point: Point) {
     let angleToPoint = Math.atan2(
       point.y - this.center.y,
       point.x - this.center.x,
@@ -175,7 +175,15 @@ class CircularTrackSegment extends TrackSegment {
       const distanceToCenter = Math.sqrt(
         (this.center.x - point.x) ** 2 + (this.center.y - point.y) ** 2,
       );
-      return Math.abs(distanceToCenter - this.radius);
+      const proportionAlong = this.counterClockWise
+        ? (angleToPoint - angleToEnd) / (angleToStart - angleToEnd)
+        : (angleToPoint - angleToStart) / (angleToEnd - angleToStart);
+      console.log(proportionAlong);
+      return {
+        point,
+        distance: Math.abs(distanceToCenter - this.radius),
+        distanceAlong: proportionAlong,
+      };
     } else {
       const distanceToStart = Math.sqrt(
         (this.start.x - point.x) ** 2 + (this.start.y - point.y) ** 2,
@@ -184,7 +192,11 @@ class CircularTrackSegment extends TrackSegment {
         (this.end.x - point.x) ** 2 + (this.end.y - point.y) ** 2,
       );
 
-      return Math.min(distanceToStart, distanceToEnd);
+      return {
+        point,
+        distance: Math.min(distanceToStart, distanceToEnd),
+        distanceAlong: 1,
+      };
     }
   }
 
