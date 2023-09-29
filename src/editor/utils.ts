@@ -87,12 +87,8 @@ const lineIntersection = (
 };
 
 /**
- * Connect two track segments via one Linear segment and one Circular segment.
- * @param segmentA
- * @param isEndA
- * @param segmentB
- * @param isEndB
- * @returns
+ * Connect two track segments via up to one Linear segment and up to one Circular segment.
+ * @returns an array of track segments created. If the segments cannot be connected, the array will be empty.
  */
 export const connectSegments = (
   segmentA: TrackSegment,
@@ -100,6 +96,7 @@ export const connectSegments = (
   segmentB: TrackSegment,
   isEndB: boolean,
 ): TrackSegment[] => {
+  if (segmentA === segmentB) return [];
   // Find the intersection point of the two rays
   let angleFromA;
   let angleFromB;

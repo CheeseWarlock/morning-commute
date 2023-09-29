@@ -44,6 +44,10 @@ export enum EDITOR_STATE {
    * Choose the second point for a linear-and-circular connection.
    */
   CREATE_CONNECTION_END,
+  /**
+   * Add a station to an existing track segment.
+   */
+  CREATE_STATION,
 }
 
 type EDITOR_STATE_PAYLOADS =
@@ -64,6 +68,9 @@ type EDITOR_STATE_PAYLOADS =
       state: EDITOR_STATE.CREATE_CONNECTION_END;
       connectionSegment: TrackSegment;
       connectedAtEnd: boolean;
+    }
+  | {
+      state: EDITOR_STATE.CREATE_STATION;
     };
 
 const SELECTION_DISTANCE_PIXELS = 15;
