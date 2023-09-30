@@ -1,5 +1,4 @@
 import React from "react";
-import TrackSegment from "../engine/TrackSegment";
 import CircularTrackSegment from "../engine/CircularTrackSegment";
 import Network from "../engine/Network";
 import { findCenter } from "./utils";
@@ -62,6 +61,12 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
 
   return <div className="segment-info">
     <h3>{segment instanceof CircularTrackSegment ? "Circular" : "Linear"}</h3>
+    {segment.stations.length &&
+    <>
+      <h4>Stations</h4>
+      <span>{segment.stations.length}</span>
+      </>
+    }
     <h4>From</h4>
     <p>
       <span>X</span>

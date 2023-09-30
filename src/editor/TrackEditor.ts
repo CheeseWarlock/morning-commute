@@ -3,7 +3,7 @@ import CircularTrackSegment from "../engine/CircularTrackSegment";
 import LinearTrackSegment from "../engine/LinearTrackSegment";
 import Network from "../engine/Network";
 import Point from "../engine/Point";
-import { ALIGNMENT } from "../engine/Station";
+import Station, { ALIGNMENT } from "../engine/Station";
 import TrackSegment from "../engine/TrackSegment";
 import { connectSegments, findCenter } from "./utils";
 import Controller from "../engine/Controller";
@@ -170,6 +170,9 @@ class TrackEditor {
         (ev.key === "Backspace" || ev.key === "Delete")
       ) {
         this.#onSelect?.();
+        this.#selectedSegment.stations.forEach((station) => {
+          this.network.stations.splice(this.network.stations.indexOf(station));
+        });
         this.network.segments.splice(
           this.network.segments.indexOf(this.#selectedSegment),
           1,
@@ -195,7 +198,10 @@ class TrackEditor {
           }
         });
         this.#selectedSegment = undefined;
-        this.network = new Network(this.network.segments);
+        this.network = new Network(
+          this.network.segments,
+          this.network.stations,
+        );
         this.onNetworkChanged?.();
         this.update();
       }
@@ -223,7 +229,10 @@ class TrackEditor {
             this.#selectedSegment.start.y = ev.offsetY;
           }
           this.mousePos = { x: ev.offsetX, y: ev.offsetY };
-          this.network = new Network(this.network.segments);
+          this.network = new Network(
+            this.network.segments,
+            this.network.stations,
+          );
           this.onNetworkChanged?.();
           this.update();
         } else if (
@@ -246,7 +255,10 @@ class TrackEditor {
             this.#selectedSegment.end.y = ev.offsetY;
           }
           this.mousePos = { x: ev.offsetX, y: ev.offsetY };
-          this.network = new Network(this.network.segments);
+          this.network = new Network(
+            this.network.segments,
+            this.network.stations,
+          );
           this.onNetworkChanged?.();
           this.update();
         }
@@ -278,7 +290,10 @@ class TrackEditor {
             },
           );
           this.network.segments.push(newSegment);
-          this.network = new Network(this.network.segments);
+          this.network = new Network(
+            this.network.segments,
+            this.network.stations,
+          );
           this.onNetworkChanged?.();
           this.update();
           this.setStatePayload({
@@ -321,7 +336,10 @@ class TrackEditor {
               newSegments[1].connect(this.statePayload.connectionSegment);
             }
             this.network.segments.push(...newSegments);
-            this.network = new Network(this.network.segments);
+            this.network = new Network(
+              this.network.segments,
+              this.network.stations,
+            );
             this.onNetworkChanged?.();
 
             this.update();
@@ -341,6 +359,26 @@ class TrackEditor {
           this.update();
           this.#dragging = true;
           break;
+
+        case EDITOR_STATE.CREATE_STATION:
+          if (!this.#hoverSegment) break;
+          if (!this.mousePos) break;
+          const closestPoint = this.#hoverSegment.distanceToPosition({
+            x: this.mousePos?.x,
+            y: this.mousePos?.y,
+          });
+          const newStation = new Station(
+            this.#hoverSegment,
+            closestPoint.distanceAlong * this.#hoverSegment.length,
+            closestPoint.alignment,
+          );
+          this.network.stations.push(newStation);
+          this.#hoverSegment.stations.push(newStation);
+          this.network = new Network(
+            this.network.segments,
+            this.network.stations,
+          );
+          break;
       }
       return;
     };
@@ -352,7 +390,7 @@ class TrackEditor {
     network.segments.push(
       ...connectSegments(network.segments[0], true, network.segments[1], false),
     );
-    this.network = new Network(this.network.segments);
+    this.network = new Network(this.network.segments, this.network.stations);
     this.onNetworkChanged?.();
   }
 
@@ -535,7 +573,25 @@ class TrackEditor {
   }
 
   drawStations() {
-    this.network.stations.forEach((station) => {
+    const fakeStationsList = [...this.network.stations];
+    if (
+      this.statePayload.state === EDITOR_STATE.CREATE_STATION &&
+      this.mousePos &&
+      this.#hoverSegment
+    ) {
+      const closestPoint = this.#hoverSegment?.distanceToPosition({
+        x: this.mousePos?.x,
+        y: this.mousePos?.y,
+      });
+      fakeStationsList.push(
+        new Station(
+          this.#hoverSegment,
+          closestPoint.distanceAlong * this.#hoverSegment.length,
+          closestPoint.alignment,
+        ),
+      );
+    }
+    fakeStationsList.forEach((station) => {
       if (!this.#context) return;
       this.#context.fillStyle = "rgb(40, 100, 255)";
       const SIZE = 10;

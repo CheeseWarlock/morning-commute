@@ -1,6 +1,6 @@
 import { areAnglesEqual } from "../utils";
 import Point from "./Point";
-import Station from "./Station";
+import Station, { ALIGNMENT } from "./Station";
 
 /**
  * A segment of track of any shape.
@@ -30,7 +30,12 @@ abstract class TrackSegment {
     distance: number,
     reverse?: boolean,
   ): { point: Point; excess: number };
-  abstract distanceToPosition(point: Point): { point: Point; distance: number };
+  abstract distanceToPosition(point: Point): {
+    point: Point;
+    distance: number;
+    distanceAlong: number;
+    alignment: ALIGNMENT;
+  };
 
   abstract getAngleAlong(distance: number, reverse?: boolean): number;
 

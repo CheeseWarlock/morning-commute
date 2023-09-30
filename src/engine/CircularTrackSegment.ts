@@ -1,4 +1,5 @@
 import Point from "./Point";
+import { ALIGNMENT } from "./Station";
 import TrackSegment from "./TrackSegment";
 
 /**
@@ -175,7 +176,6 @@ class CircularTrackSegment extends TrackSegment {
       (this.counterClockWise &&
         angleToEnd < angleToPoint &&
         angleToPoint < angleToStart);
-
     if (isInsideCone) {
       // Inside the cone
       const distanceToCenter = Math.sqrt(
@@ -187,9 +187,18 @@ class CircularTrackSegment extends TrackSegment {
       return {
         point,
         distance: Math.abs(distanceToCenter - this.radius),
-        distanceAlong: proportionAlong,
+        distanceAlong: this.counterClockWise
+          ? 1 - proportionAlong
+          : proportionAlong,
+        alignment:
+          distanceToCenter > this.radius !== this.counterClockWise
+            ? ALIGNMENT.LEFT
+            : ALIGNMENT.RIGHT,
       };
     } else {
+      const distanceToCenter = Math.sqrt(
+        (this.center.x - point.x) ** 2 + (this.center.y - point.y) ** 2,
+      );
       const distanceToStart = Math.sqrt(
         (this.start.x - point.x) ** 2 + (this.start.y - point.y) ** 2,
       );
@@ -200,7 +209,11 @@ class CircularTrackSegment extends TrackSegment {
       return {
         point,
         distance: Math.min(distanceToStart, distanceToEnd),
-        distanceAlong: 1,
+        distanceAlong: distanceToStart > distanceToEnd ? 1 : 0,
+        alignment:
+          distanceToCenter > this.radius !== this.counterClockWise
+            ? ALIGNMENT.LEFT
+            : ALIGNMENT.RIGHT,
       };
     }
   }

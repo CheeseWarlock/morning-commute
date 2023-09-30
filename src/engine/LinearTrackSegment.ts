@@ -1,4 +1,5 @@
 import Point from "./Point";
+import { ALIGNMENT } from "./Station";
 import TrackSegment from "./TrackSegment";
 
 /**
@@ -33,17 +34,15 @@ class LinearTrackSegment extends TrackSegment {
   }
 
   distanceToPosition(point: Point) {
-    const x = point.x;
-    const y = point.y;
-    const x1 = this.start.x;
-    const x2 = this.end.x;
-    const y1 = this.start.y;
-    const y2 = this.end.y;
+    const startX = this.start.x;
+    const endX = this.end.x;
+    const startY = this.start.y;
+    const endY = this.end.y;
 
-    var A = x - x1;
-    var B = y - y1;
-    var C = x2 - x1;
-    var D = y2 - y1;
+    var A = point.x - startX;
+    var B = point.y - startY;
+    var C = endX - startX;
+    var D = endY - startY;
 
     var dot = A * C + B * D;
     var len_sq = C * C + D * D;
@@ -55,20 +54,36 @@ class LinearTrackSegment extends TrackSegment {
     var xx, yy;
 
     if (param < 0) {
-      xx = x1;
-      yy = y1;
+      xx = startX;
+      yy = startY;
     } else if (param > 1) {
-      xx = x2;
-      yy = y2;
+      xx = endX;
+      yy = endY;
     } else {
-      xx = x1 + param * C;
-      yy = y1 + param * D;
+      xx = startX + param * C;
+      yy = startY + param * D;
     }
 
-    var dx = x - xx;
-    var dy = y - yy;
+    var dx = point.x - xx;
+    var dy = point.y - yy;
 
-    return { point, distance: Math.sqrt(dx * dx + dy * dy) };
+    // Get the angle now
+    let angleA = Math.atan2(point.y - this.start.y, point.x - this.start.x);
+    const angleB = Math.atan2(
+      this.end.y - this.start.y,
+      this.end.x - this.start.x,
+    );
+
+    while (angleA < angleB) {
+      angleA += Math.PI * 2;
+    }
+
+    return {
+      point: { x: xx, y: yy },
+      distance: Math.sqrt(dx * dx + dy * dy),
+      distanceAlong: param > 1 ? 1 : param < 0 ? 0 : param,
+      alignment: angleA - angleB > Math.PI ? ALIGNMENT.LEFT : ALIGNMENT.RIGHT,
+    };
   }
 
   getPositionAlong(

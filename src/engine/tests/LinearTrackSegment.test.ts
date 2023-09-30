@@ -118,18 +118,18 @@ describe("distanceToPosition", () => {
   it("reports the distance to the middle of the segment when that's the closest", () => {
     const distance = segment.distanceToPosition(pointB);
 
-    expect(distance).toBeCloseTo(Math.sqrt(200));
+    expect(distance.distance).toBeCloseTo(Math.sqrt(200));
   });
 
   it("reports the distance to the start of the line when that's the closest point", () => {
     const pointNearStart = { x: 0, y: -20 };
     const distance = segment.distanceToPosition(pointNearStart);
-    expect(distance).toBeCloseTo(20);
+    expect(distance.distance).toBeCloseTo(20);
   });
 
   it("reports the distance to the end of the line when that's the closest point", () => {
     const pointNearEnd = { x: 30, y: 20 };
     const distance = segment.distanceToPosition(pointNearEnd);
-    expect(distance).toBeCloseTo(10);
+    expect(distance.distance).toBeCloseTo(10);
   });
 });

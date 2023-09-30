@@ -35,7 +35,7 @@ const TrackEditorComponent = (props: any) => {
   }, [network]);
 
   useEffect(() => {
-    if (trackEditor && (editorState === EDITOR_STATE.SELECT || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_CONNECTION_START)) {
+    if (trackEditor && (editorState === EDITOR_STATE.SELECT || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_CONNECTION_START || editorState === EDITOR_STATE.CREATE_STATION)) {
       trackEditor.setStatePayload({
         state: editorState
       })
@@ -45,6 +45,7 @@ const TrackEditorComponent = (props: any) => {
   return <>
     <div ref={divRef} {...props}/>
     <input value={(editorState === EDITOR_STATE.SELECT ? ">" : "") + "Select"} type="button" onClick={() => setEditorState(EDITOR_STATE.SELECT)} />
+    <input value={(editorState === EDITOR_STATE.CREATE_STATION ? ">" : "") + "Add Station"} type="button" onClick={() => setEditorState(EDITOR_STATE.CREATE_STATION)} />
     <input value={(editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END ? ">" : "") + "Add Linear"} type="button" onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)} />
     <input value={(editorState === EDITOR_STATE.CREATE_CONNECTION_START || editorState === EDITOR_STATE.CREATE_CONNECTION_END ? ">" : "") + "Add Connection"} type="button" onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)} />
     <input value={"Finish"} type="button" onClick={() => trackEditor?.finish()} />

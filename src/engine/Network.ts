@@ -13,8 +13,9 @@ class Network implements GameObject {
   trains: Train[] = [];
   stations: Station[] = [];
 
-  constructor(segments?: TrackSegment[]) {
+  constructor(segments?: TrackSegment[], stations?: Station[]) {
     if (segments) this.segments = segments;
+    if (stations) this.stations = stations;
   }
 
   /**
