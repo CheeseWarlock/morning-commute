@@ -5,6 +5,8 @@ import TrackSegment from "../engine/TrackSegment";
 import TrackSegmentDetail from "./TrackSegmentDetail";
 import Network from "../engine/Network";
 
+import Button from "./components/Button";
+
 const hm = buildComplex().network
 
 const TrackEditorComponent = (props: any) => {
@@ -44,12 +46,11 @@ const TrackEditorComponent = (props: any) => {
 
   return <>
     <div ref={divRef} {...props}/>
-    <input value={(editorState === EDITOR_STATE.SELECT ? ">" : "") + "Select"} type="button" onClick={() => setEditorState(EDITOR_STATE.SELECT)} />
-    <input value={(editorState === EDITOR_STATE.CREATE_STATION ? ">" : "") + "Add Station"} type="button" onClick={() => setEditorState(EDITOR_STATE.CREATE_STATION)} />
-    <input value={(editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END ? ">" : "") + "Add Linear"} type="button" onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)} />
-    <input value={(editorState === EDITOR_STATE.CREATE_CONNECTION_START || editorState === EDITOR_STATE.CREATE_CONNECTION_END ? ">" : "") + "Add Connection"} type="button" onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)} />
-    <input value={"Finish"} type="button" onClick={() => trackEditor?.finish()} />
-    <p>{network.segments.length}</p>
+    <Button selected={(editorState === EDITOR_STATE.SELECT)} value="Select" onClick={() => setEditorState(EDITOR_STATE.SELECT)} />
+    <Button selected={(editorState === EDITOR_STATE.CREATE_STATION)} value="Add Station" onClick={() => setEditorState(EDITOR_STATE.CREATE_STATION)} />
+    <Button selected={(editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END)} value="Add Linear" onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)} />
+    <Button selected={(editorState === EDITOR_STATE.CREATE_CONNECTION_START || editorState === EDITOR_STATE.CREATE_CONNECTION_END)} value="Add Connection" onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)} />
+    <Button value="Finish" onClick={() => trackEditor?.finish()} />
     {selectedSegment && <TrackSegmentDetail update={(n) => {
       setNetwork(n);
     }} segmentIndex={network.segments.indexOf(selectedSegment)} network={network}/>}

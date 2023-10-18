@@ -71,32 +71,32 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
     }
     <h4 className="text-lg">From</h4>
     <div className="my-3 flex flex-row">
-      <div className="font-mono border border-slate-300 p-2 m-2 w-1/3 flex flex-row">
+      <div className="font-mono p-2 m-2 w-1/3 flex flex-row">
         <label className="pr-2">X</label>
-        <input type="number" className="w-full border-slate-300 background-slate-50" value={segment.start.x} onChange={(ev) => doUpdateProp({ start: { x: Number.parseInt(ev.target.value)}})}></input>
+        <input type="number" className="w-full border-slate-300 border rounded" value={segment.start.x} onChange={(ev) => doUpdateProp({ start: { x: Number.parseInt(ev.target.value)}})}></input>
       </div>
-      <span className="font-mono border border-slate-300 p-2 m-2 w-1/3 flex flex-row">
+      <span className="font-mono p-2 m-2 w-1/3 flex flex-row">
         <label className="pr-2">Y</label>
-        <input type="number" value={segment.start.y} onChange={(ev) => doUpdateProp({ start: { y: Number.parseInt(ev.target.value)}})}></input>
+        <input type="number" className="w-full border-slate-300 border rounded" value={segment.start.y} onChange={(ev) => doUpdateProp({ start: { y: Number.parseInt(ev.target.value)}})}></input>
       </span>
     </div>
     <h4 className="text-lg">To</h4>
-    <p className="my-3">
-      <span className="font-mono border border-slate-300 p-2 m-2">
+    <p className="my-3 flex flex-row">
+      <span className="font-mono p-2 m-2 w-1/3 flex flex-row">
         <label className="pr-2">X</label>
-        <input type="number" value={segment.end.x} onChange={(ev) => doUpdateProp({ end: { x: Number.parseInt(ev.target.value)}})}></input>
+        <input type="number" className="w-full border-slate-300 border rounded" value={segment.end.x} onChange={(ev) => doUpdateProp({ end: { x: Number.parseInt(ev.target.value)}})}></input>
       </span>
-      <span className="font-mono border border-slate-300 p-2 m-2">
+      <span className="font-mono p-2 m-2 w-1/3 flex flex-row">
         <label className="pr-2">Y</label>
-        <input type="number" value={segment.end.y} onChange={(ev) => doUpdateProp({ end: { y: Number.parseInt(ev.target.value)}})}></input>
+        <input type="number" className="w-full border-slate-300 border rounded" value={segment.end.y} onChange={(ev) => doUpdateProp({ end: { y: Number.parseInt(ev.target.value)}})}></input>
       </span>
     </p>
     
     {segment instanceof CircularTrackSegment && <>
       <h4 className="text-lg">Angle</h4>
       <p className="my-3">
-        <span className="font-mono border border-slate-300 p-2 m-2">
-          <input type="number" value={segment.theta} step="any" onChange={(ev) => doUpdateProp({ theta:Number.parseInt(ev.target.value)})}></input>
+        <span className="font-mono p-2 m-2 w-1/3 flex flex-row">
+          <input type="number" className="w-full border-slate-300 border rounded" value={segment.theta} step="any" onChange={(ev) => doUpdateProp({ theta:Number.parseInt(ev.target.value)})}></input>
         </span>
         
         <span>CCW</span>
