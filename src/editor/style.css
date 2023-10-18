@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 .segment-info {
   display: flex;
   flex-direction: column;
