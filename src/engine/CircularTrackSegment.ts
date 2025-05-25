@@ -292,6 +292,18 @@ class CircularTrackSegment extends TrackSegment {
     // Convert to -PI - +PI
     return ((angleAlong + Math.PI) % (Math.PI * 2)) - Math.PI;
   }
+
+  toJSON() {
+    return JSON.stringify({
+      id: this.id,
+      start: this.start,
+      end: this.end,
+      center: this.center,
+      counterClockWise: this.counterClockWise,
+      atStart: this.atStart.map((seg) => seg.id),
+      atEnd: this.atEnd.map((seg) => seg.id),
+    });
+  }
 }
 
 export default CircularTrackSegment;

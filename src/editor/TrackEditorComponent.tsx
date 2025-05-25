@@ -6,6 +6,7 @@ import TrackSegmentDetail from "./TrackSegmentDetail";
 import Network from "../engine/Network";
 
 import Button from "./components/Button";
+import ExportPage from "./ExportPage";
 
 const hm = buildComplex().network
 
@@ -15,6 +16,7 @@ const TrackEditorComponent = (props: any) => {
   const [network, setNetwork] = useState<Network>(hm);
   const [trackEditor, setTrackEditor] = useState<TrackEditor | undefined>(undefined);
   const [editorState, setEditorState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
+  const [saveMenuOpen, setSaveMenuOpen] = useState<boolean>(true);
 
   useEffect(() => {
     const canvas = divRef.current;
@@ -45,15 +47,17 @@ const TrackEditorComponent = (props: any) => {
   }, [editorState]);
 
   return <>
-    <div ref={divRef} {...props}/>
     <Button selected={(editorState === EDITOR_STATE.SELECT)} value="Select" onClick={() => setEditorState(EDITOR_STATE.SELECT)} />
     <Button selected={(editorState === EDITOR_STATE.CREATE_STATION)} value="Add Station" onClick={() => setEditorState(EDITOR_STATE.CREATE_STATION)} />
     <Button selected={(editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END)} value="Add Linear" onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)} />
     <Button selected={(editorState === EDITOR_STATE.CREATE_CONNECTION_START || editorState === EDITOR_STATE.CREATE_CONNECTION_END)} value="Add Connection" onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)} />
-    <Button value="Finish" onClick={() => trackEditor?.finish()} />
+    <div ref={divRef} {...props}/>
+
     {selectedSegment && <TrackSegmentDetail update={(n) => {
       setNetwork(n);
     }} segmentIndex={network.segments.indexOf(selectedSegment)} network={network}/>}
+    <Button selected={saveMenuOpen} value="Save/Load" onClick={() => setSaveMenuOpen(!saveMenuOpen)} />
+    {saveMenuOpen && trackEditor && <ExportPage trackEditor={trackEditor} />}
   </>;
 }
 

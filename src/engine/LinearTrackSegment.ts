@@ -153,6 +153,16 @@ class LinearTrackSegment extends TrackSegment {
   getAngleAlong(_distance: number, _reverse: boolean = false) {
     return this.initialAngle + (_reverse ? Math.PI : 0);
   }
+
+  toJSON() {
+    return JSON.stringify({
+      id: this.id,
+      start: this.start,
+      end: this.end,
+      atStart: this.atStart.map((seg) => seg.id),
+      atEnd: this.atEnd.map((seg) => seg.id),
+    });
+  }
 }
 
 export default LinearTrackSegment;

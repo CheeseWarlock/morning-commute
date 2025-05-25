@@ -1,6 +1,7 @@
 import { areAnglesEqual } from "../utils";
 import Point from "./Point";
 import Station, { ALIGNMENT } from "./Station";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * A segment of track of any shape.
@@ -25,7 +26,16 @@ abstract class TrackSegment {
    * The direction of travel at the end of this track segment.
    */
   abstract finalAngle: number;
+
+  /**
+   * Convert this segment to JSON for export.
+   */
+  abstract toJSON(): string;
   stations: Station[] = [];
+  /**
+   * The UUID of this track segment.
+   */
+  id: string;
   abstract getPositionAlong(
     distance: number,
     reverse?: boolean,
@@ -36,6 +46,10 @@ abstract class TrackSegment {
     distanceAlong: number;
     alignment: ALIGNMENT;
   };
+
+  constructor() {
+    this.id = uuidv4();
+  }
 
   abstract getAngleAlong(distance: number, reverse?: boolean): number;
 

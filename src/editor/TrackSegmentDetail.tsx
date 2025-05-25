@@ -61,7 +61,7 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
 
   return <div className="flex flex-col m-4">
     <h3 className="text-xl">{segment instanceof CircularTrackSegment ? "Circular" : "Linear"} Segment
-      <span className="font-mono"> B2EE491</span>
+      <span className="font-mono"> {segment.id.substring(0,8)}</span>
     </h3>
     {segment.stations.length > 0 &&
     <>
@@ -70,7 +70,7 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
       </>
     }
     <h4 className="text-lg">From</h4>
-    <div className="my-3 flex flex-row">
+    <div className="my-3 flex flex-row w-96">
       <div className="font-mono p-2 m-2 w-1/3 flex flex-row">
         <label className="pr-2">X</label>
         <input type="number" className="w-full border-slate-300 border rounded" value={segment.start.x} onChange={(ev) => doUpdateProp({ start: { x: Number.parseInt(ev.target.value)}})}></input>
@@ -81,7 +81,7 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
       </span>
     </div>
     <h4 className="text-lg">To</h4>
-    <p className="my-3 flex flex-row">
+    <p className="my-3 flex flex-row w-96">
       <span className="font-mono p-2 m-2 w-1/3 flex flex-row">
         <label className="pr-2">X</label>
         <input type="number" className="w-full border-slate-300 border rounded" value={segment.end.x} onChange={(ev) => doUpdateProp({ end: { x: Number.parseInt(ev.target.value)}})}></input>
@@ -94,7 +94,7 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
     
     {segment instanceof CircularTrackSegment && <>
       <h4 className="text-lg">Angle</h4>
-      <p className="my-3">
+      <p className="my-3 flex flex-row w-96">
         <span className="font-mono p-2 m-2 w-1/3 flex flex-row">
           <input type="number" className="w-full border-slate-300 border rounded" value={segment.theta} step="any" onChange={(ev) => doUpdateProp({ theta:Number.parseInt(ev.target.value)})}></input>
         </span>
