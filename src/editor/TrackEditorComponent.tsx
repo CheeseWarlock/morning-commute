@@ -8,57 +8,127 @@ import Network from "../engine/Network";
 import Button from "./components/Button";
 import ExportPage from "./ExportPage";
 
-const hm = buildComplex().network
+const hm = buildComplex().network;
+hm.autoConnect();
 
 const TrackEditorComponent = (props: any) => {
-  const divRef: React.MutableRefObject<HTMLDivElement | null> = useRef(null);
-  const [selectedSegment, setSelectedSegment] = useState<TrackSegment | null>(null);
+  const divRef = useRef<HTMLDivElement | null>(null);
+  const [selectedSegment, setSelectedSegment] = useState<TrackSegment | null>(
+    null,
+  );
   const [network, setNetwork] = useState<Network>(hm);
-  const [trackEditor, setTrackEditor] = useState<TrackEditor | undefined>(undefined);
-  const [editorState, setEditorState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
+  const [trackEditor, setTrackEditor] = useState<TrackEditor | undefined>(
+    undefined,
+  );
+  const [editorState, setEditorState] = useState<EDITOR_STATE>(
+    EDITOR_STATE.SELECT,
+  );
   const [saveMenuOpen, setSaveMenuOpen] = useState<boolean>(true);
 
   useEffect(() => {
-    const canvas = divRef.current;
+    console.log("Effect happen");
+    const canvasContainer = divRef.current;
     if (trackEditor) {
       trackEditor.network = network;
+      network.autoConnect();
       trackEditor.update();
     } else {
-      const te = new TrackEditor({element: canvas!, network: network, onSelect: (seg) => {
-        setSelectedSegment(seg || null);
-      }});
+      network.autoConnect();
+      const te = new TrackEditor({
+        element: canvasContainer!,
+        network: network,
+        onSelect: (seg) => {
+          setSelectedSegment(seg || null);
+        },
+      });
       te.onStateChanged = (payload) => {
+        console.log("State changed");
         setEditorState(payload.state);
-      }
+      };
       te.onNetworkChanged = () => {
+        console.log("Network changed");
         setNetwork(te.network);
-      }
+      };
       te.update();
       setTrackEditor(te);
     }
   }, [network]);
 
   useEffect(() => {
-    if (trackEditor && (editorState === EDITOR_STATE.SELECT || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_CONNECTION_START || editorState === EDITOR_STATE.CREATE_STATION)) {
+    if (
+      trackEditor &&
+      (editorState === EDITOR_STATE.SELECT ||
+        editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START ||
+        editorState === EDITOR_STATE.CREATE_CONNECTION_START ||
+        editorState === EDITOR_STATE.CREATE_STATION)
+    ) {
       trackEditor.setStatePayload({
-        state: editorState
-      })
+        state: editorState,
+      });
     }
   }, [editorState]);
 
-  return <>
-    <Button selected={(editorState === EDITOR_STATE.SELECT)} value="Select" onClick={() => setEditorState(EDITOR_STATE.SELECT)} />
-    <Button selected={(editorState === EDITOR_STATE.CREATE_STATION)} value="Add Station" onClick={() => setEditorState(EDITOR_STATE.CREATE_STATION)} />
-    <Button selected={(editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START || editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END)} value="Add Linear" onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)} />
-    <Button selected={(editorState === EDITOR_STATE.CREATE_CONNECTION_START || editorState === EDITOR_STATE.CREATE_CONNECTION_END)} value="Add Connection" onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)} />
-    <div ref={divRef} {...props}/>
+  const isNetworkComplete =
+    trackEditor?.network?.segments.filter(
+      (seg) => seg.atEnd.length > 0 && seg.atStart.length > 0,
+    ).length === trackEditor?.network.segments.length;
 
-    {selectedSegment && <TrackSegmentDetail update={(n) => {
-      setNetwork(n);
-    }} segmentIndex={network.segments.indexOf(selectedSegment)} network={network}/>}
-    <Button selected={saveMenuOpen} value="Save/Load" onClick={() => setSaveMenuOpen(!saveMenuOpen)} />
-    {saveMenuOpen && trackEditor && <ExportPage trackEditor={trackEditor} />}
-  </>;
-}
+  console.log("Complete?", isNetworkComplete);
+
+  return (
+    <>
+      <Button
+        selected={editorState === EDITOR_STATE.SELECT}
+        value="Select"
+        onClick={() => setEditorState(EDITOR_STATE.SELECT)}
+      />
+      <Button
+        selected={editorState === EDITOR_STATE.CREATE_STATION}
+        value="Add Station"
+        onClick={() => setEditorState(EDITOR_STATE.CREATE_STATION)}
+      />
+      <Button
+        selected={
+          editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START ||
+          editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END
+        }
+        value="Add Linear"
+        onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)}
+      />
+      <Button
+        selected={
+          editorState === EDITOR_STATE.CREATE_CONNECTION_START ||
+          editorState === EDITOR_STATE.CREATE_CONNECTION_END
+        }
+        value="Add Connection"
+        onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)}
+      />
+      <div ref={divRef} {...props} />
+
+      {selectedSegment && (
+        <TrackSegmentDetail
+          update={(n) => {
+            setNetwork(n);
+          }}
+          segmentIndex={network.segments.indexOf(selectedSegment)}
+          network={network}
+        />
+      )}
+      {isNetworkComplete && (
+        <Button
+          value="New Run Game"
+          onClick={() => props.trackEditor.finish()}
+        />
+      )}
+      <Button
+        selected={saveMenuOpen}
+        value="Save/Load"
+        onClick={() => setSaveMenuOpen(!saveMenuOpen)}
+      />
+      <Button value="Finish" onClick={() => trackEditor?.finish()} />
+      {saveMenuOpen && trackEditor && <ExportPage trackEditor={trackEditor} />}
+    </>
+  );
+};
 
 export default TrackEditorComponent;

@@ -4,8 +4,6 @@ import LinearTrackSegment from "../../engine/LinearTrackSegment";
 import Network from "../../engine/Network";
 import Point from "../../engine/Point";
 import { ALIGNMENT } from "../../engine/Station";
-import Train from "../../engine/Train";
-import { getExtentForTrackSegment } from "../../engine/networks/trackutils";
 import IRenderer from "./IRenderer";
 
 /**

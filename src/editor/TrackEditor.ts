@@ -1,4 +1,3 @@
-import React from "react";
 import CircularTrackSegment from "../engine/CircularTrackSegment";
 import LinearTrackSegment from "../engine/LinearTrackSegment";
 import Network from "../engine/Network";
