@@ -12,22 +12,29 @@ const hm = buildComplex().network;
 hm.autoConnect();
 
 const TrackEditorComponent = (props: any) => {
-  const divRef = useRef<HTMLDivElement | null>(null);
-  const [selectedSegment, setSelectedSegment] = useState<TrackSegment | null>(
-    null,
-  );
+  const trackEditorContainer = useRef<HTMLDivElement | null>(null);
+  const [selectedSegment, setSelectedSegment] = useState<TrackSegment | null>(null);
   const [network, setNetwork] = useState<Network>(hm);
-  const [trackEditor, setTrackEditor] = useState<TrackEditor | undefined>(
-    undefined,
-  );
-  const [editorState, setEditorState] = useState<EDITOR_STATE>(
-    EDITOR_STATE.SELECT,
-  );
+  const [trackEditor, setTrackEditor] = useState<TrackEditor | undefined>(undefined);
+  const [editorState, setEditorState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
   const [saveMenuOpen, setSaveMenuOpen] = useState<boolean>(true);
+  const [isNetworkComplete, setIsNetworkComplete] = useState<boolean>(false);
+
+  const updateNetwork = (newNetworkOrUpdater: Network | ((prev: Network) => Network)) => {
+    const newNetwork = typeof newNetworkOrUpdater === 'function' 
+      ? newNetworkOrUpdater(network)
+      : newNetworkOrUpdater;
+    
+    newNetwork.autoConnect();
+    const completeSegments = newNetwork.segments.filter(
+      (seg) => seg.atEnd.length > 0 && seg.atStart.length > 0
+    );
+    setIsNetworkComplete(completeSegments.length === newNetwork.segments.length);
+    setNetwork(newNetwork);
+  };
 
   useEffect(() => {
-    console.log("Effect happen");
-    const canvasContainer = divRef.current;
+    const canvasContainer = trackEditorContainer.current;
     if (trackEditor) {
       trackEditor.network = network;
       network.autoConnect();
@@ -42,12 +49,10 @@ const TrackEditorComponent = (props: any) => {
         },
       });
       te.onStateChanged = (payload) => {
-        console.log("State changed");
         setEditorState(payload.state);
       };
       te.onNetworkChanged = () => {
-        console.log("Network changed");
-        setNetwork(te.network);
+        updateNetwork(te.network);
       };
       te.update();
       setTrackEditor(te);
@@ -67,13 +72,6 @@ const TrackEditorComponent = (props: any) => {
       });
     }
   }, [editorState]);
-
-  const isNetworkComplete =
-    trackEditor?.network?.segments.filter(
-      (seg) => seg.atEnd.length > 0 && seg.atStart.length > 0,
-    ).length === trackEditor?.network.segments.length;
-
-  console.log("Complete?", isNetworkComplete);
 
   return (
     <>
@@ -103,21 +101,19 @@ const TrackEditorComponent = (props: any) => {
         value="Add Connection"
         onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)}
       />
-      <div ref={divRef} {...props} />
+      <div ref={trackEditorContainer} {...props} />
 
       {selectedSegment && (
         <TrackSegmentDetail
-          update={(n) => {
-            setNetwork(n);
-          }}
+          update={updateNetwork}
           segmentIndex={network.segments.indexOf(selectedSegment)}
           network={network}
         />
       )}
       {isNetworkComplete && (
         <Button
-          value="New Run Game"
-          onClick={() => props.trackEditor.finish()}
+          value="Finish Game"
+          onClick={() => trackEditor?.finish()}
         />
       )}
       <Button
@@ -125,7 +121,6 @@ const TrackEditorComponent = (props: any) => {
         value="Save/Load"
         onClick={() => setSaveMenuOpen(!saveMenuOpen)}
       />
-      <Button value="Finish" onClick={() => trackEditor?.finish()} />
       {saveMenuOpen && trackEditor && <ExportPage trackEditor={trackEditor} />}
     </>
   );
