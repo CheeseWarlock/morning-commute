@@ -47,7 +47,8 @@ const TrackEditorComponent = (props: any) => {
         element: canvasContainer!,
         network: network,
         onSelect: (seg) => {
-          setSelectedSegment(seg || null);
+          console.log("onSelect", seg);
+          setSelectedSegment(seg ?? null);
         },
       });
       te.onStateChanged = (payload) => {
@@ -68,22 +69,13 @@ const TrackEditorComponent = (props: any) => {
     <div className="flex flex-col h-full">
       <div className="flex gap-2 p-2">
         <Button
-          selected={buttonBarState === EDITOR_STATE.SELECT}
+          selected={buttonBarState === EDITOR_STATE.SELECT || buttonBarState === EDITOR_STATE.PAN}
           value="Select"
           onClick={() => {
             trackEditor?.setcurrentStateWithData({
               state: EDITOR_STATE.SELECT,
             });
             setButtonBarState(EDITOR_STATE.SELECT)}}
-        />
-        <Button
-          selected={buttonBarState === EDITOR_STATE.PAN}
-          value="Pan"
-          onClick={() => {
-            trackEditor?.setcurrentStateWithData({
-              state: EDITOR_STATE.PAN,
-            });
-            setButtonBarState(EDITOR_STATE.PAN)}}
         />
         <Button
           selected={buttonBarState === EDITOR_STATE.CREATE_STATION}
@@ -156,12 +148,20 @@ const TrackEditorComponent = (props: any) => {
           }} 
           {...props} 
         />
-        {selectedSegment && (
+        {(selectedSegment || 
+          (trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_POINT && 'segment' in trackEditor.currentStateWithData) ||
+          (trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT && 'segment' in trackEditor.currentStateWithData)) && (
         <div className="overflow-y-auto">
           <TrackSegmentDetail
             update={updateNetwork}
-            segmentIndex={network.segments.indexOf(selectedSegment)}
+            segmentIndex={network.segments.indexOf(
+              selectedSegment || 
+              (trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ? trackEditor.currentStateWithData.segment :
+               trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT ? trackEditor.currentStateWithData.segment :
+               selectedSegment)!
+            )}
             network={network}
+            deleteSegment={(segment) => trackEditor?.deleteSegment(segment)}
           />
         </div>
       )}

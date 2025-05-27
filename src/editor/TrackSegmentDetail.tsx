@@ -4,8 +4,14 @@ import Network from "../engine/Network";
 import { findCenter } from "./utils";
 import Point from "../engine/Point";
 import LinearTrackSegment from "../engine/LinearTrackSegment";
+import TrackSegment from "../engine/TrackSegment";
 
-const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, update: React.Dispatch<React.SetStateAction<Network>> }) => {
+const TrackSegmentDetail = (props: { 
+  network: Network, 
+  segmentIndex: number, 
+  update: React.Dispatch<React.SetStateAction<Network>>,
+  deleteSegment: (segment: TrackSegment) => void 
+}) => {
   const { update } = props;
 
   const doUpdateProp = (newProp: { start?: Partial<Point>, end?: Partial<Point>, theta?: number, counterClockWise?: boolean }) => {
@@ -61,9 +67,19 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
   const hasConnections = segment.atStart.length > 0 || segment.atEnd.length > 0;
 
   return <div className="flex flex-col m-4 border-2 border-gray-300 rounded-md p-2 bg-gray-100">
-    <h3 className="text-xl">{segment instanceof CircularTrackSegment ? "Circular" : "Linear"} Segment
-      <span className="font-mono"> {segment.id.substring(0,8)}</span>
-    </h3>
+    <div className="flex flex-row justify-between items-center">
+      <h3 className="text-xl">{segment instanceof CircularTrackSegment ? "Circular" : "Linear"} Segment
+        <span className="font-mono"> {segment.id.substring(0,8)}</span>
+      </h3>
+      <button 
+        className="px-2 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
+        onClick={() => {
+          props.deleteSegment(segment);
+        }}
+      >
+        Delete
+      </button>
+    </div>
     {segment.stations.length > 0 &&
     <>
       <h4 className="text-lg">Stations</h4>
@@ -148,11 +164,11 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
       <div className="flex flex-row gap-4">
         <div className="flex flex-row items-center gap-2">
           <span>Start:</span>
-          <span className="font-mono">{segment.atStart.length > 0 ? "✓" : "✗"}</span>
+          <span className="font-mono">{segment.atStart.length + " " +( segment.atStart.length > 0 ? "✓" : "✗")}</span>
         </div>
         <div className="flex flex-row items-center gap-2">
           <span>End:</span>
-          <span className="font-mono">{segment.atEnd.length > 0 ? "✓" : "✗"}</span>
+          <span className="font-mono">{segment.atEnd.length + " " + (segment.atEnd.length > 0 ? "✓" : "✗")}</span>
         </div>
       </div>
     </div>

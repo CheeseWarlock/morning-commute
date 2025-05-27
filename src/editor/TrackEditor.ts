@@ -108,6 +108,8 @@ type EDITOR_STATE_PAYLOADS =
     };
 
 const SELECTION_DISTANCE_PIXELS = 15;
+const _dist = (a: Point, b: Point) =>
+  Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 
 class TrackEditor {
   #canvas: HTMLCanvasElement;
@@ -157,37 +159,7 @@ class TrackEditor {
         this.currentStateWithData.selectedSegment &&
         (ev.key === "Backspace" || ev.key === "Delete")
       ) {
-        const selectedSegment = this.currentStateWithData.selectedSegment;
-        this.#onSelect?.();
-        selectedSegment.stations.forEach((station) => {
-          this.network.stations.splice(this.network.stations.indexOf(station));
-        });
-        this.network.segments.splice(
-          this.network.segments.indexOf(selectedSegment),
-          1,
-        );
-        this.network.segments.forEach((segment) => {
-          if (
-            segment.atStart.indexOf(selectedSegment) > -1
-          ) {
-            segment.atStart.splice(
-              segment.atStart.indexOf(selectedSegment),
-              1,
-            );
-          }
-          if (
-            segment.atEnd.indexOf(selectedSegment) > -1
-          ) {
-            segment.atEnd.splice(
-              segment.atEnd.indexOf(selectedSegment),
-              1,
-            );
-          }
-        });
-        this.setcurrentStateWithData({
-          state: EDITOR_STATE.SELECT,
-        });
-        this.dispatchUpdate();
+        this.deleteSegment(this.currentStateWithData.selectedSegment);
       }
     };
 
@@ -313,15 +285,6 @@ class TrackEditor {
       const gamePosition = this.untransformPosition(this.mousePos);
       
       switch (this.currentStateWithData.state) {
-        case EDITOR_STATE.PAN:
-          this.setcurrentStateWithData({
-            state: EDITOR_STATE.PAN,
-            dragStartPoint: this.mousePos,
-            originalOffset: { ...this.#offset },
-          });
-          this.#canvas.style.cursor = "grabbing";
-          break;
-
         case EDITOR_STATE.SELECT:
           if (this.#hoverSegment) {
             this.#onSelect?.(this.#hoverSegment);
@@ -362,11 +325,13 @@ class TrackEditor {
               });
             }
           } else {
-            // Clicked on nothing - unselect current segment
-            this.#onSelect?.();
+            // Clicked on nothing - start panning
             this.setcurrentStateWithData({
-              state: EDITOR_STATE.SELECT,
+              state: EDITOR_STATE.PAN,
+              dragStartPoint: this.mousePos,
+              originalOffset: { ...this.#offset },
             });
+            this.#canvas.style.cursor = "grabbing";
           }
           break;
 
@@ -492,9 +457,9 @@ class TrackEditor {
         });
       } else if (this.currentStateWithData.state === EDITOR_STATE.PAN) {
         this.setcurrentStateWithData({
-          state: EDITOR_STATE.PAN,
+          state: EDITOR_STATE.SELECT,
         });
-        this.#canvas.style.cursor = "grab";
+        this.#canvas.style.cursor = "default";
       }
     };
 
@@ -508,6 +473,40 @@ class TrackEditor {
     };
 
     this.dispatchUpdate();
+  }
+
+  deleteSegment(segment: TrackSegment) {
+    const selectedSegment = segment;
+        this.#onSelect?.();
+        selectedSegment.stations.forEach((station) => {
+          this.network.stations.splice(this.network.stations.indexOf(station));
+        });
+        this.network.segments.splice(
+          this.network.segments.indexOf(selectedSegment),
+          1,
+        );
+        this.network.segments.forEach((segment) => {
+          if (
+            segment.atStart.indexOf(selectedSegment) > -1
+          ) {
+            segment.atStart.splice(
+              segment.atStart.indexOf(selectedSegment),
+              1,
+            );
+          }
+          if (
+            segment.atEnd.indexOf(selectedSegment) > -1
+          ) {
+            segment.atEnd.splice(
+              segment.atEnd.indexOf(selectedSegment),
+              1,
+            );
+          }
+        });
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.SELECT,
+        });
+        this.dispatchUpdate();
   }
 
   /**
@@ -586,12 +585,24 @@ class TrackEditor {
 
   setcurrentStateWithData(payload: EDITOR_STATE_PAYLOADS) {
     console.log("setting state", payload);
+    const wasSelect = this.currentStateWithData.state === EDITOR_STATE.SELECT;
+    const isSelect = payload.state === EDITOR_STATE.SELECT;
+    
     this.currentStateWithData = payload;
     if (payload.state === EDITOR_STATE.PAN) {
       this.#canvas.style.cursor = "grab";
     } else {
       this.#canvas.style.cursor = "default";
     }
+    
+    // Call onSelect when entering or exiting SELECT state
+    if (wasSelect !== isSelect || (isSelect && 
+        'selectedSegment' in payload && 
+        'selectedSegment' in this.currentStateWithData && 
+        payload.selectedSegment !== this.currentStateWithData.selectedSegment)) {
+      this.#onSelect?.(isSelect && 'selectedSegment' in payload ? payload.selectedSegment : undefined);
+    }
+    
     this.onStateChanged?.(payload);
   }
 
@@ -915,8 +926,6 @@ class TrackEditor {
   updateHoverState() {
     if (!this.mousePos) return;
     const gamePosition = this.untransformPosition(this.mousePos);
-    const _dist = (a: Point, b: Point) =>
-      Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
     let closest = Infinity;
     let closestSegment: TrackSegment | undefined;
     let closestType: SELECTION_TYPE | undefined;
