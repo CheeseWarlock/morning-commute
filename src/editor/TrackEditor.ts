@@ -142,7 +142,7 @@ class TrackEditor {
     const { element, network, offset, scale, size, onSelect } = options;
     this.#offset = offset || { x: 0, y: 0 };
     this.#scale = scale || 1;
-    this.#size = size || { x: 800, y: 600 };
+    this.#size = size || { x: 1200, y: 800 };
     const canvas = document.createElement("canvas");
     canvas.width = this.#size.x;
     canvas.height = this.#size.y;
@@ -948,11 +948,11 @@ class TrackEditor {
       if (
         (!closestType ||
           closestType === SELECTION_TYPE.SEGMENT ||
-          (this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment)) &&
+          ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment)) &&
         distanceToStart < SELECTION_DISTANCE_PIXELS
       ) {
         closestSegment = seg;
-        if (this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) {
+        if ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment) {
           closest = -1;
         } else {
           closest = distanceToLine;
@@ -963,11 +963,11 @@ class TrackEditor {
       if (
         (!closestType ||
           closestType === SELECTION_TYPE.SEGMENT ||
-          (this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment)) &&
+          ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment)) &&
         distanceToEnd < SELECTION_DISTANCE_PIXELS
       ) {
         closestSegment = seg;
-        if (this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) {
+        if ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment) {
           closest = -1;
         } else {
           closest = distanceToLine;
@@ -975,6 +975,7 @@ class TrackEditor {
         closestType = SELECTION_TYPE.END;
       }
     });
+    console.log("closestSegment", closestSegment);
     this.#hoverSegment = closestSegment;
     this.#hoverSelectionType = closestType;
   }
