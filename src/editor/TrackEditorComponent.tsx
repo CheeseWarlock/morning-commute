@@ -67,7 +67,7 @@ const TrackEditorComponent = (props: any) => {
         editorState === EDITOR_STATE.CREATE_CONNECTION_START ||
         editorState === EDITOR_STATE.CREATE_STATION)
     ) {
-      trackEditor.setStatePayload({
+      trackEditor.setcurrentStateWithData({
         state: editorState,
       });
     }
