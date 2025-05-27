@@ -138,6 +138,24 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
       </p>
     </div>
     }
+    {hasConnections && 
+      <div className="my-3 text-sm text-gray-600 italic">
+        Connected segments can't be moved
+      </div>
+    }
+    <div className="my-3">
+      <h4 className="text-lg">Connections</h4>
+      <div className="flex flex-row gap-4">
+        <div className="flex flex-row items-center gap-2">
+          <span>Start:</span>
+          <span className="font-mono">{segment.atStart.length > 0 ? "✓" : "✗"}</span>
+        </div>
+        <div className="flex flex-row items-center gap-2">
+          <span>End:</span>
+          <span className="font-mono">{segment.atEnd.length > 0 ? "✓" : "✗"}</span>
+        </div>
+      </div>
+    </div>
   </div>
 }
 

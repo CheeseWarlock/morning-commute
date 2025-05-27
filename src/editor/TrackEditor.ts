@@ -384,14 +384,26 @@ class TrackEditor {
           break;
 
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END:
-          const newSegment = new LinearTrackSegment(
-            this.currentStateWithData.segmentStart,
-            {
-              x: gamePosition.x,
-              y: gamePosition.y,
-            },
-          );
-          this.network.segments.push(newSegment);
+          const previewSegment = new LinearTrackSegment(this.currentStateWithData.segmentStart, gamePosition);
+
+          // If we're locked to a segment, constrain the angle
+          if (this.currentStateWithData.lockedToSegment && this.currentStateWithData.lockedToEnd) {
+            const lockedSegment = this.currentStateWithData.lockedToSegment;
+            const angle = this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START ? 
+              lockedSegment.initialAngle + Math.PI : 
+              lockedSegment.finalAngle;
+            
+            // Calculate the distance from the start point to the mouse
+            const dx = gamePosition.x - this.currentStateWithData.segmentStart.x;
+            const dy = gamePosition.y - this.currentStateWithData.segmentStart.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Set the end point using the locked angle and calculated distance
+            previewSegment.end.x = this.currentStateWithData.segmentStart.x + Math.cos(angle) * distance;
+            previewSegment.end.y = this.currentStateWithData.segmentStart.y + Math.sin(angle) * distance;
+          }
+
+          this.network.segments.push(previewSegment);
           this.dispatchUpdate();
           this.setcurrentStateWithData({
             state: EDITOR_STATE.SELECT,
@@ -654,9 +666,26 @@ class TrackEditor {
       this.mousePos
     ) {
       const gamePosition = this.untransformPosition(this.mousePos);
-      fakeSegmentsList.push(
-        new LinearTrackSegment(this.currentStateWithData.segmentStart, gamePosition),
-      );
+      const previewSegment = new LinearTrackSegment(this.currentStateWithData.segmentStart, gamePosition);
+
+      // If we're locked to a segment, constrain the angle
+      if (this.currentStateWithData.lockedToSegment && this.currentStateWithData.lockedToEnd) {
+        const lockedSegment = this.currentStateWithData.lockedToSegment;
+        const angle = this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START ? 
+          lockedSegment.initialAngle + Math.PI : 
+          lockedSegment.finalAngle;
+        
+        // Calculate the distance from the start point to the mouse
+        const dx = gamePosition.x - this.currentStateWithData.segmentStart.x;
+        const dy = gamePosition.y - this.currentStateWithData.segmentStart.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Set the end point using the locked angle and calculated distance
+        previewSegment.end.x = this.currentStateWithData.segmentStart.x + Math.cos(angle) * distance;
+        previewSegment.end.y = this.currentStateWithData.segmentStart.y + Math.sin(angle) * distance;
+      }
+
+      fakeSegmentsList.push(previewSegment);
     }
     if (
       this.currentStateWithData.state === EDITOR_STATE.CREATE_CONNECTION_END &&
