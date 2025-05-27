@@ -61,6 +61,8 @@ export enum EDITOR_STATE {
 type EDITOR_STATE_PAYLOADS =
   | {
       state: EDITOR_STATE.SELECT;
+      selectedSegment?: TrackSegment;
+      selectionType?: SELECTION_TYPE;
     }
   | {
       state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_START;
@@ -106,18 +108,12 @@ class TrackEditor {
   #scale: number;
   #context: CanvasRenderingContext2D | null;
   #onSelect?: (segment?: TrackSegment) => void;
-  _testingOptions = {
-    randomizeFramerate: false,
-  };
   /**
    * The position of the mouse on the canvas itself.
    */
   mousePos?: { x: number; y: number };
   #hoverSegment?: TrackSegment;
-  #selectedSegment: TrackSegment | undefined;
-  #selectionType?: SELECTION_TYPE;
   #hoverSelectionType?: SELECTION_TYPE;
-  #dragging: boolean = false;
   currentStateWithData: EDITOR_STATE_PAYLOADS = {
     state: EDITOR_STATE.SELECT,
   };
@@ -151,38 +147,40 @@ class TrackEditor {
 
     document.body.onkeydown = (ev) => {
       if (
-        this.#selectedSegment &&
+        this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+        this.currentStateWithData.selectedSegment &&
         (ev.key === "Backspace" || ev.key === "Delete")
       ) {
+        const selectedSegment = this.currentStateWithData.selectedSegment;
         this.#onSelect?.();
-        this.#selectedSegment.stations.forEach((station) => {
+        selectedSegment.stations.forEach((station) => {
           this.network.stations.splice(this.network.stations.indexOf(station));
         });
         this.network.segments.splice(
-          this.network.segments.indexOf(this.#selectedSegment),
+          this.network.segments.indexOf(selectedSegment),
           1,
         );
         this.network.segments.forEach((segment) => {
           if (
-            this.#selectedSegment &&
-            segment.atStart.indexOf(this.#selectedSegment) > -1
+            segment.atStart.indexOf(selectedSegment) > -1
           ) {
             segment.atStart.splice(
-              segment.atStart.indexOf(this.#selectedSegment),
+              segment.atStart.indexOf(selectedSegment),
               1,
             );
           }
           if (
-            this.#selectedSegment &&
-            segment.atEnd.indexOf(this.#selectedSegment) > -1
+            segment.atEnd.indexOf(selectedSegment) > -1
           ) {
             segment.atEnd.splice(
-              segment.atEnd.indexOf(this.#selectedSegment),
+              segment.atEnd.indexOf(selectedSegment),
               1,
             );
           }
         });
-        this.#selectedSegment = undefined;
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.SELECT,
+        });
         this.dispatchUpdate();
       }
     };
@@ -191,7 +189,7 @@ class TrackEditor {
       this.mousePos = { x: ev.offsetX, y: ev.offsetY };
       const gamePosition = this.untransformPosition(this.mousePos);
 
-      if (!this.#dragging) {
+      if (this.currentStateWithData.state === EDITOR_STATE.SELECT) {
         this.updateHoverState();
         this.update();
         return;
@@ -257,7 +255,7 @@ class TrackEditor {
             x: this.mousePos!.x - dragStartPoint.x,
             y: this.mousePos!.y - dragStartPoint.y,
           };
-          const dragVectorGamePosition = this.transformPosition(dragVector);
+          const dragVectorGamePosition = this.untransformPosition(dragVector);
           
           segment.start.x = originalStart.x + dragVectorGamePosition.x;
           segment.start.y = originalStart.y + dragVectorGamePosition.y;
@@ -286,34 +284,53 @@ class TrackEditor {
       
       switch (this.currentStateWithData.state) {
         case EDITOR_STATE.SELECT:
-          this.#selectedSegment = this.#hoverSegment;
-          this.#selectionType = this.#hoverSelectionType;
-          this.#onSelect?.(this.#selectedSegment);
-          this.update();
-          this.#dragging = true;
+          if (this.#hoverSegment) {
+            this.#onSelect?.(this.#hoverSegment);
+            this.update();
 
-          if (this.#selectedSegment) {
             if (this.#hoverSelectionType === SELECTION_TYPE.SEGMENT) {
-              this.setcurrentStateWithData({
-                state: EDITOR_STATE.MOVE_SEGMENT,
-                segment: this.#selectedSegment,
-                dragStartPoint: this.mousePos,
-                originalStart: {...this.#selectedSegment.start},
-                originalEnd: {...this.#selectedSegment.end},
-                originalCenter: this.#selectedSegment instanceof CircularTrackSegment ? {...this.#selectedSegment.center} : undefined,
-              });
+              // Only allow moving segments with no connections
+              const canMoveSegment = this.#hoverSegment.atStart.length === 0 && this.#hoverSegment.atEnd.length === 0;
+              if (canMoveSegment) {
+                this.setcurrentStateWithData({
+                  state: EDITOR_STATE.MOVE_SEGMENT,
+                  segment: this.#hoverSegment,
+                  dragStartPoint: this.mousePos,
+                  originalStart: {...this.#hoverSegment.start},
+                  originalEnd: {...this.#hoverSegment.end},
+                  originalCenter: this.#hoverSegment instanceof CircularTrackSegment ? {...this.#hoverSegment.center} : undefined,
+                });
+              } else {
+                // Just select it if we can't move it
+                this.setcurrentStateWithData({
+                  state: EDITOR_STATE.SELECT,
+                  selectedSegment: this.#hoverSegment,
+                  selectionType: this.#hoverSelectionType,
+                });
+              }
             } else if (this.#hoverSelectionType === SELECTION_TYPE.START || this.#hoverSelectionType === SELECTION_TYPE.END) {
               this.setcurrentStateWithData({
                 state: EDITOR_STATE.MOVE_POINT,
-                segment: this.#selectedSegment,
+                segment: this.#hoverSegment,
                 pointType: this.#hoverSelectionType,
               });
+            } else {
+              this.setcurrentStateWithData({
+                state: EDITOR_STATE.SELECT,
+                selectedSegment: this.#hoverSegment,
+                selectionType: this.#hoverSelectionType,
+              });
             }
+          } else {
+            // Clicked on nothing - unselect current segment
+            this.#onSelect?.();
+            this.setcurrentStateWithData({
+              state: EDITOR_STATE.SELECT,
+            });
           }
           break;
 
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_START:
-          console.log(this.#hoverSegment, this.#hoverSelectionType);
           const isLockedToSegment = this.#hoverSegment && this.#hoverSelectionType !== SELECTION_TYPE.SEGMENT;
           this.setcurrentStateWithData({
             state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END,
@@ -382,7 +399,11 @@ class TrackEditor {
               state: EDITOR_STATE.SELECT,
             });
           } else if (this.#hoverSegment) {
-            this.#selectedSegment = this.#hoverSegment;
+            this.setcurrentStateWithData({
+              state: EDITOR_STATE.SELECT,
+              selectedSegment: this.#hoverSegment,
+              selectionType: this.#hoverSelectionType,
+            });
           }
           break;
 
@@ -407,11 +428,14 @@ class TrackEditor {
     };
 
     canvas.onmouseup = () => {
-      this.#dragging = false;
       if (this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT || 
           this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT) {
         this.setcurrentStateWithData({
           state: EDITOR_STATE.SELECT,
+          selectedSegment: this.currentStateWithData.segment,
+          selectionType: this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ? 
+            this.currentStateWithData.pointType : 
+            SELECTION_TYPE.SEGMENT,
         });
       }
     };
@@ -480,16 +504,21 @@ class TrackEditor {
 
   setNetwork(network: Network) {
     this.#hoverSegment = undefined;
-    if (this.#selectedSegment) {
-      const selection = this.network.segments.indexOf(this.#selectedSegment);
+    if (this.currentStateWithData.state === EDITOR_STATE.SELECT && this.currentStateWithData.selectedSegment) {
+      const selection = this.network.segments.indexOf(this.currentStateWithData.selectedSegment);
       this.network = network;
-      this.#selectedSegment = network.segments[selection];
+      this.setcurrentStateWithData({
+        state: EDITOR_STATE.SELECT,
+        selectedSegment: network.segments[selection],
+        selectionType: this.currentStateWithData.selectionType,
+      });
     } else {
       this.network = network;
     }
   }
 
   setcurrentStateWithData(payload: EDITOR_STATE_PAYLOADS) {
+    console.log("setting state", payload);
     this.currentStateWithData = payload;
     this.onStateChanged?.(payload);
   }
@@ -549,7 +578,8 @@ class TrackEditor {
 
     fakeSegmentsList.forEach((segment) => {
       if (!this.#context) return;
-      if (segment === this.#selectedSegment) {
+      if (this.currentStateWithData.state === EDITOR_STATE.SELECT && 
+          segment === this.currentStateWithData.selectedSegment) {
         this.#context.strokeStyle = "rgb(255, 255, 255)";
         this.#context.lineWidth = 4;
       } else if (segment === this.#hoverSegment) {
@@ -597,8 +627,9 @@ class TrackEditor {
       if (
         (this.#hoverSelectionType === SELECTION_TYPE.START &&
           segment === this.#hoverSegment) ||
-        (this.#selectionType === SELECTION_TYPE.START &&
-          segment === this.#selectedSegment)
+        (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+          this.currentStateWithData.selectionType === SELECTION_TYPE.START &&
+          segment === this.currentStateWithData.selectedSegment)
       ) {
         this.#context.strokeStyle = "rgba(255,255,255)";
         this.#context.lineWidth = 2;
@@ -624,8 +655,9 @@ class TrackEditor {
       if (
         (this.#hoverSelectionType === SELECTION_TYPE.END &&
           segment === this.#hoverSegment) ||
-        (this.#selectionType === SELECTION_TYPE.END &&
-          segment === this.#selectedSegment)
+        (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+          this.currentStateWithData.selectionType === SELECTION_TYPE.END &&
+          segment === this.currentStateWithData.selectedSegment)
       ) {
         this.#context.strokeStyle = "rgba(255,255,255)";
         this.#context.lineWidth = 2;
@@ -779,11 +811,11 @@ class TrackEditor {
       if (
         (!closestType ||
           closestType === SELECTION_TYPE.SEGMENT ||
-          seg === this.#selectedSegment) &&
+          (this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment)) &&
         distanceToStart < SELECTION_DISTANCE_PIXELS
       ) {
         closestSegment = seg;
-        if (seg === this.#selectedSegment) {
+        if (this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) {
           closest = -1;
         } else {
           closest = distanceToLine;
@@ -794,11 +826,11 @@ class TrackEditor {
       if (
         (!closestType ||
           closestType === SELECTION_TYPE.SEGMENT ||
-          seg === this.#selectedSegment) &&
+          (this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment)) &&
         distanceToEnd < SELECTION_DISTANCE_PIXELS
       ) {
         closestSegment = seg;
-        if (seg === this.#selectedSegment) {
+        if (this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) {
           closest = -1;
         } else {
           closest = distanceToLine;

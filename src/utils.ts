@@ -68,7 +68,12 @@ export function easyNavigate(
   };
 }
 
+/**
+ * Checks if a network of track segments is coherent.
+ * That means that every segment is connected to another segment, and that they form a single connected graph.
+ */
 export function isNetworkCoherent(segments: TrackSegment[]): boolean {
+  if (segments.length === 0) return false;
   const visitedSegments = new Set<TrackSegment>();
   let segmentsToVisit: TrackSegment[] = [segments[0]];
   if (segments.length === 1) return false;

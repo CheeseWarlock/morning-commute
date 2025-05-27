@@ -7,6 +7,7 @@ import Network from "../engine/Network";
 
 import Button from "./components/Button";
 import ExportPage from "./ExportPage";
+import { isNetworkCoherent } from "../utils";
 
 const hm = buildComplex().network;
 hm.autoConnect();
@@ -16,7 +17,7 @@ const TrackEditorComponent = (props: any) => {
   const [selectedSegment, setSelectedSegment] = useState<TrackSegment | null>(null);
   const [network, setNetwork] = useState<Network>(hm);
   const [trackEditor, setTrackEditor] = useState<TrackEditor | undefined>(undefined);
-  const [editorState, setEditorState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
+  const [buttonBarState, setButtonBarState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
   const [saveMenuOpen, setSaveMenuOpen] = useState<boolean>(true);
   const [isNetworkComplete, setIsNetworkComplete] = useState<boolean>(false);
 
@@ -29,7 +30,7 @@ const TrackEditorComponent = (props: any) => {
     const completeSegments = newNetwork.segments.filter(
       (seg) => seg.atEnd.length > 0 && seg.atStart.length > 0
     );
-    setIsNetworkComplete(completeSegments.length === newNetwork.segments.length);
+    setIsNetworkComplete(completeSegments.length === newNetwork.segments.length && isNetworkCoherent(newNetwork.segments));
     setNetwork(newNetwork);
   };
 
@@ -49,7 +50,7 @@ const TrackEditorComponent = (props: any) => {
         },
       });
       te.onStateChanged = (payload) => {
-        setEditorState(payload.state);
+        setButtonBarState(payload.state);
       };
       te.onNetworkChanged = () => {
         updateNetwork(te.network);
@@ -59,48 +60,50 @@ const TrackEditorComponent = (props: any) => {
     }
   }, [network]);
 
-  useEffect(() => {
-    if (
-      trackEditor &&
-      (editorState === EDITOR_STATE.SELECT ||
-        editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START ||
-        editorState === EDITOR_STATE.CREATE_CONNECTION_START ||
-        editorState === EDITOR_STATE.CREATE_STATION)
-    ) {
-      trackEditor.setcurrentStateWithData({
-        state: editorState,
-      });
-    }
-  }, [editorState]);
-
   return (
     <div className="flex flex-col h-full">
       <div className="flex gap-2 p-2">
         <Button
-          selected={editorState === EDITOR_STATE.SELECT}
+          selected={buttonBarState === EDITOR_STATE.SELECT}
           value="Select"
-          onClick={() => setEditorState(EDITOR_STATE.SELECT)}
+          onClick={() => {
+            trackEditor?.setcurrentStateWithData({
+              state: EDITOR_STATE.SELECT,
+            });
+            setButtonBarState(EDITOR_STATE.SELECT)}}
         />
         <Button
-          selected={editorState === EDITOR_STATE.CREATE_STATION}
+          selected={buttonBarState === EDITOR_STATE.CREATE_STATION}
           value="Add Station"
-          onClick={() => setEditorState(EDITOR_STATE.CREATE_STATION)}
+          onClick={() => {
+            trackEditor?.setcurrentStateWithData({
+              state: EDITOR_STATE.CREATE_STATION,
+            });
+            setButtonBarState(EDITOR_STATE.CREATE_STATION)}}
         />
         <Button
           selected={
-            editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START ||
-            editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END
+            buttonBarState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START ||
+            buttonBarState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END
           }
           value="Add Linear"
-          onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)}
+          onClick={() => {
+            trackEditor?.setcurrentStateWithData({
+              state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_START,
+            });
+            setButtonBarState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)}}
         />
         <Button
           selected={
-            editorState === EDITOR_STATE.CREATE_CONNECTION_START ||
-            editorState === EDITOR_STATE.CREATE_CONNECTION_END
+            buttonBarState === EDITOR_STATE.CREATE_CONNECTION_START ||
+            buttonBarState === EDITOR_STATE.CREATE_CONNECTION_END
           }
           value="Add Connection"
-          onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)}
+          onClick={() => {
+            trackEditor?.setcurrentStateWithData({
+              state: EDITOR_STATE.CREATE_CONNECTION_START,
+            });
+            setButtonBarState(EDITOR_STATE.CREATE_CONNECTION_START)}}
         />
         {isNetworkComplete && (
           <Button
