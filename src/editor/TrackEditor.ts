@@ -106,7 +106,6 @@ class TrackEditor {
     onSelect: (segment?: TrackSegment) => void;
   }) {
     const { element, network, offset, scale, size, onSelect } = options;
-    console.log("TrackEditor constructor", network.segments.length);
     this.#offset = offset || { x: 0, y: 0 };
     this.#scale = scale || 1;
     this.#size = size || { x: 800, y: 600 };
@@ -205,83 +204,58 @@ class TrackEditor {
 
     canvas.onmousemove = (ev) => {
       this.mousePos = { x: ev.offsetX, y: ev.offsetY };
-      if (this.#dragging && this.#selectedSegment) {
-        if (
-          this.#selectionType === SELECTION_TYPE.START &&
-          this.#selectedSegment.atStart.length === 0 &&
-          this.#selectedSegment.atEnd.length === 0
-        ) {
-          if (this.#selectedSegment instanceof CircularTrackSegment) {
-            const newCenter = findCenter(
+      if (!this.#dragging || !this.#selectedSegment) {
+        this.updateHoverState();
+        this.update();
+        return;
+      }
+
+      const canMoveStart = this.#selectedSegment.atStart.length === 0;
+      const canMoveEnd = this.#selectedSegment.atEnd.length === 0;
+      let selectedPoint;
+      if (canMoveStart && this.#selectionType === SELECTION_TYPE.START) {
+        selectedPoint = this.#selectedSegment.start;
+      } else if (canMoveEnd && this.#selectionType === SELECTION_TYPE.END) {
+        selectedPoint = this.#selectedSegment.end;
+      }
+
+      if (this.#selectedSegment instanceof LinearTrackSegment) {
+        if (selectedPoint) {
+          const line1 = { x1: this.#selectedSegment.start.x, y1: this.#selectedSegment.start.y, x2: this.#selectedSegment.end.x, y2: this.#selectedSegment.end.y };
+          const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
+          const perpendicularAngle = angle + Math.PI / 2;
+          const line2 = { x1: ev.offsetX, y1: ev.offsetY, x2: ev.offsetX + Math.cos(perpendicularAngle), y2: ev.offsetY + Math.sin(perpendicularAngle) };
+          const intersection = getIntersection(line1, line2);
+          if (intersection) {
+            selectedPoint.x = intersection.x;
+            selectedPoint.y = intersection.y;
+            this.dispatchUpdate();
+          }
+        }
+      } else if (this.#selectedSegment instanceof CircularTrackSegment) {
+        if (selectedPoint && canMoveStart && canMoveEnd) {
+          let newCenter;
+          if (this.#selectionType === SELECTION_TYPE.START) {
+            newCenter = findCenter(
               { x: ev.offsetX, y: ev.offsetY },
               this.#selectedSegment.end,
               this.#selectedSegment.theta,
               this.#selectedSegment.counterClockWise,
             );
-            this.#selectedSegment.start.x = ev.offsetX;
-            this.#selectedSegment.start.y = ev.offsetY;
-            this.#selectedSegment.center.x = newCenter.x;
-            this.#selectedSegment.center.y = newCenter.y;
           } else {
-            this.#selectedSegment.start.x = ev.offsetX;
-            this.#selectedSegment.start.y = ev.offsetY;
-          }
-          this.dispatchUpdate();
-        } else if (
-          this.#selectionType === SELECTION_TYPE.START &&
-          this.#selectedSegment.atStart.length === 0 &&
-          this.#selectedSegment instanceof LinearTrackSegment
-        ) {
-          const line1 = { x1: this.#selectedSegment.start.x, y1: this.#selectedSegment.start.y, x2: this.#selectedSegment.end.x, y2: this.#selectedSegment.end.y };
-          const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
-          const perpendicularAngle = angle + Math.PI / 2;
-          const line2 = { x1: ev.offsetX, y1: ev.offsetY, x2: ev.offsetX + Math.cos(perpendicularAngle), y2: ev.offsetY + Math.sin(perpendicularAngle) };
-          const intersection = getIntersection(line1, line2);
-          if (intersection) {
-            this.#selectedSegment.start.x = intersection.x;
-            this.#selectedSegment.start.y = intersection.y;
-            this.dispatchUpdate();
-          }
-        } else if (
-          this.#selectionType === SELECTION_TYPE.END &&
-          this.#selectedSegment.atStart.length === 0 &&
-          this.#selectedSegment.atEnd.length === 0
-        ) {
-          if (this.#selectedSegment instanceof CircularTrackSegment) {
-            const newCenter = findCenter(
+            newCenter = findCenter(
               this.#selectedSegment.start,
               { x: ev.offsetX, y: ev.offsetY },
               this.#selectedSegment.theta,
               this.#selectedSegment.counterClockWise,
             );
-            this.#selectedSegment.end.x = ev.offsetX;
-            this.#selectedSegment.end.y = ev.offsetY;
-            this.#selectedSegment.center.x = newCenter.x;
-            this.#selectedSegment.center.y = newCenter.y;
-          } else {
-            this.#selectedSegment.end.x = ev.offsetX;
-            this.#selectedSegment.end.y = ev.offsetY;
           }
+          selectedPoint.x = ev.offsetX;
+          selectedPoint.y = ev.offsetY;
+          this.#selectedSegment.center.x = newCenter.x;
+          this.#selectedSegment.center.y = newCenter.y;
           this.dispatchUpdate();
-        } else if (
-          this.#selectionType === SELECTION_TYPE.END &&
-          this.#selectedSegment.atEnd.length === 0 &&
-          this.#selectedSegment instanceof LinearTrackSegment
-        ) {
-          const line1 = { x1: this.#selectedSegment.start.x, y1: this.#selectedSegment.start.y, x2: this.#selectedSegment.end.x, y2: this.#selectedSegment.end.y };
-          const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
-          const perpendicularAngle = angle + Math.PI / 2;
-          const line2 = { x1: ev.offsetX, y1: ev.offsetY, x2: ev.offsetX + Math.cos(perpendicularAngle), y2: ev.offsetY + Math.sin(perpendicularAngle) };
-          const intersection = getIntersection(line1, line2);
-          if (intersection) {
-            this.#selectedSegment.end.x = intersection.x;
-            this.#selectedSegment.end.y = intersection.y;
-            this.dispatchUpdate();
-          }
         }
-      } else {
-        this.updateHoverState();
-        this.update();
       }
     };
 
@@ -434,6 +408,9 @@ class TrackEditor {
     };
   }
 
+  /**
+   * Draw the track sections, including the segment that is being created.
+   */
   drawTrackSections() {
     if (!this.#context) return;
     this.#context.lineWidth = 2;
@@ -664,6 +641,9 @@ class TrackEditor {
     });
   }
 
+  /**
+   * For the current mouse position, find the closest segment and which part of it is closest.
+   */
   updateHoverState() {
     const selectionPoint: Point = {
       x: this.mousePos?.x || 0,
