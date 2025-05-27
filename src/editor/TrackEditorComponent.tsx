@@ -20,6 +20,7 @@ const TrackEditorComponent = (props: any) => {
   const [buttonBarState, setButtonBarState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
   const [saveMenuOpen, setSaveMenuOpen] = useState<boolean>(true);
   const [isNetworkComplete, setIsNetworkComplete] = useState<boolean>(false);
+  const [scale, setScale] = useState<number>(1);
 
   const updateNetwork = (newNetworkOrUpdater: Network | ((prev: Network) => Network)) => {
     const newNetwork = typeof newNetworkOrUpdater === 'function' 
@@ -55,6 +56,9 @@ const TrackEditorComponent = (props: any) => {
       te.onNetworkChanged = () => {
         updateNetwork(te.network);
       };
+      te.onScaleChanged = (newScale) => {
+        setScale(newScale);
+      };
       te.update();
       setTrackEditor(te);
     }
@@ -71,6 +75,15 @@ const TrackEditorComponent = (props: any) => {
               state: EDITOR_STATE.SELECT,
             });
             setButtonBarState(EDITOR_STATE.SELECT)}}
+        />
+        <Button
+          selected={buttonBarState === EDITOR_STATE.PAN}
+          value="Pan"
+          onClick={() => {
+            trackEditor?.setcurrentStateWithData({
+              state: EDITOR_STATE.PAN,
+            });
+            setButtonBarState(EDITOR_STATE.PAN)}}
         />
         <Button
           selected={buttonBarState === EDITOR_STATE.CREATE_STATION}
@@ -116,6 +129,23 @@ const TrackEditorComponent = (props: any) => {
           value="Save/Load"
           onClick={() => setSaveMenuOpen(!saveMenuOpen)}
         />
+        <div className="flex items-center gap-2 ml-2">
+          <Button
+            value="−"
+            onClick={() => trackEditor?.adjustScale(-0.25)}
+          />
+          <span className="min-w-[3em] text-center">
+            {scale.toFixed(2)}x
+          </span>
+          <Button
+            value="+"
+            onClick={() => trackEditor?.adjustScale(0.25)}
+          />
+          <Button
+            value="=1"
+            onClick={() => trackEditor?.setScale(1)}
+          />
+        </div>
       </div>
       <div className="flex flex-row h-full">
         <div 

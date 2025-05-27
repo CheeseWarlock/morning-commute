@@ -56,6 +56,10 @@ export enum EDITOR_STATE {
    * Moving an entire track segment
    */
   MOVE_SEGMENT = "MOVE_SEGMENT",
+  /**
+   * Panning the view
+   */
+  PAN = "PAN",
 }
 
 type EDITOR_STATE_PAYLOADS =
@@ -96,6 +100,11 @@ type EDITOR_STATE_PAYLOADS =
       originalStart: Point;
       originalEnd: Point;
       originalCenter?: Point;
+    }
+  | {
+      state: EDITOR_STATE.PAN;
+      dragStartPoint?: Point;
+      originalOffset?: Point;
     };
 
 const SELECTION_DISTANCE_PIXELS = 15;
@@ -108,6 +117,7 @@ class TrackEditor {
   #scale: number;
   #context: CanvasRenderingContext2D | null;
   #onSelect?: (segment?: TrackSegment) => void;
+  onScaleChanged?: (scale: number) => void;
   /**
    * The position of the mouse on the canvas itself.
    */
@@ -140,10 +150,6 @@ class TrackEditor {
     this.#context = canvas.getContext("2d");
     this.network = network;
     this.#onSelect = onSelect;
-
-    // Ignore scale and offset for now
-    this.#scale = 1.2;
-    this.#offset = { x: 0, y: 0 };
 
     document.body.onkeydown = (ev) => {
       if (
@@ -196,6 +202,30 @@ class TrackEditor {
       }
 
       switch (this.currentStateWithData.state) {
+        case EDITOR_STATE.PAN: {
+          const { dragStartPoint, originalOffset } = this.currentStateWithData;
+          if (!dragStartPoint || !originalOffset) return;
+          
+          const dragVector = {
+            x: this.mousePos!.x - dragStartPoint.x,
+            y: this.mousePos!.y - dragStartPoint.y,
+          };
+          
+          // Convert screen drag vector to game coordinates by just dividing by scale
+          const dragVectorGamePosition = {
+            x: dragVector.x / this.#scale,
+            y: dragVector.y / this.#scale,
+          };
+          
+          this.#offset = {
+            x: originalOffset.x + dragVectorGamePosition.x,
+            y: originalOffset.y + dragVectorGamePosition.y,
+          };
+          
+          this.update();
+          break;
+        }
+
         case EDITOR_STATE.MOVE_POINT: {
           const { segment, pointType } = this.currentStateWithData;
           const canMoveStart = segment.atStart.length === 0;
@@ -251,20 +281,20 @@ class TrackEditor {
 
         case EDITOR_STATE.MOVE_SEGMENT: {
           const { segment, dragStartPoint, originalStart, originalEnd, originalCenter } = this.currentStateWithData;
+          const gamePosition = this.untransformPosition(this.mousePos);
           const dragVector = {
-            x: this.mousePos!.x - dragStartPoint.x,
-            y: this.mousePos!.y - dragStartPoint.y,
+            x: gamePosition.x - dragStartPoint.x,
+            y: gamePosition.y - dragStartPoint.y,
           };
-          const dragVectorGamePosition = this.untransformPosition(dragVector);
           
-          segment.start.x = originalStart.x + dragVectorGamePosition.x;
-          segment.start.y = originalStart.y + dragVectorGamePosition.y;
-          segment.end.x = originalEnd.x + dragVectorGamePosition.x;
-          segment.end.y = originalEnd.y + dragVectorGamePosition.y;
+          segment.start.x = originalStart.x + dragVector.x;
+          segment.start.y = originalStart.y + dragVector.y;
+          segment.end.x = originalEnd.x + dragVector.x;
+          segment.end.y = originalEnd.y + dragVector.y;
           
           if (segment instanceof CircularTrackSegment && originalCenter) {
-            segment.center.x = originalCenter.x + dragVectorGamePosition.x;
-            segment.center.y = originalCenter.y + dragVectorGamePosition.y;
+            segment.center.x = originalCenter.x + dragVector.x;
+            segment.center.y = originalCenter.y + dragVector.y;
           }
           
           this.dispatchUpdate();
@@ -283,6 +313,15 @@ class TrackEditor {
       const gamePosition = this.untransformPosition(this.mousePos);
       
       switch (this.currentStateWithData.state) {
+        case EDITOR_STATE.PAN:
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.PAN,
+            dragStartPoint: this.mousePos,
+            originalOffset: { ...this.#offset },
+          });
+          this.#canvas.style.cursor = "grabbing";
+          break;
+
         case EDITOR_STATE.SELECT:
           if (this.#hoverSegment) {
             this.#onSelect?.(this.#hoverSegment);
@@ -292,10 +331,11 @@ class TrackEditor {
               // Only allow moving segments with no connections
               const canMoveSegment = this.#hoverSegment.atStart.length === 0 && this.#hoverSegment.atEnd.length === 0;
               if (canMoveSegment) {
+                const gamePosition = this.untransformPosition(this.mousePos);
                 this.setcurrentStateWithData({
                   state: EDITOR_STATE.MOVE_SEGMENT,
                   segment: this.#hoverSegment,
-                  dragStartPoint: this.mousePos,
+                  dragStartPoint: gamePosition,
                   originalStart: {...this.#hoverSegment.start},
                   originalEnd: {...this.#hoverSegment.end},
                   originalCenter: this.#hoverSegment instanceof CircularTrackSegment ? {...this.#hoverSegment.center} : undefined,
@@ -410,9 +450,10 @@ class TrackEditor {
         case EDITOR_STATE.CREATE_STATION:
           if (!this.#hoverSegment) break;
           if (!this.mousePos) break;
+          const stationGamePosition = this.untransformPosition(this.mousePos);
           const closestPoint = this.#hoverSegment.distanceToPosition({
-            x: gamePosition.x,
-            y: gamePosition.y,
+            x: stationGamePosition.x,
+            y: stationGamePosition.y,
           });
           const newStation = new Station(
             this.#hoverSegment,
@@ -437,7 +478,21 @@ class TrackEditor {
             this.currentStateWithData.pointType : 
             SELECTION_TYPE.SEGMENT,
         });
+      } else if (this.currentStateWithData.state === EDITOR_STATE.PAN) {
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.PAN,
+        });
+        this.#canvas.style.cursor = "grab";
       }
+    };
+
+    canvas.onwheel = (ev) => {
+      // Prevent the default scroll behavior
+      ev.preventDefault();
+      
+      // Adjust scale based on wheel delta
+      // Negative delta means scroll up/zoom in, positive means scroll down/zoom out
+      this.adjustScale(-ev.deltaY * 0.001);
     };
 
     this.dispatchUpdate();
@@ -520,7 +575,50 @@ class TrackEditor {
   setcurrentStateWithData(payload: EDITOR_STATE_PAYLOADS) {
     console.log("setting state", payload);
     this.currentStateWithData = payload;
+    if (payload.state === EDITOR_STATE.PAN) {
+      this.#canvas.style.cursor = "grab";
+    } else {
+      this.#canvas.style.cursor = "default";
+    }
     this.onStateChanged?.(payload);
+  }
+
+  setScale(scale: number) {
+    this.adjustScale(scale - this.#scale);
+  }
+
+  adjustScale(delta: number) {
+    const oldScale = this.#scale;
+    this.#scale = Math.max(0.25, this.#scale + delta);
+    
+    // If we have a mouse position within the canvas, use that as the zoom center
+    let zoomCenter;
+    if (this.mousePos && 
+        this.mousePos.x >= 0 && this.mousePos.x <= this.#size.x &&
+        this.mousePos.y >= 0 && this.mousePos.y <= this.#size.y) {
+      // Convert mouse position to game coordinates
+      zoomCenter = this.untransformPosition(this.mousePos);
+    } else {
+      // Use view center if mouse is outside canvas
+      zoomCenter = {
+        x: (this.#size.x / 2 / oldScale) - this.#offset.x,
+        y: (this.#size.y / 2 / oldScale) - this.#offset.y,
+      };
+    }
+    
+    // Calculate how much the point moves due to scale change
+    const scaleFactor = this.#scale / oldScale;
+    const dx = (zoomCenter.x + this.#offset.x) * (1 - scaleFactor);
+    const dy = (zoomCenter.y + this.#offset.y) * (1 - scaleFactor);
+    
+    // Adjust offset to keep the zoom center point fixed
+    this.#offset = {
+      x: this.#offset.x + dx,
+      y: this.#offset.y + dy,
+    };
+    
+    this.onScaleChanged?.(this.#scale);
+    this.update();
   }
 
   /**
@@ -706,9 +804,10 @@ class TrackEditor {
       this.mousePos &&
       this.#hoverSegment
     ) {
+      const gamePosition = this.untransformPosition(this.mousePos);
       const closestPoint = this.#hoverSegment?.distanceToPosition({
-        x: this.mousePos?.x,
-        y: this.mousePos?.y,
+        x: gamePosition.x,
+        y: gamePosition.y,
       });
       fakeStationsList.push(
         new Station(
