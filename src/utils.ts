@@ -151,6 +151,23 @@ export function generateName(p: number) {
   return f(c).toUpperCase() + f(v) + f(c) + f(v) + f(c);
 }
 
+export function getIntersection(line1: { x1: number, y1: number, x2: number, y2: number }, line2: { x1: number, y1: number, x2: number, y2: number }) {
+  const denominator = ((line2.y2 - line2.y1) * (line1.x2 - line1.x1)) - ((line2.x2 - line2.x1) * (line1.y2 - line1.y1));
+  if (denominator == 0) {
+    return null;
+  }
+  let a = line1.y1 - line2.y1;
+  let b = line1.x1 - line2.x1;
+  const numerator1 = ((line2.x2 - line2.x1) * a) - ((line2.y2 - line2.y1) * b);
+  let c = numerator1 / denominator;
+
+  const result = {
+    x: line1.x1 + (c * (line1.x2 - line1.x1)),
+    y: line1.y1 + (c * (line1.y2 - line1.y1))
+  };
+  return result;
+};
+
 export function getNextJunction(segment: TrackSegment, reversing: boolean) {
   let upcoming = reversing ? segment.atStart : segment.atEnd;
   let safetyValve = 100;

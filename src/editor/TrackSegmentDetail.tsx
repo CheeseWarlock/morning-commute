@@ -58,6 +58,7 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
   }
 
   const segment = props.network.segments[props.segmentIndex];
+  const hasConnections = segment.atStart.length > 0 || segment.atEnd.length > 0;
 
   return <div className="flex flex-col m-4 border-2 border-gray-300 rounded-md p-2 bg-gray-100">
     <h3 className="text-xl">{segment instanceof CircularTrackSegment ? "Circular" : "Linear"} Segment
@@ -73,20 +74,43 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
       <h4 className="text-lg">From</h4>
       <div className="font-mono flex flex-row gap-2">
           <label>X</label>
-          <input type="number" className="flex-1 border-slate-300 border rounded" value={segment.start.x} onChange={(ev) => doUpdateProp({ start: { x: Number.parseInt(ev.target.value)}})}></input>
+          <input 
+            type="number" 
+            className="flex-1 border-slate-300 border rounded" 
+            value={segment.start.x} 
+            onChange={(ev) => doUpdateProp({ start: { x: Number.parseInt(ev.target.value)}})}
+            disabled={hasConnections}
+          />
           <label>Y</label>
-          <input type="number" className="flex-1 border-slate-300 border rounded" value={segment.start.y} onChange={(ev) => doUpdateProp({ start: { y: Number.parseInt(ev.target.value)}})}></input>
-
+          <input 
+            type="number" 
+            className="flex-1 border-slate-300 border rounded" 
+            value={segment.start.y} 
+            onChange={(ev) => doUpdateProp({ start: { y: Number.parseInt(ev.target.value)}})}
+            disabled={hasConnections}
+          />
       </div>
     </div>
+    
     <div className="my-3">
       <h4 className="text-lg">To</h4>
       <div className="font-mono flex flex-row gap-2">
           <label>X</label>
-          <input type="number" className="flex-1 border-slate-300 border rounded" value={segment.end.x} onChange={(ev) => doUpdateProp({ end: { x: Number.parseInt(ev.target.value)}})}></input>
+          <input 
+            type="number" 
+            className="flex-1 border-slate-300 border rounded" 
+            value={segment.end.x} 
+            onChange={(ev) => doUpdateProp({ end: { x: Number.parseInt(ev.target.value)}})}
+            disabled={hasConnections}
+          />
           <label>Y</label>
-          <input type="number" className="flex-1 border-slate-300 border rounded" value={segment.end.y} onChange={(ev) => doUpdateProp({ end: { y: Number.parseInt(ev.target.value)}})}></input>
-
+          <input 
+            type="number" 
+            className="flex-1 border-slate-300 border rounded" 
+            value={segment.end.y} 
+            onChange={(ev) => doUpdateProp({ end: { y: Number.parseInt(ev.target.value)}})}
+            disabled={hasConnections}
+          />
       </div>
     </div>
     
@@ -94,12 +118,24 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
       <h4 className="text-lg">Angle</h4>
       <p className="flex flex-row gap-2">
         <span className="font-mono w-1/3 flex flex-row">
-          <input type="number" className="w-full border-slate-300 border rounded" value={segment.theta} step="any" onChange={(ev) => doUpdateProp({ theta:Number.parseInt(ev.target.value)})}></input>
+          <input 
+            type="number" 
+            className="w-full border-slate-300 border rounded" 
+            value={segment.theta} 
+            step="any" 
+            onChange={(ev) => doUpdateProp({ theta:Number.parseInt(ev.target.value)})}
+            disabled={hasConnections}
+          />
         </span>
         
         <span>CCW</span>
-        <input type="checkbox" checked={segment.counterClockWise} onChange={(ev) => doUpdateProp({ counterClockWise: ev.target.checked})}></input>
-    </p>
+        <input 
+          type="checkbox" 
+          checked={segment.counterClockWise} 
+          onChange={(ev) => doUpdateProp({ counterClockWise: ev.target.checked})}
+          disabled={hasConnections}
+        />
+      </p>
     </div>
     }
   </div>

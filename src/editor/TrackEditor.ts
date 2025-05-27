@@ -9,6 +9,7 @@ import Controller from "../engine/Controller";
 import Game from "../engine/Game";
 import BabylonRenderer from "../renderer/basic/babylon/BabylonRenderer";
 import RendererCoordinator from "../renderer/RendererCoordinator";
+import { getIntersection } from "../utils";
 
 /**
  * Which end of the segment is selected, or if it's just the whole thing
@@ -105,6 +106,7 @@ class TrackEditor {
     onSelect: (segment?: TrackSegment) => void;
   }) {
     const { element, network, offset, scale, size, onSelect } = options;
+    console.log("TrackEditor constructor", network.segments.length);
     this.#offset = offset || { x: 0, y: 0 };
     this.#scale = scale || 1;
     this.#size = size || { x: 800, y: 600 };
@@ -197,20 +199,17 @@ class TrackEditor {
           }
         });
         this.#selectedSegment = undefined;
-        this.network = new Network(
-          this.network.segments,
-          this.network.stations,
-        );
-        this.onNetworkChanged?.();
-        this.update();
+        this.dispatchUpdate();
       }
     };
 
     canvas.onmousemove = (ev) => {
-      if (this.#dragging) {
+      this.mousePos = { x: ev.offsetX, y: ev.offsetY };
+      if (this.#dragging && this.#selectedSegment) {
         if (
-          this.#selectedSegment &&
-          this.#selectionType === SELECTION_TYPE.START
+          this.#selectionType === SELECTION_TYPE.START &&
+          this.#selectedSegment.atStart.length === 0 &&
+          this.#selectedSegment.atEnd.length === 0
         ) {
           if (this.#selectedSegment instanceof CircularTrackSegment) {
             const newCenter = findCenter(
@@ -227,16 +226,26 @@ class TrackEditor {
             this.#selectedSegment.start.x = ev.offsetX;
             this.#selectedSegment.start.y = ev.offsetY;
           }
-          this.mousePos = { x: ev.offsetX, y: ev.offsetY };
-          this.network = new Network(
-            this.network.segments,
-            this.network.stations,
-          );
-          this.onNetworkChanged?.();
-          this.update();
+          this.dispatchUpdate();
         } else if (
-          this.#selectedSegment &&
-          this.#selectionType === SELECTION_TYPE.END
+          this.#selectionType === SELECTION_TYPE.START &&
+          this.#selectedSegment.atStart.length === 0 &&
+          this.#selectedSegment instanceof LinearTrackSegment
+        ) {
+          const line1 = { x1: this.#selectedSegment.start.x, y1: this.#selectedSegment.start.y, x2: this.#selectedSegment.end.x, y2: this.#selectedSegment.end.y };
+          const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
+          const perpendicularAngle = angle + Math.PI / 2;
+          const line2 = { x1: ev.offsetX, y1: ev.offsetY, x2: ev.offsetX + Math.cos(perpendicularAngle), y2: ev.offsetY + Math.sin(perpendicularAngle) };
+          const intersection = getIntersection(line1, line2);
+          if (intersection) {
+            this.#selectedSegment.start.x = intersection.x;
+            this.#selectedSegment.start.y = intersection.y;
+            this.dispatchUpdate();
+          }
+        } else if (
+          this.#selectionType === SELECTION_TYPE.END &&
+          this.#selectedSegment.atStart.length === 0 &&
+          this.#selectedSegment.atEnd.length === 0
         ) {
           if (this.#selectedSegment instanceof CircularTrackSegment) {
             const newCenter = findCenter(
@@ -253,16 +262,24 @@ class TrackEditor {
             this.#selectedSegment.end.x = ev.offsetX;
             this.#selectedSegment.end.y = ev.offsetY;
           }
-          this.mousePos = { x: ev.offsetX, y: ev.offsetY };
-          this.network = new Network(
-            this.network.segments,
-            this.network.stations,
-          );
-          this.onNetworkChanged?.();
-          this.update();
+          this.dispatchUpdate();
+        } else if (
+          this.#selectionType === SELECTION_TYPE.END &&
+          this.#selectedSegment.atEnd.length === 0 &&
+          this.#selectedSegment instanceof LinearTrackSegment
+        ) {
+          const line1 = { x1: this.#selectedSegment.start.x, y1: this.#selectedSegment.start.y, x2: this.#selectedSegment.end.x, y2: this.#selectedSegment.end.y };
+          const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
+          const perpendicularAngle = angle + Math.PI / 2;
+          const line2 = { x1: ev.offsetX, y1: ev.offsetY, x2: ev.offsetX + Math.cos(perpendicularAngle), y2: ev.offsetY + Math.sin(perpendicularAngle) };
+          const intersection = getIntersection(line1, line2);
+          if (intersection) {
+            this.#selectedSegment.end.x = intersection.x;
+            this.#selectedSegment.end.y = intersection.y;
+            this.dispatchUpdate();
+          }
         }
       } else {
-        this.mousePos = { x: ev.offsetX, y: ev.offsetY };
         this.updateHoverState();
         this.update();
       }
@@ -289,12 +306,7 @@ class TrackEditor {
             },
           );
           this.network.segments.push(newSegment);
-          this.network = new Network(
-            this.network.segments,
-            this.network.stations,
-          );
-          this.onNetworkChanged?.();
-          this.update();
+          this.dispatchUpdate();
           this.setStatePayload({
             state: EDITOR_STATE.SELECT,
           });
@@ -335,13 +347,7 @@ class TrackEditor {
               newSegments[1].connect(this.statePayload.connectionSegment);
             }
             this.network.segments.push(...newSegments);
-            this.network = new Network(
-              this.network.segments,
-              this.network.stations,
-            );
-            this.onNetworkChanged?.();
-
-            this.update();
+            this.dispatchUpdate();
 
             this.setStatePayload({
               state: EDITOR_STATE.SELECT,
@@ -373,10 +379,7 @@ class TrackEditor {
           );
           this.network.stations.push(newStation);
           this.#hoverSegment.stations.push(newStation);
-          this.network = new Network(
-            this.network.segments,
-            this.network.stations,
-          );
+          this.dispatchUpdate();
           break;
       }
       return;
@@ -386,11 +389,19 @@ class TrackEditor {
       this.#dragging = false;
     };
 
-    network.segments.push(
-      ...connectSegments(network.segments[0], true, network.segments[1], false),
+    this.dispatchUpdate();
+  }
+
+  /**
+   * After this editor makes a change, make sure everything is updated.
+   */
+  dispatchUpdate() {
+    this.network = new Network(
+      this.network.segments,
+      this.network.stations,
     );
-    this.network = new Network(this.network.segments, this.network.stations);
     this.onNetworkChanged?.();
+    this.update();
   }
 
   setNetwork(network: Network) {
