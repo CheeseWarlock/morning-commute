@@ -86,7 +86,26 @@ class TrackEditor {
   _testingOptions = {
     randomizeFramerate: false,
   };
+  /**
+   * The position of the mouse on the canvas itself.
+   */
   mousePos?: { x: number; y: number };
+  /**
+   * The position on the canvas where the drag started.
+   */
+  dragStartPoint?: Point;
+  /**
+   * The start point of the dragged segment.
+   */
+  dragStartSegmentPosition?: Point;
+  /**
+   * The end point of the dragged segment.
+   */
+  dragEndSegmentPosition?: Point;
+  /**
+   * The center point of the dragged segment.
+   */
+  dragCenterSegmentPosition?: Point;
   #hoverSegment?: TrackSegment;
   #selectedSegment: TrackSegment | undefined;
   #selectionType?: SELECTION_TYPE;
@@ -118,47 +137,6 @@ class TrackEditor {
     this.#context = canvas.getContext("2d");
     this.network = network;
     this.#onSelect = onSelect;
-
-    const gameBounds = network.getBounds();
-
-    const padding = 100;
-    // The max fittable scale along X
-    const scaleX =
-      (this.#size.x - padding) / (gameBounds.max.x - gameBounds.min.x);
-    // The max fittable scale along Y
-    const scaleY =
-      (this.#size.y - padding) / (gameBounds.max.y - gameBounds.min.y);
-
-    if (scaleX < scaleY) {
-      this.#scale = scaleX;
-      const excessY =
-        (this.#size.y -
-          padding -
-          (gameBounds.max.y - gameBounds.min.y) * this.#scale) /
-        2;
-      this.#offset = {
-        x: -gameBounds.min.x + padding / (this.#scale * 2),
-        y:
-          -gameBounds.min.y +
-          excessY / this.#scale +
-          padding / (this.#scale * 2),
-      };
-    } else {
-      this.#scale = scaleY;
-      const excessX =
-        (this.#size.x -
-          padding -
-          (gameBounds.max.x - gameBounds.min.x) * this.#scale) /
-        2;
-
-      this.#offset = {
-        x:
-          -gameBounds.min.x +
-          excessX / this.#scale +
-          padding / (this.#scale * 2),
-        y: -gameBounds.min.y + padding / (this.#scale * 2),
-      };
-    }
 
     // Ignore scale and offset for now
     this.#scale = 1;
@@ -204,6 +182,9 @@ class TrackEditor {
 
     canvas.onmousemove = (ev) => {
       this.mousePos = { x: ev.offsetX, y: ev.offsetY };
+
+      const gamePosition = this.untransformPosition(this.mousePos);
+
       if (!this.#dragging || !this.#selectedSegment) {
         this.updateHoverState();
         this.update();
@@ -219,12 +200,29 @@ class TrackEditor {
         selectedPoint = this.#selectedSegment.end;
       }
 
+      if (this.#dragging && canMoveStart && canMoveEnd && this.dragStartSegmentPosition && this.dragEndSegmentPosition) {
+        const dragVector = {
+          x: this.mousePos!.x - this.dragStartPoint!.x,
+          y: this.mousePos!.y - this.dragStartPoint!.y,
+        };
+        const dragVectorGamePosition = this.transformPosition(dragVector);
+        this.#selectedSegment.start.x = this.dragStartSegmentPosition!.x + dragVectorGamePosition.x;
+        this.#selectedSegment.start.y = this.dragStartSegmentPosition!.y + dragVectorGamePosition.y;
+        this.#selectedSegment.end.x = this.dragEndSegmentPosition!.x + dragVectorGamePosition.x;
+        this.#selectedSegment.end.y = this.dragEndSegmentPosition!.y + dragVectorGamePosition.y;
+        if (this.#selectedSegment instanceof CircularTrackSegment) {
+          this.#selectedSegment.center.x = this.dragCenterSegmentPosition!.x + dragVectorGamePosition.x;
+          this.#selectedSegment.center.y = this.dragCenterSegmentPosition!.y + dragVectorGamePosition.y;
+        }
+        this.dispatchUpdate();
+      }
+
       if (this.#selectedSegment instanceof LinearTrackSegment) {
         if (selectedPoint) {
           const line1 = { x1: this.#selectedSegment.start.x, y1: this.#selectedSegment.start.y, x2: this.#selectedSegment.end.x, y2: this.#selectedSegment.end.y };
           const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
           const perpendicularAngle = angle + Math.PI / 2;
-          const line2 = { x1: ev.offsetX, y1: ev.offsetY, x2: ev.offsetX + Math.cos(perpendicularAngle), y2: ev.offsetY + Math.sin(perpendicularAngle) };
+          const line2 = { x1: gamePosition.x, y1: gamePosition.y, x2: gamePosition.x + Math.cos(perpendicularAngle), y2: gamePosition.y + Math.sin(perpendicularAngle) };
           const intersection = getIntersection(line1, line2);
           if (intersection) {
             selectedPoint.x = intersection.x;
@@ -237,7 +235,7 @@ class TrackEditor {
           let newCenter;
           if (this.#selectionType === SELECTION_TYPE.START) {
             newCenter = findCenter(
-              { x: ev.offsetX, y: ev.offsetY },
+              gamePosition,
               this.#selectedSegment.end,
               this.#selectedSegment.theta,
               this.#selectedSegment.counterClockWise,
@@ -245,13 +243,13 @@ class TrackEditor {
           } else {
             newCenter = findCenter(
               this.#selectedSegment.start,
-              { x: ev.offsetX, y: ev.offsetY },
+              gamePosition,
               this.#selectedSegment.theta,
               this.#selectedSegment.counterClockWise,
             );
           }
-          selectedPoint.x = ev.offsetX;
-          selectedPoint.y = ev.offsetY;
+          selectedPoint.x = gamePosition.x;
+          selectedPoint.y = gamePosition.y;
           this.#selectedSegment.center.x = newCenter.x;
           this.#selectedSegment.center.y = newCenter.y;
           this.dispatchUpdate();
@@ -259,14 +257,17 @@ class TrackEditor {
       }
     };
 
-    canvas.onmousedown = (ev) => {
+    canvas.onmousedown = () => {
+      if (!this.mousePos) return;
+      this.dragStartPoint = this.mousePos;
+      const gamePosition = this.untransformPosition(this.mousePos);
       switch (this.statePayload.state) {
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_START:
           this.setStatePayload({
             state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END,
             segmentStart: {
-              x: this.mousePos!.x,
-              y: this.mousePos!.y,
+              x: gamePosition.x,
+              y: gamePosition.y,
             },
           });
           break;
@@ -275,8 +276,8 @@ class TrackEditor {
           const newSegment = new LinearTrackSegment(
             this.statePayload.segmentStart,
             {
-              x: this.mousePos!.x,
-              y: this.mousePos!.y,
+              x: gamePosition.x,
+              y: gamePosition.y,
             },
           );
           this.network.segments.push(newSegment);
@@ -337,14 +338,26 @@ class TrackEditor {
           this.#onSelect?.(this.#selectedSegment);
           this.update();
           this.#dragging = true;
+          console.log("Setting drag positions");
+          if (this.#selectedSegment && this.#hoverSelectionType === SELECTION_TYPE.SEGMENT) {
+            this.dragStartSegmentPosition = {...this.#selectedSegment?.start};
+            this.dragEndSegmentPosition = {...this.#selectedSegment?.end};
+            if (this.#selectedSegment instanceof CircularTrackSegment) {
+              this.dragCenterSegmentPosition = {...this.#selectedSegment?.center};
+            }
+          } else {
+            this.dragStartSegmentPosition = undefined;
+            this.dragEndSegmentPosition = undefined;
+            this.dragCenterSegmentPosition = undefined;
+          }
           break;
 
         case EDITOR_STATE.CREATE_STATION:
           if (!this.#hoverSegment) break;
           if (!this.mousePos) break;
           const closestPoint = this.#hoverSegment.distanceToPosition({
-            x: this.mousePos?.x,
-            y: this.mousePos?.y,
+            x: gamePosition.x,
+            y: gamePosition.y,
           });
           const newStation = new Station(
             this.#hoverSegment,
@@ -359,7 +372,7 @@ class TrackEditor {
       return;
     };
 
-    canvas.onmouseup = (ev) => {
+    canvas.onmouseup = () => {
       this.#dragging = false;
     };
 
@@ -378,6 +391,52 @@ class TrackEditor {
     this.update();
   }
 
+  /**
+   * Automatically scale and offset the canvas to fit the network.
+   */
+  autoScaleAndOffset() {
+    const gameBounds = this.network.getBounds();
+
+    const padding = 100;
+    // The max fittable scale along X
+    const scaleX =
+      (this.#size.x - padding) / (gameBounds.max.x - gameBounds.min.x);
+    // The max fittable scale along Y
+    const scaleY =
+      (this.#size.y - padding) / (gameBounds.max.y - gameBounds.min.y);
+
+    if (scaleX < scaleY) {
+      this.#scale = scaleX;
+      const excessY =
+        (this.#size.y -
+          padding -
+          (gameBounds.max.y - gameBounds.min.y) * this.#scale) /
+        2;
+      this.#offset = {
+        x: -gameBounds.min.x + padding / (this.#scale * 2),
+        y:
+          -gameBounds.min.y +
+          excessY / this.#scale +
+          padding / (this.#scale * 2),
+      };
+    } else {
+      this.#scale = scaleY;
+      const excessX =
+        (this.#size.x -
+          padding -
+          (gameBounds.max.x - gameBounds.min.x) * this.#scale) /
+        2;
+
+      this.#offset = {
+        x:
+          -gameBounds.min.x +
+          excessX / this.#scale +
+          padding / (this.#scale * 2),
+        y: -gameBounds.min.y + padding / (this.#scale * 2),
+      };
+    }
+  }
+
   setNetwork(network: Network) {
     this.#hoverSegment = undefined;
     if (this.#selectedSegment) {
@@ -394,6 +453,9 @@ class TrackEditor {
     this.onStateChanged?.(payload);
   }
 
+  /**
+   * Transform a point from the game world to the canvas.
+   */
   transformPosition(p: Point): Point {
     return {
       x: (p.x + this.#offset.x) * this.#scale,
@@ -401,11 +463,15 @@ class TrackEditor {
     };
   }
 
+  /**
+   * Transform a point from the canvas to the game world.
+   */
   untransformPosition(p: Point): Point {
-    return {
+    const result = {
       x: p.x / this.#scale - this.#offset.x,
       y: p.y / this.#scale - this.#offset.y,
     };
+    return result;
   }
 
   /**
@@ -419,8 +485,9 @@ class TrackEditor {
       this.statePayload.state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
       this.mousePos
     ) {
+      const gamePosition = this.untransformPosition(this.mousePos);
       fakeSegmentsList.push(
-        new LinearTrackSegment(this.statePayload.segmentStart, this.mousePos!),
+        new LinearTrackSegment(this.statePayload.segmentStart, gamePosition),
       );
     }
     if (
@@ -645,17 +712,15 @@ class TrackEditor {
    * For the current mouse position, find the closest segment and which part of it is closest.
    */
   updateHoverState() {
-    const selectionPoint: Point = {
-      x: this.mousePos?.x || 0,
-      y: this.mousePos?.y || 0,
-    };
+    if (!this.mousePos) return;
+    const gamePosition = this.untransformPosition(this.mousePos);
     const _dist = (a: Point, b: Point) =>
       Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
     let closest = Infinity;
     let closestSegment: TrackSegment | undefined;
     let closestType: SELECTION_TYPE | undefined;
     this.network.segments.forEach((seg) => {
-      const distanceToLine = seg.distanceToPosition(selectionPoint).distance;
+      const distanceToLine = seg.distanceToPosition(gamePosition).distance;
       if (distanceToLine > SELECTION_DISTANCE_PIXELS) return;
       if (
         distanceToLine < closest &&
@@ -667,8 +732,8 @@ class TrackEditor {
         closestType = SELECTION_TYPE.SEGMENT;
       }
 
-      const distanceToStart = _dist(seg.start, selectionPoint);
-      const distanceToEnd = _dist(seg.end, selectionPoint);
+      const distanceToStart = _dist(seg.start, gamePosition);
+      const distanceToEnd = _dist(seg.end, gamePosition);
 
       if (
         (!closestType ||
