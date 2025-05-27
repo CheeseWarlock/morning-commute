@@ -59,7 +59,7 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
 
   const segment = props.network.segments[props.segmentIndex];
 
-  return <div className="flex flex-col m-4">
+  return <div className="flex flex-col m-4 border-2 border-gray-300 rounded-md p-2 bg-gray-100">
     <h3 className="text-xl">{segment instanceof CircularTrackSegment ? "Circular" : "Linear"} Segment
       <span className="font-mono"> {segment.id.substring(0,8)}</span>
     </h3>
@@ -69,40 +69,38 @@ const TrackSegmentDetail = (props: { network: Network, segmentIndex: number, upd
       <span>{segment.stations.length}</span>
       </>
     }
-    <h4 className="text-lg">From</h4>
-    <div className="my-3 flex flex-row w-96">
-      <div className="font-mono p-2 m-2 w-1/3 flex flex-row">
-        <label className="pr-2">X</label>
-        <input type="number" className="w-full border-slate-300 border rounded" value={segment.start.x} onChange={(ev) => doUpdateProp({ start: { x: Number.parseInt(ev.target.value)}})}></input>
+    <div className="my-3">
+      <h4 className="text-lg">From</h4>
+      <div className="font-mono flex flex-row gap-2">
+          <label>X</label>
+          <input type="number" className="flex-1 border-slate-300 border rounded" value={segment.start.x} onChange={(ev) => doUpdateProp({ start: { x: Number.parseInt(ev.target.value)}})}></input>
+          <label>Y</label>
+          <input type="number" className="flex-1 border-slate-300 border rounded" value={segment.start.y} onChange={(ev) => doUpdateProp({ start: { y: Number.parseInt(ev.target.value)}})}></input>
+
       </div>
-      <span className="font-mono p-2 m-2 w-1/3 flex flex-row">
-        <label className="pr-2">Y</label>
-        <input type="number" className="w-full border-slate-300 border rounded" value={segment.start.y} onChange={(ev) => doUpdateProp({ start: { y: Number.parseInt(ev.target.value)}})}></input>
-      </span>
     </div>
-    <h4 className="text-lg">To</h4>
-    <p className="my-3 flex flex-row w-96">
-      <span className="font-mono p-2 m-2 w-1/3 flex flex-row">
-        <label className="pr-2">X</label>
-        <input type="number" className="w-full border-slate-300 border rounded" value={segment.end.x} onChange={(ev) => doUpdateProp({ end: { x: Number.parseInt(ev.target.value)}})}></input>
-      </span>
-      <span className="font-mono p-2 m-2 w-1/3 flex flex-row">
-        <label className="pr-2">Y</label>
-        <input type="number" className="w-full border-slate-300 border rounded" value={segment.end.y} onChange={(ev) => doUpdateProp({ end: { y: Number.parseInt(ev.target.value)}})}></input>
-      </span>
-    </p>
+    <div className="my-3">
+      <h4 className="text-lg">To</h4>
+      <div className="font-mono flex flex-row gap-2">
+          <label>X</label>
+          <input type="number" className="flex-1 border-slate-300 border rounded" value={segment.end.x} onChange={(ev) => doUpdateProp({ end: { x: Number.parseInt(ev.target.value)}})}></input>
+          <label>Y</label>
+          <input type="number" className="flex-1 border-slate-300 border rounded" value={segment.end.y} onChange={(ev) => doUpdateProp({ end: { y: Number.parseInt(ev.target.value)}})}></input>
+
+      </div>
+    </div>
     
-    {segment instanceof CircularTrackSegment && <>
+    {segment instanceof CircularTrackSegment && <div className="my-3">
       <h4 className="text-lg">Angle</h4>
-      <p className="my-3 flex flex-row w-96">
-        <span className="font-mono p-2 m-2 w-1/3 flex flex-row">
+      <p className="flex flex-row gap-2">
+        <span className="font-mono w-1/3 flex flex-row">
           <input type="number" className="w-full border-slate-300 border rounded" value={segment.theta} step="any" onChange={(ev) => doUpdateProp({ theta:Number.parseInt(ev.target.value)})}></input>
         </span>
         
         <span>CCW</span>
         <input type="checkbox" checked={segment.counterClockWise} onChange={(ev) => doUpdateProp({ counterClockWise: ev.target.checked})}></input>
     </p>
-      </>
+    </div>
     }
   </div>
 }

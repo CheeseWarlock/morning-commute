@@ -16,7 +16,7 @@ const ExportPage = (props: { trackEditor: TrackEditor }) => {
       {isNetworkComplete && (
         <Button value="Run Game" onClick={() => props.trackEditor.finish()} />
       )}
-      <textarea defaultValue={networkJSON} />
+      <textarea className="font-mono border-2 border-gray-300 rounded-md p-2" defaultValue={networkJSON} />
     </>
   );
 };

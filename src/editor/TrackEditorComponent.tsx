@@ -74,55 +74,67 @@ const TrackEditorComponent = (props: any) => {
   }, [editorState]);
 
   return (
-    <>
-      <Button
-        selected={editorState === EDITOR_STATE.SELECT}
-        value="Select"
-        onClick={() => setEditorState(EDITOR_STATE.SELECT)}
-      />
-      <Button
-        selected={editorState === EDITOR_STATE.CREATE_STATION}
-        value="Add Station"
-        onClick={() => setEditorState(EDITOR_STATE.CREATE_STATION)}
-      />
-      <Button
-        selected={
-          editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START ||
-          editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END
-        }
-        value="Add Linear"
-        onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)}
-      />
-      <Button
-        selected={
-          editorState === EDITOR_STATE.CREATE_CONNECTION_START ||
-          editorState === EDITOR_STATE.CREATE_CONNECTION_END
-        }
-        value="Add Connection"
-        onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)}
-      />
-      <div ref={trackEditorContainer} {...props} />
-
-      {selectedSegment && (
-        <TrackSegmentDetail
-          update={updateNetwork}
-          segmentIndex={network.segments.indexOf(selectedSegment)}
-          network={network}
-        />
-      )}
-      {isNetworkComplete && (
+    <div className="flex flex-col h-full">
+      <div className="flex gap-2 p-2">
         <Button
-          value="Finish Game"
-          onClick={() => trackEditor?.finish()}
+          selected={editorState === EDITOR_STATE.SELECT}
+          value="Select"
+          onClick={() => setEditorState(EDITOR_STATE.SELECT)}
         />
+        <Button
+          selected={editorState === EDITOR_STATE.CREATE_STATION}
+          value="Add Station"
+          onClick={() => setEditorState(EDITOR_STATE.CREATE_STATION)}
+        />
+        <Button
+          selected={
+            editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_START ||
+            editorState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END
+          }
+          value="Add Linear"
+          onClick={() => setEditorState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START)}
+        />
+        <Button
+          selected={
+            editorState === EDITOR_STATE.CREATE_CONNECTION_START ||
+            editorState === EDITOR_STATE.CREATE_CONNECTION_END
+          }
+          value="Add Connection"
+          onClick={() => setEditorState(EDITOR_STATE.CREATE_CONNECTION_START)}
+        />
+        {isNetworkComplete && (
+          <Button
+            value="Finish Game"
+            onClick={() => trackEditor?.finish()}
+          />
+        )}
+        <Button
+          selected={saveMenuOpen}
+          value="Save/Load"
+          onClick={() => setSaveMenuOpen(!saveMenuOpen)}
+        />
+      </div>
+      <div className="flex flex-row h-full">
+        <div 
+          ref={trackEditorContainer} 
+          style={{ 
+            minHeight: '500px',
+            position: 'relative'
+          }} 
+          {...props} 
+        />
+        {selectedSegment && (
+        <div className="overflow-y-auto">
+          <TrackSegmentDetail
+            update={updateNetwork}
+            segmentIndex={network.segments.indexOf(selectedSegment)}
+            network={network}
+          />
+        </div>
       )}
-      <Button
-        selected={saveMenuOpen}
-        value="Save/Load"
-        onClick={() => setSaveMenuOpen(!saveMenuOpen)}
-      />
+      </div>
       {saveMenuOpen && trackEditor && <ExportPage trackEditor={trackEditor} />}
-    </>
+    </div>
   );
 };
 
