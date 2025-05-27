@@ -27,27 +27,35 @@ export enum EDITOR_STATE {
   /**
    * Select and unselect track segments.
    */
-  SELECT,
+  SELECT = "SELECT",
   /**
    * Choose the first point for a linear track segment.
    */
-  CREATE_LINEAR_SEGMENT_START,
+  CREATE_LINEAR_SEGMENT_START = "CREATE_LINEAR_SEGMENT_START",
   /**
    * Choose the second point for a linear track segment.
    */
-  CREATE_LINEAR_SEGMENT_END,
+  CREATE_LINEAR_SEGMENT_END = "CREATE_LINEAR_SEGMENT_END",
   /**
    * Choose the first point for a linear-and-circular connection.
    */
-  CREATE_CONNECTION_START,
+  CREATE_CONNECTION_START = "CREATE_CONNECTION_START",
   /**
    * Choose the second point for a linear-and-circular connection.
    */
-  CREATE_CONNECTION_END,
+  CREATE_CONNECTION_END = "CREATE_CONNECTION_END",
   /**
    * Add a station to an existing track segment.
    */
-  CREATE_STATION,
+  CREATE_STATION = "CREATE_STATION",
+  /**
+   * Moving a point on a track segment
+   */
+  MOVE_POINT = "MOVE_POINT",
+  /**
+   * Moving an entire track segment
+   */
+  MOVE_SEGMENT = "MOVE_SEGMENT",
 }
 
 type EDITOR_STATE_PAYLOADS =
@@ -73,6 +81,19 @@ type EDITOR_STATE_PAYLOADS =
     }
   | {
       state: EDITOR_STATE.CREATE_STATION;
+    }
+  | {
+      state: EDITOR_STATE.MOVE_POINT;
+      segment: TrackSegment;
+      pointType: SELECTION_TYPE.START | SELECTION_TYPE.END;
+    }
+  | {
+      state: EDITOR_STATE.MOVE_SEGMENT;
+      segment: TrackSegment;
+      dragStartPoint: Point;
+      originalStart: Point;
+      originalEnd: Point;
+      originalCenter?: Point;
     };
 
 const SELECTION_DISTANCE_PIXELS = 15;
@@ -92,22 +113,6 @@ class TrackEditor {
    * The position of the mouse on the canvas itself.
    */
   mousePos?: { x: number; y: number };
-  /**
-   * The position on the canvas where the drag started.
-   */
-  dragStartPoint?: Point;
-  /**
-   * The start point of the dragged segment.
-   */
-  dragStartSegmentPosition?: Point;
-  /**
-   * The end point of the dragged segment.
-   */
-  dragEndSegmentPosition?: Point;
-  /**
-   * The center point of the dragged segment.
-   */
-  dragCenterSegmentPosition?: Point;
   #hoverSegment?: TrackSegment;
   #selectedSegment: TrackSegment | undefined;
   #selectionType?: SELECTION_TYPE;
@@ -184,98 +189,129 @@ class TrackEditor {
 
     canvas.onmousemove = (ev) => {
       this.mousePos = { x: ev.offsetX, y: ev.offsetY };
-
       const gamePosition = this.untransformPosition(this.mousePos);
 
-      if (!this.#dragging || !this.#selectedSegment) {
+      if (!this.#dragging) {
         this.updateHoverState();
         this.update();
         return;
       }
 
-      const canMoveStart = this.#selectedSegment.atStart.length === 0;
-      const canMoveEnd = this.#selectedSegment.atEnd.length === 0;
-      
+      switch (this.currentStateWithData.state) {
+        case EDITOR_STATE.MOVE_POINT: {
+          const { segment, pointType } = this.currentStateWithData;
+          const canMoveStart = segment.atStart.length === 0;
+          const canMoveEnd = segment.atEnd.length === 0;
 
-      if (this.#dragging && canMoveStart && canMoveEnd && this.dragStartSegmentPosition && this.dragEndSegmentPosition) {
-        // Dragging an entire segment
-        const dragVector = {
-          x: this.mousePos!.x - this.dragStartPoint!.x,
-          y: this.mousePos!.y - this.dragStartPoint!.y,
-        };
-        const dragVectorGamePosition = this.transformPosition(dragVector);
-        this.#selectedSegment.start.x = this.dragStartSegmentPosition!.x + dragVectorGamePosition.x;
-        this.#selectedSegment.start.y = this.dragStartSegmentPosition!.y + dragVectorGamePosition.y;
-        this.#selectedSegment.end.x = this.dragEndSegmentPosition!.x + dragVectorGamePosition.x;
-        this.#selectedSegment.end.y = this.dragEndSegmentPosition!.y + dragVectorGamePosition.y;
-        if (this.#selectedSegment instanceof CircularTrackSegment) {
-          this.#selectedSegment.center.x = this.dragCenterSegmentPosition!.x + dragVectorGamePosition.x;
-          this.#selectedSegment.center.y = this.dragCenterSegmentPosition!.y + dragVectorGamePosition.y;
-        }
-        this.dispatchUpdate();
-        return;
-      }
+          if (pointType === SELECTION_TYPE.START && !canMoveStart) return;
+          if (pointType === SELECTION_TYPE.END && !canMoveEnd) return;
 
-      let selectedPoint;
-      if (canMoveStart && this.#selectionType === SELECTION_TYPE.START) {
-        selectedPoint = this.#selectedSegment.start;
-      } else if (canMoveEnd && this.#selectionType === SELECTION_TYPE.END) {
-        selectedPoint = this.#selectedSegment.end;
-      }
+          const selectedPoint = pointType === SELECTION_TYPE.START ? segment.start : segment.end;
 
-      if (this.#selectedSegment instanceof LinearTrackSegment) {
-        // Dragging a point on a linear segment
-        if (selectedPoint) {
-          if (canMoveStart && canMoveEnd) {
-            selectedPoint.x = gamePosition.x;
-            selectedPoint.y = gamePosition.y;
-            this.dispatchUpdate();
-          } else {
-            const line1 = { x1: this.#selectedSegment.start.x, y1: this.#selectedSegment.start.y, x2: this.#selectedSegment.end.x, y2: this.#selectedSegment.end.y };
-            const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
-            const perpendicularAngle = angle + Math.PI / 2;
-            const line2 = { x1: gamePosition.x, y1: gamePosition.y, x2: gamePosition.x + Math.cos(perpendicularAngle), y2: gamePosition.y + Math.sin(perpendicularAngle) };
-            const intersection = getIntersection(line1, line2);
-            if (intersection) {
-              selectedPoint.x = intersection.x;
-              selectedPoint.y = intersection.y;
-              this.dispatchUpdate();
+          if (segment instanceof LinearTrackSegment) {
+            if (canMoveStart && canMoveEnd) {
+              selectedPoint.x = gamePosition.x;
+              selectedPoint.y = gamePosition.y;
+            } else {
+              const line1 = { x1: segment.start.x, y1: segment.start.y, x2: segment.end.x, y2: segment.end.y };
+              const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
+              const perpendicularAngle = angle + Math.PI / 2;
+              const line2 = { x1: gamePosition.x, y1: gamePosition.y, x2: gamePosition.x + Math.cos(perpendicularAngle), y2: gamePosition.y + Math.sin(perpendicularAngle) };
+              const intersection = getIntersection(line1, line2);
+              if (intersection) {
+                selectedPoint.x = intersection.x;
+                selectedPoint.y = intersection.y;
+              }
+            }
+          } else if (segment instanceof CircularTrackSegment) {
+            if (canMoveStart && canMoveEnd) {
+              let newCenter;
+              if (pointType === SELECTION_TYPE.START) {
+                newCenter = findCenter(
+                  gamePosition,
+                  segment.end,
+                  segment.theta,
+                  segment.counterClockWise,
+                );
+              } else {
+                newCenter = findCenter(
+                  segment.start,
+                  gamePosition,
+                  segment.theta,
+                  segment.counterClockWise,
+                );
+              }
+              selectedPoint.x = gamePosition.x;
+              selectedPoint.y = gamePosition.y;
+              segment.center.x = newCenter.x;
+              segment.center.y = newCenter.y;
             }
           }
-        }
-      } else if (this.#selectedSegment instanceof CircularTrackSegment) {
-        // Dragging a point on a circular segment
-        if (selectedPoint && canMoveStart && canMoveEnd) {
-          let newCenter;
-          if (this.#selectionType === SELECTION_TYPE.START) {
-            newCenter = findCenter(
-              gamePosition,
-              this.#selectedSegment.end,
-              this.#selectedSegment.theta,
-              this.#selectedSegment.counterClockWise,
-            );
-          } else {
-            newCenter = findCenter(
-              this.#selectedSegment.start,
-              gamePosition,
-              this.#selectedSegment.theta,
-              this.#selectedSegment.counterClockWise,
-            );
-          }
-          selectedPoint.x = gamePosition.x;
-          selectedPoint.y = gamePosition.y;
-          this.#selectedSegment.center.x = newCenter.x;
-          this.#selectedSegment.center.y = newCenter.y;
           this.dispatchUpdate();
+          break;
         }
+
+        case EDITOR_STATE.MOVE_SEGMENT: {
+          const { segment, dragStartPoint, originalStart, originalEnd, originalCenter } = this.currentStateWithData;
+          const dragVector = {
+            x: this.mousePos!.x - dragStartPoint.x,
+            y: this.mousePos!.y - dragStartPoint.y,
+          };
+          const dragVectorGamePosition = this.transformPosition(dragVector);
+          
+          segment.start.x = originalStart.x + dragVectorGamePosition.x;
+          segment.start.y = originalStart.y + dragVectorGamePosition.y;
+          segment.end.x = originalEnd.x + dragVectorGamePosition.x;
+          segment.end.y = originalEnd.y + dragVectorGamePosition.y;
+          
+          if (segment instanceof CircularTrackSegment && originalCenter) {
+            segment.center.x = originalCenter.x + dragVectorGamePosition.x;
+            segment.center.y = originalCenter.y + dragVectorGamePosition.y;
+          }
+          
+          this.dispatchUpdate();
+          break;
+        }
+
+        default:
+          this.updateHoverState();
+          this.update();
+          break;
       }
     };
 
     canvas.onmousedown = () => {
       if (!this.mousePos) return;
-      this.dragStartPoint = this.mousePos;
       const gamePosition = this.untransformPosition(this.mousePos);
+      
       switch (this.currentStateWithData.state) {
+        case EDITOR_STATE.SELECT:
+          this.#selectedSegment = this.#hoverSegment;
+          this.#selectionType = this.#hoverSelectionType;
+          this.#onSelect?.(this.#selectedSegment);
+          this.update();
+          this.#dragging = true;
+
+          if (this.#selectedSegment) {
+            if (this.#hoverSelectionType === SELECTION_TYPE.SEGMENT) {
+              this.setcurrentStateWithData({
+                state: EDITOR_STATE.MOVE_SEGMENT,
+                segment: this.#selectedSegment,
+                dragStartPoint: this.mousePos,
+                originalStart: {...this.#selectedSegment.start},
+                originalEnd: {...this.#selectedSegment.end},
+                originalCenter: this.#selectedSegment instanceof CircularTrackSegment ? {...this.#selectedSegment.center} : undefined,
+              });
+            } else if (this.#hoverSelectionType === SELECTION_TYPE.START || this.#hoverSelectionType === SELECTION_TYPE.END) {
+              this.setcurrentStateWithData({
+                state: EDITOR_STATE.MOVE_POINT,
+                segment: this.#selectedSegment,
+                pointType: this.#hoverSelectionType,
+              });
+            }
+          }
+          break;
+
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_START:
           console.log(this.#hoverSegment, this.#hoverSelectionType);
           const isLockedToSegment = this.#hoverSegment && this.#hoverSelectionType !== SELECTION_TYPE.SEGMENT;
@@ -350,26 +386,6 @@ class TrackEditor {
           }
           break;
 
-        case EDITOR_STATE.SELECT:
-          this.#selectedSegment = this.#hoverSegment;
-          this.#selectionType = this.#hoverSelectionType;
-          this.#onSelect?.(this.#selectedSegment);
-          this.update();
-          this.#dragging = true;
-          console.log("Setting drag positions");
-          if (this.#selectedSegment && this.#hoverSelectionType === SELECTION_TYPE.SEGMENT) {
-            this.dragStartSegmentPosition = {...this.#selectedSegment?.start};
-            this.dragEndSegmentPosition = {...this.#selectedSegment?.end};
-            if (this.#selectedSegment instanceof CircularTrackSegment) {
-              this.dragCenterSegmentPosition = {...this.#selectedSegment?.center};
-            }
-          } else {
-            this.dragStartSegmentPosition = undefined;
-            this.dragEndSegmentPosition = undefined;
-            this.dragCenterSegmentPosition = undefined;
-          }
-          break;
-
         case EDITOR_STATE.CREATE_STATION:
           if (!this.#hoverSegment) break;
           if (!this.mousePos) break;
@@ -392,6 +408,12 @@ class TrackEditor {
 
     canvas.onmouseup = () => {
       this.#dragging = false;
+      if (this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT || 
+          this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT) {
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.SELECT,
+        });
+      }
     };
 
     this.dispatchUpdate();
