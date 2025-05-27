@@ -60,6 +60,8 @@ type EDITOR_STATE_PAYLOADS =
   | {
       state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END;
       segmentStart: Point;
+      lockedToSegment?: TrackSegment;
+      lockedToEnd?: SELECTION_TYPE.START | SELECTION_TYPE.END;
     }
   | {
       state: EDITOR_STATE.CREATE_CONNECTION_START;
@@ -139,7 +141,7 @@ class TrackEditor {
     this.#onSelect = onSelect;
 
     // Ignore scale and offset for now
-    this.#scale = 1;
+    this.#scale = 1.2;
     this.#offset = { x: 0, y: 0 };
 
     document.body.onkeydown = (ev) => {
@@ -219,15 +221,21 @@ class TrackEditor {
 
       if (this.#selectedSegment instanceof LinearTrackSegment) {
         if (selectedPoint) {
-          const line1 = { x1: this.#selectedSegment.start.x, y1: this.#selectedSegment.start.y, x2: this.#selectedSegment.end.x, y2: this.#selectedSegment.end.y };
-          const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
-          const perpendicularAngle = angle + Math.PI / 2;
-          const line2 = { x1: gamePosition.x, y1: gamePosition.y, x2: gamePosition.x + Math.cos(perpendicularAngle), y2: gamePosition.y + Math.sin(perpendicularAngle) };
-          const intersection = getIntersection(line1, line2);
-          if (intersection) {
-            selectedPoint.x = intersection.x;
-            selectedPoint.y = intersection.y;
+          if (canMoveStart && canMoveEnd) {
+            selectedPoint.x = gamePosition.x;
+            selectedPoint.y = gamePosition.y;
             this.dispatchUpdate();
+          } else {
+            const line1 = { x1: this.#selectedSegment.start.x, y1: this.#selectedSegment.start.y, x2: this.#selectedSegment.end.x, y2: this.#selectedSegment.end.y };
+            const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
+            const perpendicularAngle = angle + Math.PI / 2;
+            const line2 = { x1: gamePosition.x, y1: gamePosition.y, x2: gamePosition.x + Math.cos(perpendicularAngle), y2: gamePosition.y + Math.sin(perpendicularAngle) };
+            const intersection = getIntersection(line1, line2);
+            if (intersection) {
+              selectedPoint.x = intersection.x;
+              selectedPoint.y = intersection.y;
+              this.dispatchUpdate();
+            }
           }
         }
       } else if (this.#selectedSegment instanceof CircularTrackSegment) {
@@ -263,11 +271,15 @@ class TrackEditor {
       const gamePosition = this.untransformPosition(this.mousePos);
       switch (this.statePayload.state) {
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_START:
+          console.log(this.#hoverSegment, this.#hoverSelectionType);
+          const isLockedToSegment = this.#hoverSegment && this.#hoverSelectionType !== SELECTION_TYPE.SEGMENT;
           this.setStatePayload({
             state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END,
+            lockedToSegment: isLockedToSegment ? this.#hoverSegment : undefined,
+            lockedToEnd: isLockedToSegment ? this.#hoverSelectionType === SELECTION_TYPE.END ? SELECTION_TYPE.END : SELECTION_TYPE.START : undefined,
             segmentStart: {
-              x: gamePosition.x,
-              y: gamePosition.y,
+              x: isLockedToSegment ? this.#hoverSelectionType === SELECTION_TYPE.START ? this.#hoverSegment!.start.x : this.#hoverSegment!.end.x : gamePosition.x,
+              y: isLockedToSegment ? this.#hoverSelectionType === SELECTION_TYPE.START ? this.#hoverSegment!.start.y : this.#hoverSegment!.end.y : gamePosition.y,
             },
           });
           break;
@@ -387,6 +399,7 @@ class TrackEditor {
       this.network.segments,
       this.network.stations,
     );
+    this.network.autoConnect();
     this.onNetworkChanged?.();
     this.update();
   }
