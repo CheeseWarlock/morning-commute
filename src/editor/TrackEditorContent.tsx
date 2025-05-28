@@ -58,7 +58,12 @@ const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }
 
   return (
     <div className="flex flex-col h-full font-mono">
-      <div className="flex justify-between items-center gap-4 p-2 bg-slate-50 border-b border-slate-200 shadow-sm">
+      <div className="flex flex-row h-full">
+        <div>
+        <div 
+          ref={trackEditorContainer} 
+        />
+        <div className="flex flex-row justify-between items-center gap-4 p-2 bg-zinc-50 border-b border-zinc-200 shadow-sm">
         {/* Main Actions */}
         <div className="flex gap-2 bg-white rounded shadow px-3 py-2">
           <Button
@@ -109,14 +114,7 @@ const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }
           <Button value="=1" onClick={() => trackEditor?.setScale(1)} />
         </div>
       </div>
-      <div className="flex flex-row h-full">
-        <div 
-          ref={trackEditorContainer} 
-          style={{ 
-            minHeight: '500px',
-            position: 'relative'
-          }}
-        />
+        </div>
         {(selectedSegment || 
           (trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_POINT && 'segment' in trackEditor.currentStateWithData) ||
           (trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT && 'segment' in trackEditor.currentStateWithData)) && (
@@ -135,6 +133,7 @@ const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }
         </div>
       )}
       </div>
+      
     </div>
   );
 };

@@ -66,13 +66,13 @@ const TrackSegmentDetail = (props: {
   const segment = props.network.segments[props.segmentIndex];
   const hasConnections = segment.atStart.length > 0 || segment.atEnd.length > 0;
 
-  return <div className="flex flex-col m-4 border-2 border-gray-300 rounded-md p-2 bg-gray-100">
+  return <div className="flex flex-col m-4 border-2 border-zinc-300 rounded-md p-2 bg-zinc-100">
     <div className="flex flex-row justify-between items-center">
       <h3 className="text-xl">{segment instanceof CircularTrackSegment ? "Circular" : "Linear"} Segment
         <span className="font-mono"> {segment.id.substring(0,8)}</span>
       </h3>
       <button 
-        className="px-2 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
+        className="px-2 py-1 text-sm text-red-600 hover:text-red-800 bg-red-100 rounded font-bold"
         onClick={() => {
           props.deleteSegment(segment);
         }}
@@ -92,7 +92,7 @@ const TrackSegmentDetail = (props: {
           <label>X</label>
           <input 
             type="number" 
-            className="flex-1 border-slate-300 border rounded" 
+            className="flex-1 border-zinc-300 border rounded" 
             value={segment.start.x} 
             onChange={(ev) => doUpdateProp({ start: { x: Number.parseInt(ev.target.value)}})}
             disabled={hasConnections}
@@ -100,7 +100,7 @@ const TrackSegmentDetail = (props: {
           <label>Y</label>
           <input 
             type="number" 
-            className="flex-1 border-slate-300 border rounded" 
+            className="flex-1 border-zinc-300 border rounded" 
             value={segment.start.y} 
             onChange={(ev) => doUpdateProp({ start: { y: Number.parseInt(ev.target.value)}})}
             disabled={hasConnections}
@@ -114,7 +114,7 @@ const TrackSegmentDetail = (props: {
           <label>X</label>
           <input 
             type="number" 
-            className="flex-1 border-slate-300 border rounded" 
+            className="flex-1 border-zinc-300 border rounded" 
             value={segment.end.x} 
             onChange={(ev) => doUpdateProp({ end: { x: Number.parseInt(ev.target.value)}})}
             disabled={hasConnections}
@@ -122,7 +122,7 @@ const TrackSegmentDetail = (props: {
           <label>Y</label>
           <input 
             type="number" 
-            className="flex-1 border-slate-300 border rounded" 
+            className="flex-1 border-zinc-300 border rounded" 
             value={segment.end.y} 
             onChange={(ev) => doUpdateProp({ end: { y: Number.parseInt(ev.target.value)}})}
             disabled={hasConnections}
@@ -136,7 +136,7 @@ const TrackSegmentDetail = (props: {
         <span className="font-mono w-1/3 flex flex-row">
           <input 
             type="number" 
-            className="w-full border-slate-300 border rounded" 
+            className="w-full border-zinc-300 border rounded" 
             value={segment.theta} 
             step="any" 
             onChange={(ev) => doUpdateProp({ theta:Number.parseInt(ev.target.value)})}
@@ -155,7 +155,7 @@ const TrackSegmentDetail = (props: {
     </div>
     }
     {hasConnections && 
-      <div className="my-3 text-sm text-gray-600 italic">
+      <div className="my-3 text-sm text-zinc-600 italic">
         Connected segments can't be moved
       </div>
     }
