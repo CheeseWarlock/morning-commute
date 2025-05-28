@@ -5,24 +5,14 @@ import TrackSegmentDetail from "./TrackSegmentDetail";
 import Network from "../engine/Network";
 
 import Button from "./components/Button";
-import ExportPage from "./ExportJsonPanel";
-import LoadJsonPanel from "./LoadJsonPanel";
 import { isNetworkCoherent } from "../utils";
-import MadeInEditor from "../engine/networks/MadeInEditor";
-import { loadNetworkFromJSON, JSONTrackSegment } from "../engine/JSONNetworkLoader";
 
-const hm = loadNetworkFromJSON(MadeInEditor as JSONTrackSegment[]);
-
-const TrackEditorComponent = (props: any) => {
+const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }: { network: Network, trackEditor?: TrackEditor, setNetwork: (network: Network) => void, setTrackEditor: (trackEditor: TrackEditor) => void }) => {
   const trackEditorContainer = useRef<HTMLDivElement | null>(null);
   const [selectedSegment, setSelectedSegment] = useState<TrackSegment | null>(null);
-  const [network, setNetwork] = useState<Network>(hm);
-  const [trackEditor, setTrackEditor] = useState<TrackEditor | undefined>(undefined);
   const [buttonBarState, setButtonBarState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
-  const [saveMenuOpen, setSaveMenuOpen] = useState<boolean>(false);
-  const [loadMenuOpen, setLoadMenuOpen] = useState<boolean>(false);
-  const [isNetworkComplete, setIsNetworkComplete] = useState<boolean>(isNetworkCoherent(hm.segments));
   const [scale, setScale] = useState<number>(1);
+  const [networkComplete, setNetworkComplete] = useState<boolean>(false);
 
   const updateNetwork = (newNetworkOrUpdater: Network | ((prev: Network) => Network)) => {
     const newNetwork = typeof newNetworkOrUpdater === 'function' 
@@ -33,7 +23,7 @@ const TrackEditorComponent = (props: any) => {
     const completeSegments = newNetwork.segments.filter(
       (seg) => seg.atEnd.length > 0 && seg.atStart.length > 0
     );
-    setIsNetworkComplete(completeSegments.length === newNetwork.segments.length && isNetworkCoherent(newNetwork.segments));
+    setNetworkComplete(completeSegments.length === newNetwork.segments.length && isNetworkCoherent(newNetwork.segments));
     setNetwork(newNetwork);
   };
 
@@ -118,27 +108,6 @@ const TrackEditorComponent = (props: any) => {
           <Button value="+" onClick={() => trackEditor?.adjustScale(0.25)} />
           <Button value="=1" onClick={() => trackEditor?.setScale(1)} />
         </div>
-
-        {/* Meta Actions */}
-        <div className="flex gap-2">
-          <Button
-            disabled={!isNetworkComplete}
-            value="Run Game"
-            onClick={() => trackEditor?.finish()}
-            className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
-          />
-          <Button
-            value="Load from JSON"
-            onClick={() => setLoadMenuOpen(true)}
-            className="bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
-          />
-          <Button
-            selected={saveMenuOpen}
-            value="View JSON"
-            onClick={() => setSaveMenuOpen(!saveMenuOpen)}
-            className="bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200"
-          />
-        </div>
       </div>
       <div className="flex flex-row h-full">
         <div 
@@ -146,8 +115,7 @@ const TrackEditorComponent = (props: any) => {
           style={{ 
             minHeight: '500px',
             position: 'relative'
-          }} 
-          {...props} 
+          }}
         />
         {(selectedSegment || 
           (trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_POINT && 'segment' in trackEditor.currentStateWithData) ||
@@ -167,19 +135,8 @@ const TrackEditorComponent = (props: any) => {
         </div>
       )}
       </div>
-      {saveMenuOpen && trackEditor && (
-        <ExportPage trackEditor={trackEditor} network={network} onClose={() => setSaveMenuOpen(false)} />
-      )}
-      {loadMenuOpen && (
-        <LoadJsonPanel 
-          onClose={() => setLoadMenuOpen(false)}
-          onLoad={(network) => {
-            setNetwork(network);
-          }}
-        />
-      )}
     </div>
   );
 };
 
-export default TrackEditorComponent;
+export default TrackEditorContent;

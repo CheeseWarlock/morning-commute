@@ -1,9 +1,7 @@
 import React from "react";
-import Button from "./components/Button";
-import TrackEditor from "./TrackEditor";
 import Network from "../engine/Network";
 
-const ExportJsonPanel = (props: { trackEditor: TrackEditor; network: Network; onClose: () => void }) => {
+const ExportJsonPanel = (props: { network: Network; onClose: () => void }) => {
   const networkJSON = JSON.stringify(props.network.segments.map((seg) => seg.toJSON()), null, 2);
   const [copied, setCopied] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
