@@ -43,10 +43,11 @@ class BabylonRenderer implements IRenderer {
 
   constructor(element: HTMLElement, game: Game) {
     this.game = game;
+    console.log("BabylonRenderer constructor", game.network.trains.length);
     const aCanvas = document.createElement("canvas");
     aCanvas.setAttribute("id", "renderCanvas");
-    aCanvas.width = 800;
-    aCanvas.height = 600;
+    aCanvas.width = 1200;
+    aCanvas.height = 800;
     element.appendChild(aCanvas);
 
     // Get the canvas DOM element

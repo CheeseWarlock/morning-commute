@@ -5,14 +5,16 @@ import TrackSegmentDetail from "./TrackSegmentDetail";
 import Network from "../engine/Network";
 
 import Button from "./components/Button";
-import { isNetworkCoherent } from "../utils";
 
-const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }: { network: Network, trackEditor?: TrackEditor, setNetwork: (network: Network) => void, setTrackEditor: (trackEditor: TrackEditor) => void }) => {
+const TrackEditorContent = ({ network, setNetwork }: {
+  network: Network,
+  setNetwork: (network: Network) => void
+}) => {
   const trackEditorContainer = useRef<HTMLDivElement | null>(null);
+  const trackEditorRef = useRef<TrackEditor | null>(null);
   const [selectedSegment, setSelectedSegment] = useState<TrackSegment | null>(null);
   const [buttonBarState, setButtonBarState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
   const [scale, setScale] = useState<number>(1);
-  const [networkComplete, setNetworkComplete] = useState<boolean>(false);
 
   const updateNetwork = (newNetworkOrUpdater: Network | ((prev: Network) => Network)) => {
     const newNetwork = typeof newNetworkOrUpdater === 'function' 
@@ -20,39 +22,36 @@ const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }
       : newNetworkOrUpdater;
     
     newNetwork.autoConnect();
-    const completeSegments = newNetwork.segments.filter(
-      (seg) => seg.atEnd.length > 0 && seg.atStart.length > 0
-    );
-    setNetworkComplete(completeSegments.length === newNetwork.segments.length && isNetworkCoherent(newNetwork.segments));
     setNetwork(newNetwork);
   };
 
   useEffect(() => {
-    const canvasContainer = trackEditorContainer.current;
-    if (trackEditor) {
-      trackEditor.network = network;
-      network.autoConnect();
-      trackEditor.update();
-    } else {
-      network.autoConnect();
-      const te = new TrackEditor({
-        element: canvasContainer!,
-        network: network,
-        onSelect: (seg) => {
-          setSelectedSegment(seg ?? null);
-        },
-      });
-      te.onStateChanged = (payload) => {
-        setButtonBarState(payload.state);
-      };
-      te.onNetworkChanged = () => {
-        updateNetwork(te.network);
-      };
-      te.onScaleChanged = (newScale) => {
-        setScale(newScale);
-      };
-      te.update();
-      setTrackEditor(te);
+    const container = trackEditorContainer.current;
+    if (!container) return;
+
+    // Only run on mount
+    const te = new TrackEditor({
+      element: container,
+      network,
+      onSelect: (seg) => setSelectedSegment(seg ?? null),
+    });
+    te.onStateChanged = (payload) => setButtonBarState(payload.state);
+    te.onNetworkChanged = () => updateNetwork(te.network);
+    te.onScaleChanged = (newScale) => setScale(newScale);
+    te.update();
+    trackEditorRef.current = te;
+
+    return () => {
+      container.innerHTML = "";
+      trackEditorRef.current = null;
+    };
+  }, []); // Only on mount/unmount
+
+  // Update network on changes
+  useEffect(() => {
+    if (trackEditorRef.current) {
+      trackEditorRef.current.network = network;
+      trackEditorRef.current.update();
     }
   }, [network]);
 
@@ -70,7 +69,7 @@ const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }
             selected={buttonBarState === EDITOR_STATE.SELECT || buttonBarState === EDITOR_STATE.PAN}
             value="Select"
             onClick={() => {
-              trackEditor?.setcurrentStateWithData({ state: EDITOR_STATE.SELECT });
+              trackEditorRef.current?.setcurrentStateWithData({ state: EDITOR_STATE.SELECT });
               setButtonBarState(EDITOR_STATE.SELECT);
             }}
           />
@@ -81,7 +80,7 @@ const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }
             }
             value="Add Line"
             onClick={() => {
-              trackEditor?.setcurrentStateWithData({ state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_START });
+              trackEditorRef.current?.setcurrentStateWithData({ state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_START });
               setButtonBarState(EDITOR_STATE.CREATE_LINEAR_SEGMENT_START);
             }}
           />
@@ -92,7 +91,7 @@ const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }
             }
             value="Add Connection"
             onClick={() => {
-              trackEditor?.setcurrentStateWithData({ state: EDITOR_STATE.CREATE_CONNECTION_START });
+              trackEditorRef.current?.setcurrentStateWithData({ state: EDITOR_STATE.CREATE_CONNECTION_START });
               setButtonBarState(EDITOR_STATE.CREATE_CONNECTION_START);
             }}
           />
@@ -100,7 +99,7 @@ const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }
             selected={buttonBarState === EDITOR_STATE.CREATE_STATION}
             value="Add Station"
             onClick={() => {
-              trackEditor?.setcurrentStateWithData({ state: EDITOR_STATE.CREATE_STATION });
+              trackEditorRef.current?.setcurrentStateWithData({ state: EDITOR_STATE.CREATE_STATION });
               setButtonBarState(EDITOR_STATE.CREATE_STATION);
             }}
           />
@@ -108,27 +107,27 @@ const TrackEditorContent = ({ network, trackEditor, setNetwork, setTrackEditor }
 
         {/* Zoom Controls */}
         <div className="flex items-center gap-2 bg-white rounded shadow px-3 py-2">
-          <Button value="−" onClick={() => trackEditor?.adjustScale(-0.25)} />
+          <Button value="−" onClick={() => trackEditorRef.current?.adjustScale(-0.25)} />
           <span className="min-w-[3em] text-center">{scale.toFixed(2)}x</span>
-          <Button value="+" onClick={() => trackEditor?.adjustScale(0.25)} />
-          <Button value="=1" onClick={() => trackEditor?.setScale(1)} />
+          <Button value="+" onClick={() => trackEditorRef.current?.adjustScale(0.25)} />
+          <Button value="=1" onClick={() => trackEditorRef.current?.setScale(1)} />
         </div>
       </div>
         </div>
         {(selectedSegment || 
-          (trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_POINT && 'segment' in trackEditor.currentStateWithData) ||
-          (trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT && 'segment' in trackEditor.currentStateWithData)) && (
+          (trackEditorRef.current?.currentStateWithData.state === EDITOR_STATE.MOVE_POINT && 'segment' in trackEditorRef.current.currentStateWithData) ||
+          (trackEditorRef.current?.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT && 'segment' in trackEditorRef.current.currentStateWithData)) && (
         <div className="overflow-y-auto">
           <TrackSegmentDetail
             update={updateNetwork}
             segmentIndex={network.segments.indexOf(
               selectedSegment || 
-              (trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ? trackEditor.currentStateWithData.segment :
-               trackEditor?.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT ? trackEditor.currentStateWithData.segment :
+              (trackEditorRef.current?.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ? trackEditorRef.current.currentStateWithData.segment :
+               trackEditorRef.current?.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT ? trackEditorRef.current.currentStateWithData.segment :
                selectedSegment)!
             )}
             network={network}
-            deleteSegment={(segment) => trackEditor?.deleteSegment(segment)}
+            deleteSegment={(segment) => trackEditorRef.current?.deleteSegment(segment)}
           />
         </div>
       )}

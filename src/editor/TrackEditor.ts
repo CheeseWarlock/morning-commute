@@ -139,6 +139,7 @@ class TrackEditor {
     size?: Point;
     onSelect: (segment?: TrackSegment) => void;
   }) {
+    console.log("TrackEditor constructor", options);
     const { element, network, offset, scale, size, onSelect } = options;
     this.#offset = offset || { x: 0, y: 0 };
     this.#scale = scale || 1;
@@ -152,6 +153,8 @@ class TrackEditor {
     this.#context = canvas.getContext("2d");
     this.network = network;
     this.#onSelect = onSelect;
+
+    console.log("Element added", element);
 
     document.body.onkeydown = (ev) => {
       if (
@@ -584,7 +587,7 @@ class TrackEditor {
   }
 
   setcurrentStateWithData(payload: EDITOR_STATE_PAYLOADS) {
-    console.log("setting state", payload);
+    // console.log("setting state", payload);
     const wasSelect = this.currentStateWithData.state === EDITOR_STATE.SELECT;
     const isSelect = payload.state === EDITOR_STATE.SELECT;
     
@@ -778,7 +781,10 @@ class TrackEditor {
       }
 
       // Draw arrow in the middle
-      this.#drawArrowInMiddle(segment);
+      if (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+          this.currentStateWithData.selectedSegment === segment) {
+        this.#drawArrowInMiddle(segment);
+      }
 
       // Draw a red X near either end if not connected
       if (segment.atStart.length === 0) {
@@ -819,7 +825,7 @@ class TrackEditor {
     }
     fakeStationsList.forEach((station) => {
       if (!this.#context) return;
-      this.#context.fillStyle = "rgb(40, 100, 255)";
+      this.#context.fillStyle = "rgb(222, 200, 0)";
       const SIZE = 10;
 
       const targetPosition = station.trackSegment.getPositionAlong(
@@ -999,7 +1005,7 @@ class TrackEditor {
     const mid = segment.length / 2;
     const canvasPosition = this.transformPosition(segment.getPositionAlong(mid).point);
     const angle = segment.getAngleAlong(mid) + Math.PI;
-    this.#context.strokeStyle = "rgba(255, 255, 0)";
+    this.#context.strokeStyle = "rgb(222, 200, 0)";
     this.#context.beginPath();
     this.#context.moveTo(canvasPosition.x, canvasPosition.y);
     this.#context.lineTo(

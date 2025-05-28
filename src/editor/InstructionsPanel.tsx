@@ -24,6 +24,7 @@ const InstructionsPanel = ({ onClose }: { onClose: () => void }) => (
       <ul className="list-disc ml-6 mb-2">
         <li>The game can only run on complete networks.</li>
         <li>A network is complete if every segment is connected at both ends. The entire network must be a connected graph.</li>
+        <li>The direction of a segment has no effect on the game.</li>
       </ul>
       <h2 className="text-lg font-bold">Playing the Game</h2>
       <ul className="list-disc ml-6 mb-2">
