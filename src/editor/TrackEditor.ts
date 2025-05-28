@@ -755,83 +755,42 @@ class TrackEditor {
         this.#context.stroke();
       }
 
-      // Draw a dot at the start and end
-      let canvasPosition = this.transformPosition(segment.start);
-      this.#context.fillStyle = "rgba(200, 0, 0)";
-      this.#context.beginPath();
-      this.#context.arc(canvasPosition.x, canvasPosition.y, 5, 0, Math.PI * 2);
-      this.#context.closePath();
-      this.#context.fill();
+      // Draw endpoint dots
+      this.#drawEndpointDot(segment.start);
+      this.#drawEndpointDot(segment.end);
 
+      // Draw endpoint highlight rings if needed
       if (
-        (this.#hoverSelectionType === SELECTION_TYPE.START &&
-          segment === this.#hoverSegment) ||
+        (this.#hoverSelectionType === SELECTION_TYPE.START && segment === this.#hoverSegment) ||
         (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
           this.currentStateWithData.selectionType === SELECTION_TYPE.START &&
           segment === this.currentStateWithData.selectedSegment)
       ) {
-        this.#context.strokeStyle = "rgba(255,255,255)";
-        this.#context.lineWidth = 2;
-        this.#context.beginPath();
-        this.#context.arc(
-          canvasPosition.x,
-          canvasPosition.y,
-          8,
-          0,
-          Math.PI * 2,
-        );
-        this.#context.closePath();
-        this.#context.stroke();
+        this.#drawEndpointHighlight(segment.start);
       }
-
-      canvasPosition = this.transformPosition(segment.end);
-      this.#context.fillStyle = "rgba(200, 0, 0)";
-      this.#context.beginPath();
-      this.#context.arc(canvasPosition.x, canvasPosition.y, 5, 0, Math.PI * 2);
-      this.#context.closePath();
-      this.#context.fill();
-
       if (
-        (this.#hoverSelectionType === SELECTION_TYPE.END &&
-          segment === this.#hoverSegment) ||
+        (this.#hoverSelectionType === SELECTION_TYPE.END && segment === this.#hoverSegment) ||
         (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
           this.currentStateWithData.selectionType === SELECTION_TYPE.END &&
           segment === this.currentStateWithData.selectedSegment)
       ) {
-        this.#context.strokeStyle = "rgba(255,255,255)";
-        this.#context.lineWidth = 2;
-        this.#context.beginPath();
-        this.#context.arc(
-          canvasPosition.x,
-          canvasPosition.y,
-          8,
-          0,
-          Math.PI * 2,
-        );
-        this.#context.closePath();
-        this.#context.stroke();
+        this.#drawEndpointHighlight(segment.end);
       }
 
-      // Draw an arrow in the middle
-      canvasPosition = this.transformPosition(
-        segment.getPositionAlong(segment.length / 2).point,
-      );
-      const angle = segment.getAngleAlong(segment.length / 2) + Math.PI;
-      this.#context.strokeStyle = "rgba(255, 255, 0)";
-      this.#context.beginPath();
-      this.#context.moveTo(canvasPosition.x, canvasPosition.y);
-      this.#context.lineTo(
-        canvasPosition.x + Math.cos(angle + Math.PI / 4) * 10,
-        canvasPosition.y + Math.sin(angle + Math.PI / 4) * 10,
-      );
-      this.#context.stroke();
-      this.#context.beginPath();
-      this.#context.moveTo(canvasPosition.x, canvasPosition.y);
-      this.#context.lineTo(
-        canvasPosition.x + Math.cos(angle - Math.PI / 4) * 10,
-        canvasPosition.y + Math.sin(angle - Math.PI / 4) * 10,
-      );
-      this.#context.stroke();
+      // Draw arrow in the middle
+      this.#drawArrowInMiddle(segment);
+
+      // Draw a red X near either end if not connected
+      if (segment.atStart.length === 0) {
+        const d = 0.1 * segment.length;
+        const a = segment.getAngleAlong(d);
+        this.#drawRedX(segment, d, a);
+      }
+      if (segment.atEnd.length === 0) {
+        const d = segment.length - 0.1 * segment.length;
+        const a = segment.getAngleAlong(d);
+        this.#drawRedX(segment, d, a);
+      }
 
       this.#context.closePath();
       this.#context.fill();
@@ -872,8 +831,8 @@ class TrackEditor {
       angleFromForward +=
         station.alignment === ALIGNMENT.LEFT ? -Math.PI / 2 : Math.PI / 2;
 
-      targetPosition.x += Math.cos(angleFromForward) * 5;
-      targetPosition.y += Math.sin(angleFromForward) * 5;
+      targetPosition.x += Math.cos(angleFromForward) * 8 / this.#scale;
+      targetPosition.y += Math.sin(angleFromForward) * 8 / this.#scale;
       targetPosition.x += this.#offset.x;
       targetPosition.y += this.#offset.y;
       targetPosition.x *= this.#scale;
@@ -926,16 +885,18 @@ class TrackEditor {
    */
   updateHoverState() {
     if (!this.mousePos) return;
+
+    const gameSelectionDistance = SELECTION_DISTANCE_PIXELS / this.#scale;
     const gamePosition = this.untransformPosition(this.mousePos);
     let closest = Infinity;
     let closestSegment: TrackSegment | undefined;
     let closestType: SELECTION_TYPE | undefined;
     this.network.segments.forEach((seg) => {
       const distanceToLine = seg.distanceToPosition(gamePosition).distance;
-      if (distanceToLine > SELECTION_DISTANCE_PIXELS) return;
+      if (distanceToLine > gameSelectionDistance) return;
       if (
         distanceToLine < closest &&
-        distanceToLine < SELECTION_DISTANCE_PIXELS &&
+        distanceToLine < gameSelectionDistance &&
         (!closestType || closestType === SELECTION_TYPE.SEGMENT)
       ) {
         closestSegment = seg;
@@ -950,7 +911,7 @@ class TrackEditor {
         (!closestType ||
           closestType === SELECTION_TYPE.SEGMENT ||
           ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment)) &&
-        distanceToStart < SELECTION_DISTANCE_PIXELS
+        distanceToStart < gameSelectionDistance
       ) {
         closestSegment = seg;
         if ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment) {
@@ -965,7 +926,7 @@ class TrackEditor {
         (!closestType ||
           closestType === SELECTION_TYPE.SEGMENT ||
           ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment)) &&
-        distanceToEnd < SELECTION_DISTANCE_PIXELS
+        distanceToEnd < gameSelectionDistance
       ) {
         closestSegment = seg;
         if ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment) {
@@ -1008,6 +969,69 @@ class TrackEditor {
       game,
     );
     const coordinator = new RendererCoordinator(game, [map3]);
+  }
+
+  // --- Drawing helpers ---
+  #drawEndpointDot(point: Point) {
+    if (!this.#context) return;
+    const canvasPosition = this.transformPosition(point);
+    this.#context.fillStyle = "rgb(100, 100, 255)";
+    this.#context.beginPath();
+    this.#context.arc(canvasPosition.x, canvasPosition.y, 5, 0, Math.PI * 2);
+    this.#context.closePath();
+    this.#context.fill();
+  }
+
+  #drawEndpointHighlight(point: Point) {
+    if (!this.#context) return;
+    const canvasPosition = this.transformPosition(point);
+    this.#context.strokeStyle = "rgba(255,255,255)";
+    this.#context.lineWidth = 2;
+    this.#context.beginPath();
+    this.#context.arc(canvasPosition.x, canvasPosition.y, 8, 0, Math.PI * 2);
+    this.#context.closePath();
+    this.#context.stroke();
+  }
+
+  #drawArrowInMiddle(segment: TrackSegment) {
+    if (!this.#context) return;
+    const mid = segment.length / 2;
+    const canvasPosition = this.transformPosition(segment.getPositionAlong(mid).point);
+    const angle = segment.getAngleAlong(mid) + Math.PI;
+    this.#context.strokeStyle = "rgba(255, 255, 0)";
+    this.#context.beginPath();
+    this.#context.moveTo(canvasPosition.x, canvasPosition.y);
+    this.#context.lineTo(
+      canvasPosition.x + Math.cos(angle + Math.PI / 4) * 10,
+      canvasPosition.y + Math.sin(angle + Math.PI / 4) * 10,
+    );
+    this.#context.stroke();
+    this.#context.beginPath();
+    this.#context.moveTo(canvasPosition.x, canvasPosition.y);
+    this.#context.lineTo(
+      canvasPosition.x + Math.cos(angle - Math.PI / 4) * 10,
+      canvasPosition.y + Math.sin(angle - Math.PI / 4) * 10,
+    );
+    this.#context.stroke();
+  }
+
+  #drawRedX(segment: TrackSegment, distanceAlong: number, angle: number) {
+    if (!this.#context) return;
+    const pos = segment.getPositionAlong(distanceAlong).point;
+    const canvasPos = this.transformPosition(pos);
+    const size = 10;
+    this.#context.save();
+    this.#context.translate(canvasPos.x, canvasPos.y);
+    this.#context.rotate(angle);
+    this.#context.strokeStyle = "#e11d48"; // Tailwind red-600
+    this.#context.lineWidth = 3;
+    this.#context.beginPath();
+    this.#context.moveTo(-size / 2, -size / 2);
+    this.#context.lineTo(size / 2, size / 2);
+    this.#context.moveTo(size / 2, -size / 2);
+    this.#context.lineTo(-size / 2, size / 2);
+    this.#context.stroke();
+    this.#context.restore();
   }
 }
 
