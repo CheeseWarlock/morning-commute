@@ -28,9 +28,9 @@ abstract class TrackSegment {
   abstract finalAngle: number;
 
   /**
-   * Convert this segment to JSON for export.
+   * Convert this segment to JSON-like object for export.
    */
-  abstract toJSON(): string;
+  abstract toJSON(): any;
   stations: Station[] = [];
   /**
    * The UUID of this track segment.

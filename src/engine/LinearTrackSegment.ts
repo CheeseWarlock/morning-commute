@@ -155,13 +155,13 @@ class LinearTrackSegment extends TrackSegment {
   }
 
   toJSON() {
-    return JSON.stringify({
+    return {
       id: this.id,
       start: this.start,
       end: this.end,
       atStart: this.atStart.map((seg) => seg.id),
       atEnd: this.atEnd.map((seg) => seg.id),
-    });
+    };
   }
 }
 

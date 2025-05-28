@@ -602,6 +602,7 @@ class TrackEditor {
         payload.selectedSegment !== this.currentStateWithData.selectedSegment)) {
       this.#onSelect?.(isSelect && 'selectedSegment' in payload ? payload.selectedSegment : undefined);
     }
+    this.update();
     
     this.onStateChanged?.(payload);
   }
@@ -975,11 +976,13 @@ class TrackEditor {
         closestType = SELECTION_TYPE.END;
       }
     });
-    console.log("closestSegment", closestSegment);
     this.#hoverSegment = closestSegment;
     this.#hoverSelectionType = closestType;
   }
 
+  /**
+   * Redraw the editor canvas.
+   */
   update() {
     this.#context = this.#canvas.getContext("2d");
     if (!this.#context) return;

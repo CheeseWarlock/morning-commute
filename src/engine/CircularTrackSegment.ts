@@ -294,7 +294,7 @@ class CircularTrackSegment extends TrackSegment {
   }
 
   toJSON() {
-    return JSON.stringify({
+    return ({
       id: this.id,
       start: this.start,
       end: this.end,
