@@ -6,6 +6,7 @@ import Network from "../engine/Network";
 
 import Button from "./components/Button";
 
+
 const TrackEditorContent = ({ network, setNetwork }: {
   network: Network,
   setNetwork: (network: Network) => void
@@ -16,11 +17,7 @@ const TrackEditorContent = ({ network, setNetwork }: {
   const [buttonBarState, setButtonBarState] = useState<EDITOR_STATE>(EDITOR_STATE.SELECT);
   const [scale, setScale] = useState<number>(1);
 
-  const updateNetwork = (newNetworkOrUpdater: Network | ((prev: Network) => Network)) => {
-    const newNetwork = typeof newNetworkOrUpdater === 'function' 
-      ? newNetworkOrUpdater(network)
-      : newNetworkOrUpdater;
-    
+  const updateNetwork = (newNetwork: Network) => {
     newNetwork.autoConnect();
     setNetwork(newNetwork);
   };
@@ -29,7 +26,6 @@ const TrackEditorContent = ({ network, setNetwork }: {
     const container = trackEditorContainer.current;
     if (!container) return;
 
-    // Only run on mount
     const te = new TrackEditor({
       element: container,
       network,
@@ -45,7 +41,7 @@ const TrackEditorContent = ({ network, setNetwork }: {
       container.innerHTML = "";
       trackEditorRef.current = null;
     };
-  }, []); // Only on mount/unmount
+  }, []);
 
   // Update network on changes
   useEffect(() => {
@@ -107,9 +103,9 @@ const TrackEditorContent = ({ network, setNetwork }: {
 
         {/* Zoom Controls */}
         <div className="flex items-center gap-2 bg-white rounded shadow px-3 py-2">
-          <Button value="−" onClick={() => trackEditorRef.current?.adjustScale(-0.25)} />
+          <Button value="−" onClick={() => trackEditorRef.current?.adjustScale(-0.25, false)} />
           <span className="min-w-[3em] text-center">{scale.toFixed(2)}x</span>
-          <Button value="+" onClick={() => trackEditorRef.current?.adjustScale(0.25)} />
+          <Button value="+" onClick={() => trackEditorRef.current?.adjustScale(0.25, false)} />
           <Button value="=1" onClick={() => trackEditorRef.current?.setScale(1)} />
         </div>
       </div>

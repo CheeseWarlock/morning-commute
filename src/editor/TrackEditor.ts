@@ -472,7 +472,7 @@ class TrackEditor {
       
       // Adjust scale based on wheel delta
       // Negative delta means scroll up/zoom in, positive means scroll down/zoom out
-      this.adjustScale(-ev.deltaY * 0.001);
+      this.adjustScale(-ev.deltaY * 0.001 * this.#scale, true);
     };
 
     this.dispatchUpdate();
@@ -611,26 +611,27 @@ class TrackEditor {
   }
 
   setScale(scale: number) {
-    this.adjustScale(scale - this.#scale);
+    this.adjustScale(scale - this.#scale, false);
   }
 
-  adjustScale(delta: number) {
+  adjustScale(delta: number, useMouseCenter: boolean = true) {
     const oldScale = this.#scale;
     this.#scale = Math.max(0.25, this.#scale + delta);
     
     // If we have a mouse position within the canvas, use that as the zoom center
     let zoomCenter;
-    if (this.mousePos && 
+    if ((this.mousePos && 
         this.mousePos.x >= 0 && this.mousePos.x <= this.#size.x &&
-        this.mousePos.y >= 0 && this.mousePos.y <= this.#size.y) {
+        this.mousePos.y >= 0 && this.mousePos.y <= this.#size.y) && useMouseCenter) {
       // Convert mouse position to game coordinates
+      console.log("Mouse center", this.mousePos);
       zoomCenter = this.untransformPosition(this.mousePos);
     } else {
       // Use view center if mouse is outside canvas
-      zoomCenter = {
-        x: (this.#size.x / 2 / oldScale) - this.#offset.x,
-        y: (this.#size.y / 2 / oldScale) - this.#offset.y,
-      };
+      zoomCenter = this.untransformPosition({
+        x: this.#size.x / 2,
+        y: this.#size.y / 2,
+      });
     }
     
     // Calculate how much the point moves due to scale change

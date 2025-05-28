@@ -8,8 +8,8 @@ import TrackSegment from "../engine/TrackSegment";
 
 const TrackSegmentDetail = (props: { 
   network: Network, 
-  segmentIndex: number, 
-  update: React.Dispatch<React.SetStateAction<Network>>,
+  segmentIndex: number,
+  update: (newNetwork: Network) => void,
   deleteSegment: (segment: TrackSegment) => void 
 }) => {
   const { update } = props;
