@@ -950,6 +950,7 @@ class TrackEditor {
 
     // Render
     this.#context.clearRect(0, 0, this.#size.x, this.#size.y);
+    this.#drawGridLines(100);
     this.drawTrackSections();
     this.drawStations();
   }
@@ -1032,6 +1033,24 @@ class TrackEditor {
     this.#context.lineTo(-size / 2, size / 2);
     this.#context.stroke();
     this.#context.restore();
+  }
+
+  #drawGridLines(interval: number) {
+    if (!this.#context) return;
+    
+    const scaledInterval = interval * this.#scale;
+    this.#context.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    this.#context.lineWidth = 1;
+    this.#context.beginPath();
+    for (let x = ((this.#offset.x * this.#scale) % scaledInterval) - scaledInterval; x < this.#size.x; x += scaledInterval) {
+      this.#context.moveTo(x, 0);
+      this.#context.lineTo(x, this.#size.y);
+    }
+    for (let y = ((this.#offset.y * this.#scale) % scaledInterval) - scaledInterval; y < this.#size.y; y += scaledInterval) {
+      this.#context.moveTo(0, y);
+      this.#context.lineTo(this.#size.x, y);
+    }
+    this.#context.stroke();
   }
 }
 
