@@ -1,4 +1,5 @@
 import { areAnglesEqual } from "../utils";
+import { JSONTrackSegment } from "./JSONNetworkLoader";
 import Point from "./Point";
 import Station, { ALIGNMENT } from "./Station";
 import { v4 as uuidv4 } from "uuid";
@@ -30,7 +31,7 @@ abstract class TrackSegment {
   /**
    * Convert this segment to JSON-like object for export.
    */
-  abstract toJSON(): any;
+  abstract toJSON(): JSONTrackSegment;
   stations: Station[] = [];
   /**
    * The UUID of this track segment.

@@ -1,3 +1,4 @@
+import { JSONTrackSegment } from "./JSONNetworkLoader";
 import Point from "./Point";
 import { ALIGNMENT } from "./Station";
 import TrackSegment from "./TrackSegment";
@@ -154,13 +155,15 @@ class LinearTrackSegment extends TrackSegment {
     return this.initialAngle + (_reverse ? Math.PI : 0);
   }
 
-  toJSON() {
+  toJSON(): JSONTrackSegment {
+    const stations = this.stations.length > 0 ? this.stations.map((station) => ({ distanceAlong: station.distanceAlong, alignment: station.alignment })) : undefined;
     return {
       id: this.id,
       start: this.start,
       end: this.end,
       atStart: this.atStart.map((seg) => seg.id),
       atEnd: this.atEnd.map((seg) => seg.id),
+      stations: stations,
     };
   }
 }

@@ -6,8 +6,8 @@ import TrackSegment from "./TrackSegment";
  * Relative to the track's direction.
  */
 export enum ALIGNMENT {
-  LEFT,
-  RIGHT,
+  LEFT = "LEFT",
+  RIGHT = "RIGHT",
 }
 
 /**

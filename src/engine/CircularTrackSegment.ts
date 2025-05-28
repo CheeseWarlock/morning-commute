@@ -1,3 +1,4 @@
+import { JSONTrackSegment } from "./JSONNetworkLoader";
 import Point from "./Point";
 import { ALIGNMENT } from "./Station";
 import TrackSegment from "./TrackSegment";
@@ -293,7 +294,8 @@ class CircularTrackSegment extends TrackSegment {
     return ((angleAlong + Math.PI) % (Math.PI * 2)) - Math.PI;
   }
 
-  toJSON() {
+  toJSON(): JSONTrackSegment {
+    const stations = this.stations.length > 0 ? this.stations.map((station) => ({ distanceAlong: station.distanceAlong, alignment: station.alignment })) : undefined;
     return ({
       id: this.id,
       start: this.start,
@@ -302,6 +304,7 @@ class CircularTrackSegment extends TrackSegment {
       counterClockWise: this.counterClockWise,
       atStart: this.atStart.map((seg) => seg.id),
       atEnd: this.atEnd.map((seg) => seg.id),
+      stations: stations,
     });
   }
 }
