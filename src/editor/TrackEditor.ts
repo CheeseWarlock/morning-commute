@@ -65,6 +65,10 @@ export enum EDITOR_STATE {
    */
   QUERY_POINT = "QUERY_POINT",
   /**
+   * Drag selecting multiple segments
+   */
+  DRAG_SELECT = "DRAG_SELECT",
+  /**
    * Selecting multiple segments
    */
   MULTI_SELECT = "MULTI_SELECT",
@@ -120,6 +124,11 @@ type EDITOR_STATE_PAYLOADS =
   | {
       state: EDITOR_STATE.MULTI_SELECT;
       selectedSegments: TrackSegment[];
+    }
+  | {
+      state: EDITOR_STATE.DRAG_SELECT;
+      /** Drag start point in screen coordinates */
+      dragStartPoint?: Point;
     };
 
 const SELECTION_DISTANCE_PIXELS = 15;
@@ -154,7 +163,6 @@ class TrackEditor {
     size?: Point;
     onSelect: (segment?: TrackSegment) => void;
   }) {
-    console.log("TrackEditor constructor", options);
     const { element, network, offset, scale, size, onSelect } = options;
     this.#offset = offset || { x: 0, y: 0 };
     this.#scale = scale || 1;
@@ -168,8 +176,6 @@ class TrackEditor {
     this.#context = canvas.getContext("2d");
     this.network = network;
     this.#onSelect = onSelect;
-
-    console.log("Element added", element);
 
     document.body.onkeydown = (ev) => {
       if (
@@ -460,6 +466,15 @@ class TrackEditor {
           this.dispatchUpdate();
           break;
 
+        case EDITOR_STATE.DRAG_SELECT:
+          const startPoint = this.mousePos;
+          if (!startPoint) return;
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.DRAG_SELECT,
+            dragStartPoint: startPoint,
+          });
+          break;
+
         case EDITOR_STATE.QUERY_POINT:
           const point = this.mousePos;
           if (!point) return;
@@ -469,7 +484,6 @@ class TrackEditor {
             const distanceToLine = segment.distanceToPosition(gamePosition).distance;
             return distanceToLine <= gameSelectionDistance;
           });
-          console.log("Segments", segments);
           this.setcurrentStateWithData({
             state: EDITOR_STATE.MULTI_SELECT,
             selectedSegments: segments,
@@ -500,6 +514,13 @@ class TrackEditor {
       } else if (this.currentStateWithData.state === EDITOR_STATE.PAN) {
         this.setcurrentStateWithData({
           state: EDITOR_STATE.SELECT,
+        });
+        this.#canvas.style.cursor = "default";
+      } else if (this.currentStateWithData.state === EDITOR_STATE.DRAG_SELECT) {
+        if (!this.currentStateWithData.dragStartPoint || !this.mousePos) return;
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.MULTI_SELECT,
+          selectedSegments: this.getSegmentsInRectangle(this.currentStateWithData.dragStartPoint, this.mousePos),
         });
         this.#canvas.style.cursor = "default";
       }
@@ -1005,6 +1026,9 @@ class TrackEditor {
     this.#drawGridLines(100);
     this.drawTrackSections();
     this.drawStations();
+    if (this.currentStateWithData.state === EDITOR_STATE.DRAG_SELECT) {
+      this.#drawDragSelection();
+    }
   }
 
   finish() {
@@ -1022,6 +1046,22 @@ class TrackEditor {
       game,
     );
     const coordinator = new RendererCoordinator(game, [map3]);
+  }
+
+  getSegmentsInRectangle(from: Point, to: Point) {
+    const gameFrom = this.untransformPosition(from);
+    const gameTo = this.untransformPosition(to);
+    const upperLeft = {
+      x: Math.min(gameFrom.x, gameTo.x),
+      y: Math.min(gameFrom.y, gameTo.y),
+    };
+    const lowerRight = {
+      x: Math.max(gameFrom.x, gameTo.x),
+      y: Math.max(gameFrom.y, gameTo.y),
+    };
+    return this.network.segments.filter((seg) => {
+      return seg.isWithinRectangle(upperLeft, lowerRight);
+    });
   }
 
   // --- Drawing helpers ---
@@ -1103,6 +1143,22 @@ class TrackEditor {
       this.#context.lineTo(this.#size.x, y);
     }
     this.#context.stroke();
+  }
+
+  #drawDragSelection() {
+    if (this.currentStateWithData.state !== EDITOR_STATE.DRAG_SELECT) return;
+    if (!this.#context || !this.currentStateWithData.dragStartPoint) return;
+    const startPoint = this.currentStateWithData.dragStartPoint;
+    if (!startPoint) return;
+    const endPoint = this.mousePos;
+    if (!endPoint) return;
+    this.#context.strokeStyle = "rgba(255, 255, 255, 0.5)";
+    this.#context.lineWidth = 2;
+    this.#context.setLineDash([10, 5]);
+    this.#context.beginPath();
+    this.#context.rect(startPoint.x, startPoint.y, endPoint.x - startPoint.x, endPoint.y - startPoint.y);
+    this.#context.stroke();
+    this.#context.setLineDash([]);
   }
 }
 

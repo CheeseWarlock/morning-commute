@@ -294,6 +294,130 @@ class CircularTrackSegment extends TrackSegment {
     return ((angleAlong + Math.PI) % (Math.PI * 2)) - Math.PI;
   }
 
+  isWithinRectangle(from: Point, to: Point) {
+    const startX = from.x;
+    const startY = from.y;
+    const endX = to.x;
+    const endY = to.y;
+
+    // if (!this.id.startsWith("ec477d91")) {
+    //   return false;
+    // }
+
+    const collidingPoints: Point[] = [];
+
+    // check if the circle is completely within the rectangle
+    if (this.center.x - this.radius >= startX && this.center.x + this.radius <= endX &&
+      this.center.y - this.radius >= startY && this.center.y + this.radius <= endY) {
+      return true;
+    }
+
+    // find where the circle's x is startX
+    const deltaStartX = startX - this.center.x;
+    if (Math.abs(deltaStartX) > this.radius) {
+      // too far from this line
+      
+    } else {
+      const discriminant = Math.sqrt((this.radius ** 2) - (deltaStartX ** 2));
+      const plusY = this.center.y + discriminant;
+      const minusY = this.center.y - discriminant;
+
+      if (plusY >= startY && plusY <= endY) {
+        collidingPoints.push({ x: startX, y: plusY });
+      }
+      if (minusY >= startY && minusY <= endY) {
+        collidingPoints.push({ x: startX, y: minusY });
+      }
+    }
+
+    const deltaStartY = startY - this.center.y;
+    if (Math.abs(deltaStartY) > this.radius) {
+      // too far from this line
+      
+    } else {
+      const discriminant = Math.sqrt((this.radius ** 2) - (deltaStartY ** 2));
+      const plusX = this.center.x + discriminant;
+      const minusX = this.center.x - discriminant;
+
+      if (plusX >= startX && plusX <= endX) {
+        collidingPoints.push({ x: plusX, y: startY });
+      }
+      if (minusX >= startX && minusX <= endX) {
+        collidingPoints.push({ x: minusX, y: startY });
+      }
+    }
+
+    const deltaEndX = endX - this.center.x;
+    if (Math.abs(deltaEndX) > this.radius) {
+      // too far from this line
+      
+    } else {
+      const discriminant = Math.sqrt((this.radius ** 2) - (deltaEndX ** 2));
+      const plusY = this.center.y + discriminant;
+      const minusY = this.center.y - discriminant;
+
+      if (plusY >= startY && plusY <= endY) {
+        collidingPoints.push({ x: endX, y: plusY });
+      }
+      if (minusY >= startY && minusY <= endY) {
+        collidingPoints.push({ x: endX, y: minusY });
+      }
+    }
+
+    const deltaEndY = endY - this.center.y;
+    if (Math.abs(deltaEndY) > this.radius) {
+      // too far from this line
+      
+    } else {
+      const discriminant = Math.sqrt((this.radius ** 2) - (deltaEndY ** 2));
+      const plusX = this.center.x + discriminant;
+      const minusX = this.center.x - discriminant;
+
+      if (plusX >= startX && plusX <= endX) {
+        collidingPoints.push({ x: plusX, y: endY });
+      }
+      if (minusX >= startX && minusX <= endX) {
+        collidingPoints.push({ x: minusX, y: endY });
+      }
+    }
+
+    if (collidingPoints.length > 0) {
+    } else {
+      return false;
+    }
+
+    let initialAngleFromCenter = Math.atan2(
+      (this.counterClockWise ? this.end : this.start).y - this.center.y,
+      (this.counterClockWise ? this.end : this.start).x - this.center.x,
+    );
+    let finalAngleFromCenter = Math.atan2(
+      (this.counterClockWise ? this.start : this.end).y - this.center.y,
+      (this.counterClockWise ? this.start : this.end).x - this.center.x,
+    );
+
+    while (finalAngleFromCenter < initialAngleFromCenter) {
+      finalAngleFromCenter += Math.PI * 2;
+    }
+
+    const whuh = collidingPoints.map((point) => {
+      const angleToCenter = Math.atan2(point.y - this.center.y, point.x - this.center.x);
+      return angleToCenter;
+    });
+
+    const huh = collidingPoints.filter((point) => {
+      let angleToCenter = Math.atan2(point.y - this.center.y, point.x - this.center.x);
+      while (angleToCenter < initialAngleFromCenter) {
+        angleToCenter += Math.PI * 2;
+      }
+      if (angleToCenter > initialAngleFromCenter && angleToCenter < finalAngleFromCenter) {
+        return true;
+      }
+      return false;
+    });
+
+    return huh.length > 0;
+  }
+
   toJSON(): JSONTrackSegment {
     const stations = this.stations.length > 0 ? this.stations.map((station) => ({ distanceAlong: station.distanceAlong, alignment: station.alignment })) : undefined;
     return ({

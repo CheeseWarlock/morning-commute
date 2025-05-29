@@ -108,6 +108,14 @@ const TrackEditorContent = ({ network, setNetwork }: {
               setButtonBarState(EDITOR_STATE.QUERY_POINT);
             }}
           />
+          <Button
+            selected={buttonBarState === EDITOR_STATE.DRAG_SELECT}
+            value="Drag Select"
+            onClick={() => {
+              trackEditorRef.current?.setcurrentStateWithData({ state: EDITOR_STATE.DRAG_SELECT });
+              setButtonBarState(EDITOR_STATE.DRAG_SELECT);
+            }}
+          />
         </div>
 
         {/* Zoom Controls */}

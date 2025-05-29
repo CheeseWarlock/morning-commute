@@ -166,6 +166,46 @@ class LinearTrackSegment extends TrackSegment {
       stations: stations,
     };
   }
+
+  isWithinRectangle(upperLeft: Point, lowerRight: Point) {
+    const lineDelta = {
+      x: 1 / (this.end.x - this.start.x),
+      y: 1 / (this.end.y - this.start.y),
+    };
+  
+    const isForwardX = lineDelta.x > 0;
+    const isForwardY = lineDelta.y > 0;
+  
+    // Which h side is closest
+    const firstX = isForwardX ? upperLeft.x : lowerRight.x;
+    const firstY = isForwardY ? upperLeft.y : lowerRight.y;
+  
+    const secondX = isForwardX ? lowerRight.x : upperLeft.x;
+    const secondY = isForwardY ? lowerRight.y : upperLeft.y;
+  
+    const firstXProportion = (firstX - this.start.x) * lineDelta.x;
+    const firstYProportion = (firstY - this.start.y) * lineDelta.y;
+  
+    const secondXProportion = (secondX - this.start.x) * lineDelta.x;
+    const secondYProportion = (secondY - this.start.y) * lineDelta.y;
+  
+    if (firstXProportion > secondYProportion || firstYProportion > secondXProportion) {
+      return false;
+    }
+  
+    const closestFirstProportion = Math.max(firstXProportion, firstYProportion);
+  const closestSecondProportion = Math.min(secondXProportion, secondYProportion);
+
+  if(closestFirstProportion > closestSecondProportion) {
+    return false;
+  }
+
+  if (closestFirstProportion >= 1 || closestSecondProportion <= 0) {
+    return false;
+  }
+
+  return true;
+  }
 }
 
 export default LinearTrackSegment;

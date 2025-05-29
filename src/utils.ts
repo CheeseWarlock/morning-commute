@@ -198,3 +198,43 @@ export function getNextJunction(segment: TrackSegment, reversing: boolean) {
     angle: angleAt,
   };
 }
+
+export function isWithinRectangle(pointStart: Point, pointEnd: Point, upperLeft: Point, lowerRight: Point) {
+  const lineDelta = {
+    x: pointEnd.x - pointStart.x,
+    y: pointEnd.y - pointStart.y,
+  };
+
+  const isForwardX = lineDelta.x > 0;
+  const isForwardY = lineDelta.y > 0;
+
+  // Which h side is closest
+  const firstX = isForwardX ? upperLeft.x : lowerRight.x;
+  const firstY = isForwardY ? upperLeft.y : lowerRight.y;
+
+  const secondX = isForwardX ? lowerRight.x : upperLeft.x;
+  const secondY = isForwardY ? lowerRight.y : upperLeft.y;
+
+  const firstXProportion = (firstX - pointStart.x) / lineDelta.x;
+  const firstYProportion = (firstY - pointStart.y) / lineDelta.y;
+
+  const secondXProportion = (secondX - pointStart.x) / lineDelta.x;
+  const secondYProportion = (secondY - pointStart.y) / lineDelta.y;
+
+  if (firstXProportion > secondYProportion || firstYProportion > secondXProportion) {
+    return false;
+  }
+
+  const closestFirstProportion = Math.max(firstXProportion, firstYProportion);
+  const closestSecondProportion = Math.min(secondXProportion, secondYProportion);
+
+  if(closestFirstProportion > closestSecondProportion) {
+    return false;
+  }
+
+  if (closestFirstProportion >= 1 || closestSecondProportion <= 0) {
+    return false;
+  }
+
+  return true;
+}

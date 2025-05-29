@@ -54,6 +54,8 @@ abstract class TrackSegment {
 
   abstract getAngleAlong(distance: number, reverse?: boolean): number;
 
+  abstract isWithinRectangle(from: Point, to: Point): boolean;
+
   get isWellConnected() {
     return this.atStart?.length > 0 && this.atEnd.length > 0;
   }
