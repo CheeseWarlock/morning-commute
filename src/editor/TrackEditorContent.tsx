@@ -5,6 +5,7 @@ import TrackSegmentDetail from "./TrackSegmentDetail";
 import Network from "../engine/Network";
 
 import Button from "./components/Button";
+import MultiSegmentDetail from "./MultiSegmentDetail";
 
 
 const TrackEditorContent = ({ network, setNetwork }: {
@@ -99,6 +100,14 @@ const TrackEditorContent = ({ network, setNetwork }: {
               setButtonBarState(EDITOR_STATE.CREATE_STATION);
             }}
           />
+          <Button
+            selected={buttonBarState === EDITOR_STATE.QUERY_POINT}
+            value="Query Point"
+            onClick={() => {
+              trackEditorRef.current?.setcurrentStateWithData({ state: EDITOR_STATE.QUERY_POINT });
+              setButtonBarState(EDITOR_STATE.QUERY_POINT);
+            }}
+          />
         </div>
 
         {/* Zoom Controls */}
@@ -107,26 +116,27 @@ const TrackEditorContent = ({ network, setNetwork }: {
           <span className="min-w-[3em] text-center">{scale.toFixed(2)}x</span>
           <Button value="+" onClick={() => trackEditorRef.current?.adjustScale(0.25, false)} />
           <Button value="=1" onClick={() => trackEditorRef.current?.setScale(1)} />
+          <Button value="Fit" onClick={() => trackEditorRef.current?.autoScaleAndOffset()} />
         </div>
       </div>
         </div>
-        {(selectedSegment || 
-          (trackEditorRef.current?.currentStateWithData.state === EDITOR_STATE.MOVE_POINT && 'segment' in trackEditorRef.current.currentStateWithData) ||
-          (trackEditorRef.current?.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT && 'segment' in trackEditorRef.current.currentStateWithData)) && (
+        {(selectedSegment) && (
         <div className="overflow-y-auto">
           <TrackSegmentDetail
             update={updateNetwork}
             segmentIndex={network.segments.indexOf(
-              selectedSegment || 
-              (trackEditorRef.current?.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ? trackEditorRef.current.currentStateWithData.segment :
-               trackEditorRef.current?.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT ? trackEditorRef.current.currentStateWithData.segment :
-               selectedSegment)!
+              selectedSegment
             )}
             network={network}
             deleteSegment={(segment) => trackEditorRef.current?.deleteSegment(segment)}
           />
         </div>
       )}
+      {(trackEditorRef.current?.currentStateWithData.state === EDITOR_STATE.MULTI_SELECT) &&
+      <MultiSegmentDetail segments={trackEditorRef.current?.currentStateWithData.selectedSegments} selectSegment={(segment) => {
+        trackEditorRef.current?.setcurrentStateWithData({ state: EDITOR_STATE.SELECT, selectedSegment: segment });
+        setButtonBarState(EDITOR_STATE.SELECT);
+      }} />}
       </div>
       
     </div>

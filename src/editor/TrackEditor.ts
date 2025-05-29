@@ -60,6 +60,14 @@ export enum EDITOR_STATE {
    * Panning the view
    */
   PAN = "PAN",
+  /**
+   * Querying a point for all segments
+   */
+  QUERY_POINT = "QUERY_POINT",
+  /**
+   * Selecting multiple segments
+   */
+  MULTI_SELECT = "MULTI_SELECT",
 }
 
 type EDITOR_STATE_PAYLOADS =
@@ -105,6 +113,13 @@ type EDITOR_STATE_PAYLOADS =
       state: EDITOR_STATE.PAN;
       dragStartPoint?: Point;
       originalOffset?: Point;
+    }
+  | {
+      state: EDITOR_STATE.QUERY_POINT;
+    }
+  | {
+      state: EDITOR_STATE.MULTI_SELECT;
+      selectedSegments: TrackSegment[];
     };
 
 const SELECTION_DISTANCE_PIXELS = 15;
@@ -444,6 +459,30 @@ class TrackEditor {
           this.#hoverSegment.stations.push(newStation);
           this.dispatchUpdate();
           break;
+
+        case EDITOR_STATE.QUERY_POINT:
+          const point = this.mousePos;
+          if (!point) return;
+          
+          const gameSelectionDistance = SELECTION_DISTANCE_PIXELS / this.#scale;
+          const segments = this.network.segments.filter((segment) => {
+            const distanceToLine = segment.distanceToPosition(gamePosition).distance;
+            return distanceToLine <= gameSelectionDistance;
+          });
+          console.log("Segments", segments);
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.MULTI_SELECT,
+            selectedSegments: segments,
+          });
+          break;
+
+        case EDITOR_STATE.MULTI_SELECT:
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.PAN,
+            dragStartPoint: this.mousePos,
+            originalOffset: { ...this.#offset },
+          });
+          break;
       }
       return;
     };
@@ -569,6 +608,8 @@ class TrackEditor {
         y: -gameBounds.min.y + padding / (this.#scale * 2),
       };
     }
+    this.onScaleChanged?.(this.#scale);
+    this.update();
   }
 
   setNetwork(network: Network) {
@@ -587,9 +628,8 @@ class TrackEditor {
   }
 
   setcurrentStateWithData(payload: EDITOR_STATE_PAYLOADS) {
-    // console.log("setting state", payload);
-    const wasSelect = this.currentStateWithData.state === EDITOR_STATE.SELECT;
-    const isSelect = payload.state === EDITOR_STATE.SELECT;
+    const currentSelection = this.currentStateWithData.state === EDITOR_STATE.SELECT ? this.currentStateWithData.selectedSegment : undefined;
+    const newSelection = payload.state === EDITOR_STATE.SELECT ? payload.selectedSegment : undefined;
     
     this.currentStateWithData = payload;
     if (payload.state === EDITOR_STATE.PAN) {
@@ -597,13 +637,9 @@ class TrackEditor {
     } else {
       this.#canvas.style.cursor = "default";
     }
-    
-    // Call onSelect when entering or exiting SELECT state
-    if (wasSelect !== isSelect || (isSelect && 
-        'selectedSegment' in payload && 
-        'selectedSegment' in this.currentStateWithData && 
-        payload.selectedSegment !== this.currentStateWithData.selectedSegment)) {
-      this.#onSelect?.(isSelect && 'selectedSegment' in payload ? payload.selectedSegment : undefined);
+
+    if (currentSelection !== newSelection) {
+      this.#onSelect?.(newSelection);
     }
     this.update();
     
@@ -614,7 +650,7 @@ class TrackEditor {
     this.adjustScale(scale - this.#scale, false);
   }
 
-  adjustScale(delta: number, useMouseCenter: boolean = true) {
+  adjustScale(delta: number, useMouseCenter: boolean) {
     const oldScale = this.#scale;
     this.#scale = Math.max(0.25, this.#scale + delta);
     
@@ -624,7 +660,6 @@ class TrackEditor {
         this.mousePos.x >= 0 && this.mousePos.x <= this.#size.x &&
         this.mousePos.y >= 0 && this.mousePos.y <= this.#size.y) && useMouseCenter) {
       // Convert mouse position to game coordinates
-      console.log("Mouse center", this.mousePos);
       zoomCenter = this.untransformPosition(this.mousePos);
     } else {
       // Use view center if mouse is outside canvas
@@ -721,8 +756,10 @@ class TrackEditor {
 
     fakeSegmentsList.forEach((segment) => {
       if (!this.#context) return;
-      if (this.currentStateWithData.state === EDITOR_STATE.SELECT && 
-          segment === this.currentStateWithData.selectedSegment) {
+      if ((this.currentStateWithData.state === EDITOR_STATE.SELECT && 
+          segment === this.currentStateWithData.selectedSegment) || 
+          (this.currentStateWithData.state === EDITOR_STATE.MULTI_SELECT &&
+            this.currentStateWithData.selectedSegments.includes(segment))) {
         this.#context.strokeStyle = "rgb(255, 255, 255)";
         this.#context.lineWidth = 4;
       } else if (segment === this.#hoverSegment) {
@@ -802,6 +839,14 @@ class TrackEditor {
       this.#context.closePath();
       this.#context.fill();
     });
+
+    if (this.currentStateWithData.state === EDITOR_STATE.QUERY_POINT) {
+      this.#context.strokeStyle = "rgb(200, 200, 200)";
+      this.#context.lineWidth = 2;
+      this.#context.beginPath();
+      this.#context.arc(this.mousePos!.x, this.mousePos!.y, 15, 0, Math.PI * 2);
+      this.#context.stroke();
+    }
   }
 
   drawStations() {

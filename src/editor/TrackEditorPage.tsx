@@ -7,7 +7,6 @@ import Network from "../engine/Network";
 import { JSONTrackSegment, loadNetworkFromJSON } from "../engine/JSONNetworkLoader";
 import MadeInEditor from "../engine/networks/MadeInEditor";
 import { isNetworkCoherent } from "../utils";
-import TrackEditor from "./TrackEditor";
 import GamePreview from "./GamePreview";
 
 const DEFAULT_NETWORK = loadNetworkFromJSON(MadeInEditor as JSONTrackSegment[]);
