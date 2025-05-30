@@ -17,26 +17,17 @@ class GameState {
   }
 
   initializeTrains() {
-    this.trains.push(
-      new Train(
-        { segment: this.network.segments[0], distanceAlong: 0, reversing: false },
-        {
-          slowdown: true,
-          waitTime: 500,
-          waitTimePerPassenger: 500,
-          speed: 100,
-          followingCarCount: 4,
-        },
-      ),
+    const properSegments = this.network.segments.filter(
+      (s) => s.id.startsWith("ee3adb0a"),
     );
     this.trains.push(
       new Train(
-        { segment: this.network.segments[1], distanceAlong: 0, reversing: false },
+        { segment: properSegments[0], distanceAlong: 0, reversing: false },
         {
           slowdown: true,
           waitTime: 500,
           waitTimePerPassenger: 500,
-          speed: 100,
+          speed: 50,
           followingCarCount: 4,
         },
       ),

@@ -119,6 +119,10 @@ class Train implements GameObject {
     );
   }
 
+  get currentSegment() {
+    return this.#currentSegment;
+  }
+
   #moveAlongTrackSegment() {
     /**
      * Turn distance-effort into distance.
@@ -302,12 +306,18 @@ class Train implements GameObject {
   }
 
   #selectNewTrackSegment(excess: number) {
+    console.log("Leaving segment", this.#currentSegment.id.slice(0, 8), "was reversing", this.#currentlyReversing);
     const currentConnectionPoint = this.#currentlyReversing
       ? this.#currentSegment.start
       : this.#currentSegment.end;
     const candidates = this.#currentlyReversing
       ? this.#currentSegment.atStart
       : this.#currentSegment.atEnd;
+
+    console.log(
+      "Candidates",
+      candidates.map((c) => c.id.slice(0, 8)),
+    );
 
     let selectedTrack =
       candidates[Math.floor(Math.random() * candidates.length)];
@@ -342,6 +352,7 @@ class Train implements GameObject {
           candidatesByTurnDirection[candidatesByTurnDirection.length - 1]
             .segment;
       } else {
+        console.log("stay random");
         // stay random
       }
     }
@@ -353,6 +364,7 @@ class Train implements GameObject {
       0,
       selectedTrack,
     );
+    console.log("Easy Navigate result", newPos.reversing);
     const millisToProcess = (1000 * excess) / this.#speed;
     this.#currentDistanceEffort = 0;
     this.#currentDistance = 0;
@@ -364,6 +376,8 @@ class Train implements GameObject {
     this.#upcomingStations = selectedTrack.stations.slice();
     this.#currentlyReversing = newPos.reversing;
     this.#timeLeftToProcess = millisToProcess;
+    
+    console.log("selectedTrack", selectedTrack.id.slice(0, 8));
   }
 
   get nextJunction() {

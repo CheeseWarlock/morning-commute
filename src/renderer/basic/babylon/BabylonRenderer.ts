@@ -196,8 +196,8 @@ class BabylonRenderer implements IRenderer {
     const camera = new BABYLON.ArcRotateCamera(
       "Camera",
       (3 * Math.PI) / 2,
-      1,
-      200,
+      0.5,
+      700,
       new BABYLON.Vector3(
         (gameBounds.max.x + gameBounds.min.x) / 2,
         0,

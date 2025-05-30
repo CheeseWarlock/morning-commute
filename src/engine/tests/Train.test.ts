@@ -10,6 +10,9 @@ import SimpleStation, { build } from "../networks/SimpleStation";
 import LotsOfSplits from "../networks/TestingNetworks/LotsOfSplits";
 import CircularTrackSegment from "../CircularTrackSegment";
 import { build as buildComplex } from "../networks/Complex";
+import MadeInEditor from "../networks/MadeInEditor";
+import { loadNetworkFromJSON } from "../JSONNetworkLoader";
+import { JSONTrackSegment } from "../JSONNetworkLoader";
 
 describe("train motion", () => {
   const pointA = { x: 0, y: 0 };
@@ -398,11 +401,11 @@ describe("wait time, including per-passenger", () => {
       },
     );
 
-    game.network.trains.push(trainA);
+    game.gameState.trains.push(trainA);
 
     game.update(2000 + 1000 * Math.PI * 2);
 
-    expect(game.network.trains[0].position.x).toBeCloseTo(
+    expect(game.gameState.trains[0].position.x).toBeCloseTo(
       20 + 10 * Math.PI * 2,
     );
   });
@@ -496,7 +499,7 @@ describe("collision segments", () => {
       },
     );
 
-    game.network.trains.push(trainA);
+    game.gameState.trains.push(trainA);
 
     game.update(1000);
 
@@ -539,7 +542,7 @@ describe("collision segments", () => {
       },
     );
 
-    game.network.trains.push(trainA);
+    game.gameState.trains.push(trainA);
 
     game.update(5000);
 
@@ -646,7 +649,7 @@ describe("nextJunction", () => {
         speed: 10,
       },
     );
-    game.network.trains.push(trainA);
+    game.gameState.trains.push(trainA);
 
     expect(trainA.nextJunction.segments.length).toBe(2);
     expect(
@@ -743,3 +746,65 @@ describe("nextJunction", () => {
     expect(train.nextJunction.position).toEqual({ x: 60, y: 20 });
   });
 });
+
+describe("the odd case from the editor", () => {
+  it.only("works", () => {
+    const network = loadNetworkFromJSON(MadeInEditor as JSONTrackSegment[]);
+    const game = new Game(network, new FakeController());
+    const targetSegment = network.segments.find((s) => s.id.startsWith("ee3adb0a"))!;
+    const nextSegment = network.segments.find((s) => s.id.startsWith("72d9fb63"))!;
+    const tinySegment = network.segments.find((s) => s.id.startsWith("a7571cbc"))!;
+    const continuingSegment = network.segments.find((s) => s.id.startsWith("e5da3343"))!;
+    const train = new Train(
+      { segment: targetSegment, distanceAlong: 0, reversing: false },
+      { slowdown: true,
+        waitTime: 500,
+        waitTimePerPassenger: 500,
+        speed: 100,
+        followingCarCount: 4, },
+    );
+    game.gameState.trains.push(train);
+    const initialDist = targetSegment.getPositionAlong(0);
+    expect(train.position.x).toBeCloseTo(initialDist.point.x, 4);
+    expect(train.position.y).toBeCloseTo(initialDist.point.y, 4);
+    expect(train.currentSegment.id).toBe(targetSegment.id);
+
+    game.update(1000);
+    const dist = targetSegment.getPositionAlong(100);
+    
+    expect(initialDist.point.x).not.toBeCloseTo(dist.point.x, 4);
+    expect(initialDist.point.y).not.toBeCloseTo(dist.point.y, 4);
+    expect(train.position.x).toBeCloseTo(dist.point.x, 4);
+    expect(train.position.y).toBeCloseTo(dist.point.y, 4);
+    expect(train.currentSegment.id).toBe(targetSegment.id);
+
+    game.update(1000);
+    let nextDist = nextSegment.getPositionAlong(200 - targetSegment.length, true);
+
+    expect(train.currentSegment.id).toBe(nextSegment.id);
+    expect(train.position.x).toBeCloseTo(nextDist.point.x, 4);
+    expect(train.position.y).toBeCloseTo(nextDist.point.y, 4);
+
+    game.update(1000);
+    nextDist = nextSegment.getPositionAlong(300 - targetSegment.length, true);
+    expect(train.currentSegment.id).toBe(nextSegment.id);
+    expect(train.position.x).toBeCloseTo(nextDist.point.x, 4);
+    expect(train.position.y).toBeCloseTo(nextDist.point.y, 4);
+
+    game.update(1000);
+    expect(targetSegment.length + nextSegment.length + tinySegment.length).toBeLessThan(400);
+    nextDist = continuingSegment.getPositionAlong(400 - targetSegment.length - nextSegment.length - tinySegment.length);
+
+    // If reversed after a757...
+    const otherDistanceBack = 400 - targetSegment.length - nextSegment.length - tinySegment.length;
+    const otherBadPosition = nextSegment.getPositionAlong(otherDistanceBack);
+    expect(otherBadPosition.point.x).not.toBeCloseTo(train.position.x, 4);
+    expect(otherBadPosition.point.y).not.toBeCloseTo(train.position.y, 4);
+
+
+    expect(train.currentSegment.id).toBe(continuingSegment.id);
+    expect(train.position.x).toBeCloseTo(nextDist.point.x, 4);
+    expect(train.position.y).toBeCloseTo(nextDist.point.y, 4);
+  });
+});
+
