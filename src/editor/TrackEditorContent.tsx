@@ -141,10 +141,12 @@ const TrackEditorContent = ({ network, setNetwork }: {
         </div>
       )}
       {(trackEditorRef.current?.currentStateWithData.state === EDITOR_STATE.MULTI_SELECT) &&
-      <MultiSegmentDetail segments={trackEditorRef.current?.currentStateWithData.selectedSegments} selectSegment={(segment) => {
-        trackEditorRef.current?.setcurrentStateWithData({ state: EDITOR_STATE.SELECT, selectedSegment: segment });
-        setButtonBarState(EDITOR_STATE.SELECT);
-      }} />}
+      <div className="h-full overflow-hidden">
+        <MultiSegmentDetail segments={trackEditorRef.current?.currentStateWithData.selectedSegments} selectSegment={(segment) => {
+          trackEditorRef.current?.setcurrentStateWithData({ state: EDITOR_STATE.SELECT, selectedSegment: segment });
+          setButtonBarState(EDITOR_STATE.SELECT);
+        }} />
+      </div>}
       </div>
       
     </div>

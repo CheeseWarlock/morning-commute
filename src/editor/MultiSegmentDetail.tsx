@@ -3,15 +3,15 @@ import TrackSegment from "../engine/TrackSegment";
 import CircularTrackSegment from "../engine/CircularTrackSegment";
 
 const MultiSegmentDetail = ({ segments, selectSegment } : { segments: TrackSegment[], selectSegment: (segment: TrackSegment) => void }) => {
-    return <div className="flex flex-col m-4 border-2 border-zinc-300 rounded-md p-2 bg-zinc-100 w-[400px]">
+    return <div className="flex flex-col m-4 border-2 border-zinc-300 rounded-md p-2 bg-zinc-100 w-[400px] max-h-[calc(100vh-2rem)]">
     <div className="flex flex-row justify-between items-center">
       <h3 className="text-xl">{segments.length} Segment{segments.length === 1 ? "" : "s"}
       </h3>
     </div>
-    <div className="my-3">
+    <div className="overflow-y-auto max-h-[600px]">
         {segments.map(segment => {
             return (
-                <div key={segment.id} className="border rounded-lg border-zinc-300 bg-zinc-200 flex flex-col m-2 p-2 cursor-pointer" onClick={() => {
+                <div key={segment.id} className="border rounded-lg border-zinc-300 bg-zinc-200 flex flex-col m-2 p-2 cursor-pointer hover:bg-zinc-300" onClick={() => {
                   selectSegment(segment);
                 }}>
                     <div>{segment instanceof CircularTrackSegment ? "Circular" : "Linear"} {segment.id.substring(0,8)}</div>
@@ -25,8 +25,6 @@ const MultiSegmentDetail = ({ segments, selectSegment } : { segments: TrackSegme
             )
         })}
     </div>
-    
-    
   </div>
 }
 

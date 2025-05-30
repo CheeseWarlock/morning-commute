@@ -37,10 +37,16 @@ abstract class TrackSegment {
    * The UUID of this track segment.
    */
   id: string;
+  /**
+   * Gets the point along the segment at a given distance.
+   */
   abstract getPositionAlong(
     distance: number,
     reverse?: boolean,
   ): { point: Point; excess: number };
+  /**
+   * Gets the distance from a point to the nearest point on the segment.
+   */
   abstract distanceToPosition(point: Point): {
     point: Point;
     distance: number;
@@ -54,6 +60,11 @@ abstract class TrackSegment {
 
   abstract getAngleAlong(distance: number, reverse?: boolean): number;
 
+  /**
+   * Checks if any part of this segment is within a rectangle.
+   * @param from The upper left corner of the rectangle.
+   * @param to The lower right corner of the rectangle.
+   */
   abstract isWithinRectangle(from: Point, to: Point): boolean;
 
   get isWellConnected() {

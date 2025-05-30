@@ -300,10 +300,6 @@ class CircularTrackSegment extends TrackSegment {
     const endX = to.x;
     const endY = to.y;
 
-    // if (!this.id.startsWith("ec477d91")) {
-    //   return false;
-    // }
-
     const collidingPoints: Point[] = [];
 
     // check if the circle is completely within the rectangle
@@ -312,12 +308,10 @@ class CircularTrackSegment extends TrackSegment {
       return true;
     }
 
-    // find where the circle's x is startX
+    // for all 8 potential intersection points, find if they're within the rectangle
+    // could make this into a function but it's easier to read this way
     const deltaStartX = startX - this.center.x;
-    if (Math.abs(deltaStartX) > this.radius) {
-      // too far from this line
-      
-    } else {
+    if (Math.abs(deltaStartX) <= this.radius) {
       const discriminant = Math.sqrt((this.radius ** 2) - (deltaStartX ** 2));
       const plusY = this.center.y + discriminant;
       const minusY = this.center.y - discriminant;
@@ -331,10 +325,7 @@ class CircularTrackSegment extends TrackSegment {
     }
 
     const deltaStartY = startY - this.center.y;
-    if (Math.abs(deltaStartY) > this.radius) {
-      // too far from this line
-      
-    } else {
+    if (Math.abs(deltaStartY) <= this.radius) {
       const discriminant = Math.sqrt((this.radius ** 2) - (deltaStartY ** 2));
       const plusX = this.center.x + discriminant;
       const minusX = this.center.x - discriminant;
@@ -348,10 +339,7 @@ class CircularTrackSegment extends TrackSegment {
     }
 
     const deltaEndX = endX - this.center.x;
-    if (Math.abs(deltaEndX) > this.radius) {
-      // too far from this line
-      
-    } else {
+    if (Math.abs(deltaEndX) <= this.radius) {
       const discriminant = Math.sqrt((this.radius ** 2) - (deltaEndX ** 2));
       const plusY = this.center.y + discriminant;
       const minusY = this.center.y - discriminant;
@@ -365,10 +353,7 @@ class CircularTrackSegment extends TrackSegment {
     }
 
     const deltaEndY = endY - this.center.y;
-    if (Math.abs(deltaEndY) > this.radius) {
-      // too far from this line
-      
-    } else {
+    if (Math.abs(deltaEndY) <= this.radius) {
       const discriminant = Math.sqrt((this.radius ** 2) - (deltaEndY ** 2));
       const plusX = this.center.x + discriminant;
       const minusX = this.center.x - discriminant;
@@ -381,11 +366,11 @@ class CircularTrackSegment extends TrackSegment {
       }
     }
 
-    if (collidingPoints.length > 0) {
-    } else {
+    if (collidingPoints.length === 0) {
       return false;
     }
 
+    // now filter the points to only include the ones that are within the arc of the segment
     let initialAngleFromCenter = Math.atan2(
       (this.counterClockWise ? this.end : this.start).y - this.center.y,
       (this.counterClockWise ? this.end : this.start).x - this.center.x,
@@ -399,23 +384,13 @@ class CircularTrackSegment extends TrackSegment {
       finalAngleFromCenter += Math.PI * 2;
     }
 
-    const whuh = collidingPoints.map((point) => {
-      const angleToCenter = Math.atan2(point.y - this.center.y, point.x - this.center.x);
-      return angleToCenter;
-    });
-
-    const huh = collidingPoints.filter((point) => {
+    return collidingPoints.some((point) => {
       let angleToCenter = Math.atan2(point.y - this.center.y, point.x - this.center.x);
       while (angleToCenter < initialAngleFromCenter) {
         angleToCenter += Math.PI * 2;
       }
-      if (angleToCenter > initialAngleFromCenter && angleToCenter < finalAngleFromCenter) {
-        return true;
-      }
-      return false;
+      return (angleToCenter > initialAngleFromCenter && angleToCenter < finalAngleFromCenter);
     });
-
-    return huh.length > 0;
   }
 
   toJSON(): JSONTrackSegment {
