@@ -43,7 +43,7 @@ class BabylonRenderer implements IRenderer {
 
   constructor(element: HTMLElement, game: Game) {
     this.game = game;
-    console.log("BabylonRenderer constructor", game.network.trains.length);
+    console.log("BabylonRenderer constructor", game.gameState.trains.length);
     const aCanvas = document.createElement("canvas");
     aCanvas.setAttribute("id", "renderCanvas");
     aCanvas.width = 1200;
@@ -84,7 +84,7 @@ class BabylonRenderer implements IRenderer {
     );
     trainFollowingMaterial.diffuseColor = new BABYLON.Color3(1, 0.15, 1);
     this.materials.set("trainFollowing", trainFollowingMaterial);
-    game.network.trains.forEach((train) => {
+    game.gameState.trains.forEach((train) => {
       const theseSpheres: BABYLON.Mesh[] = [];
       const sphere = BABYLON.MeshBuilder.CreateSphere(
         "sphere2",
@@ -276,7 +276,7 @@ class BabylonRenderer implements IRenderer {
       b.width = 5;
     });
 
-    this.game.network.trains.forEach((train) => {
+    this.game.gameState.trains.forEach((train) => {
       this.trainNumberSprites.push(
         new BABYLON.Sprite("", this.numberSpriteManager),
       );
@@ -393,7 +393,7 @@ class BabylonRenderer implements IRenderer {
         -station.position.y - Math.cos(aa) * 5,
       );
     });
-    this.game.network.trains.forEach((train, i) => {
+    this.game.gameState.trains.forEach((train, i) => {
       const theseSpheres = this.spheres[i];
       const thisNumber = this.trainNumberSprites[i];
       thisNumber.position = new BABYLON.Vector3(

@@ -1,16 +1,12 @@
-import GameObject from "./GameObject";
-import Passenger from "./Passenger";
-import Station from "./Station";
 import TrackSegment from "./TrackSegment";
-import Train from "./Train";
+import Station from "./Station";
 import { getExtentForTrackSegment } from "./networks/trackutils";
 
 /**
  * A set of Track Segments and other gameplay elements.
  */
-class Network implements GameObject {
+class Network {
   segments: TrackSegment[] = [];
-  trains: Train[] = [];
   stations: Station[] = [];
 
   constructor(segments?: TrackSegment[], stations?: Station[]) {
@@ -56,42 +52,6 @@ class Network implements GameObject {
       min: { x: minX, y: minY },
       max: { x: maxX, y: maxY },
     };
-  }
-
-  update(deltaT: number) {
-    this.generatePassengers();
-    this.trains.forEach((t) => t.update(deltaT));
-  }
-
-  /**
-   * This is currently a VERY naive implementation.
-   */
-  detectCollisions() {
-    this.trains.forEach((t1) => {
-      this.trains.forEach((t2) => {
-        if (t1 !== t2) {
-          const d = Math.sqrt(
-            (t1.position.x - t2.position.x) ** 2 +
-              (t1.position.y - t2.position.y) ** 2,
-          );
-          if (d < 10) {
-            t1.passengers = [];
-            t2.passengers = [];
-          }
-        }
-      });
-    });
-  }
-
-  generatePassengers() {
-    this.stations.forEach((station) => {
-      if (Math.random() > 0.995) {
-        const destinations = this.stations.filter((s) => s !== station);
-        const destination =
-          destinations[Math.floor(Math.random() * destinations.length)];
-        station.waitingPassengers.push(new Passenger(station, destination));
-      }
-    });
   }
 }
 
