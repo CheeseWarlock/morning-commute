@@ -10,7 +10,7 @@ class RendererCoordinator {
     this.game = game;
     this.renderers = renderers;
     requestAnimationFrame((cb) => {
-      // this.#lastTime = cb;
+      this.#lastTime = cb;
       this.update(0);
     });
   }

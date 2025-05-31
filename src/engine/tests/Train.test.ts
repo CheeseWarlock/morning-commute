@@ -748,7 +748,7 @@ describe("nextJunction", () => {
 });
 
 describe("the odd case from the editor", () => {
-  it.only("works", () => {
+  it("works", () => {
     const network = loadNetworkFromJSON(MadeInEditor as JSONTrackSegment[]);
     const game = new Game(network, new FakeController());
     const targetSegment = network.segments.find((s) => s.id.startsWith("ee3adb0a"))!;

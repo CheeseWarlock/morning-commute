@@ -25,9 +25,9 @@ class GameState {
         { segment: properSegments[0], distanceAlong: 0, reversing: false },
         {
           slowdown: true,
-          waitTime: 500,
+          waitTime: 2000,
           waitTimePerPassenger: 500,
-          speed: 50,
+          speed: 100,
           followingCarCount: 4,
         },
       ),
