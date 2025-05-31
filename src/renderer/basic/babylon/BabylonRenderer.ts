@@ -376,10 +376,13 @@ class BabylonRenderer implements IRenderer {
 
   update() {
     this.game.network.stations.forEach((station, i) => {
+      const waitingPassengers = this.game.gameState.waitingPassengers.get(
+        station,
+      )!;
       this.stationNumberSprites[i][0].cellIndex =
-        (station.waitingPassengers.length + 9) % 10;
+        (waitingPassengers.length + 9) % 10;
       this.stationNumberSprites[i][1].cellIndex =
-        (Math.floor(station.waitingPassengers.length / 10) + 9) % 10;
+        (Math.floor(waitingPassengers.length / 10) + 9) % 10;
 
       this.stationNumberSprites[i][0].position = new BABYLON.Vector3(
         station.position.x,

@@ -8,9 +8,11 @@ class GameState {
   network: Network;
   trains: Train[] = [];
   waitingPassengers: Map<Station, Passenger[]> = new Map();
+  autoGeneratePassengers: boolean = true;
 
-  constructor(network: Network) {
+  constructor(network: Network, autoGeneratePassengers: boolean = true) {
     this.network = network;
+    this.autoGeneratePassengers = autoGeneratePassengers;
     this.network.stations.forEach(station => {
       this.waitingPassengers.set(station, []);
     });
@@ -30,12 +32,15 @@ class GameState {
           speed: 100,
           followingCarCount: 4,
         },
+        this,
       ),
     );
   }
 
   update(deltaT: number) {
-    this.generatePassengers();
+    if (this.autoGeneratePassengers) {
+      this.generatePassengers();
+    }
     this.trains.forEach((t) => t.update(deltaT));
   }
 

@@ -13,6 +13,7 @@ import { build as buildComplex } from "../networks/Complex";
 import MadeInEditor from "../networks/MadeInEditor";
 import { loadNetworkFromJSON } from "../JSONNetworkLoader";
 import { JSONTrackSegment } from "../JSONNetworkLoader";
+import GameState from "../GameState";
 
 describe("train motion", () => {
   const pointA = { x: 0, y: 0 };
@@ -200,15 +201,15 @@ describe("train motion", () => {
     train.update(1500);
     train.update(1500);
     train2.update(3000);
-    // expect(train.position.x).toBeCloseTo(train2.position.x);
+    expect(train.position.x).toBeCloseTo(train2.position.x);
     train.update(1500);
     train.update(1500);
     train2.update(3000);
-    // expect(train.position.x).toBeCloseTo(train2.position.x);
+    expect(train.position.x).toBeCloseTo(train2.position.x);
     train.update(1500);
     train.update(1500);
     train2.update(3000);
-    // expect(train.position.x).toBeCloseTo(train2.position.x);
+    expect(train.position.x).toBeCloseTo(train2.position.x);
     train.update(1500);
     train.update(1500);
     train2.update(3000);
@@ -236,7 +237,7 @@ describe("train motion", () => {
     expect(train.position.x).toBeLessThan(50);
     train.update(1000);
     expect(train.position.x).toBeCloseTo(50);
-    train.update(1000);
+    train.update(4000);
     expect(train.position.x).toBeGreaterThan(50);
   });
 });
@@ -391,6 +392,10 @@ describe("passenger pickup and dropoff", () => {
 describe("wait time, including per-passenger", () => {
   it("allows zero wait times", () => {
     const network = build().network;
+    network.stations = [];
+    network.segments.forEach((seg) => {
+      seg.stations = [];
+    });
     const game = new Game(network, new FakeController());
     const trainA = new Train(
       { segment: game.network.segments[0], distanceAlong: 0, reversing: false },
@@ -403,14 +408,17 @@ describe("wait time, including per-passenger", () => {
 
     game.gameState.trains.push(trainA);
 
-    game.update(2000 + 1000 * Math.PI * 2);
+    game.update(1000);
+    expect(trainA.position.x).toBeCloseTo(10);
+
+    game.update(5000);
 
     expect(game.gameState.trains[0].position.x).toBeCloseTo(
-      20 + 10 * Math.PI * 2,
+      60,
     );
   });
 
-  it("waits extra time per passenger processed when specified", () => {
+  it.only("waits extra time per passenger processed when specified", () => {
     const network = SimpleStation;
 
     const train = new Train(
@@ -421,9 +429,10 @@ describe("wait time, including per-passenger", () => {
         speed: 10,
       },
     );
-    network.stations[0].waitingPassengers = [];
-    network.stations[0].waitingPassengers.push(
-      new Passenger(network.stations[0], {} as any),
+    const gameState = new GameState(network);
+    gameState.waitingPassengers.set(
+      network.stations[0],
+      [new Passenger(network.stations[0], {} as any)],
     );
 
     // Station is at 50

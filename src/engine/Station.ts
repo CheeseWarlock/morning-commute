@@ -1,4 +1,3 @@
-import Passenger from "./Passenger";
 import TrackSegment from "./TrackSegment";
 
 /**
@@ -14,7 +13,6 @@ export enum ALIGNMENT {
  * A place where Passengers are picked up and dropped off.
  */
 class Station {
-  waitingPassengers: Passenger[] = [];
   trackSegment: TrackSegment;
   distanceAlong: number;
   alignment: ALIGNMENT;
