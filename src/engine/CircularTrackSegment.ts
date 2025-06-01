@@ -303,8 +303,12 @@ class CircularTrackSegment extends TrackSegment {
     const collidingPoints: Point[] = [];
 
     // check if the circle is completely within the rectangle
-    if (this.center.x - this.radius >= startX && this.center.x + this.radius <= endX &&
-      this.center.y - this.radius >= startY && this.center.y + this.radius <= endY) {
+    if (
+      this.center.x - this.radius >= startX &&
+      this.center.x + this.radius <= endX &&
+      this.center.y - this.radius >= startY &&
+      this.center.y + this.radius <= endY
+    ) {
       return true;
     }
 
@@ -312,7 +316,7 @@ class CircularTrackSegment extends TrackSegment {
     // could make this into a function but it's easier to read this way
     const deltaStartX = startX - this.center.x;
     if (Math.abs(deltaStartX) <= this.radius) {
-      const discriminant = Math.sqrt((this.radius ** 2) - (deltaStartX ** 2));
+      const discriminant = Math.sqrt(this.radius ** 2 - deltaStartX ** 2);
       const plusY = this.center.y + discriminant;
       const minusY = this.center.y - discriminant;
 
@@ -326,7 +330,7 @@ class CircularTrackSegment extends TrackSegment {
 
     const deltaStartY = startY - this.center.y;
     if (Math.abs(deltaStartY) <= this.radius) {
-      const discriminant = Math.sqrt((this.radius ** 2) - (deltaStartY ** 2));
+      const discriminant = Math.sqrt(this.radius ** 2 - deltaStartY ** 2);
       const plusX = this.center.x + discriminant;
       const minusX = this.center.x - discriminant;
 
@@ -340,7 +344,7 @@ class CircularTrackSegment extends TrackSegment {
 
     const deltaEndX = endX - this.center.x;
     if (Math.abs(deltaEndX) <= this.radius) {
-      const discriminant = Math.sqrt((this.radius ** 2) - (deltaEndX ** 2));
+      const discriminant = Math.sqrt(this.radius ** 2 - deltaEndX ** 2);
       const plusY = this.center.y + discriminant;
       const minusY = this.center.y - discriminant;
 
@@ -354,7 +358,7 @@ class CircularTrackSegment extends TrackSegment {
 
     const deltaEndY = endY - this.center.y;
     if (Math.abs(deltaEndY) <= this.radius) {
-      const discriminant = Math.sqrt((this.radius ** 2) - (deltaEndY ** 2));
+      const discriminant = Math.sqrt(this.radius ** 2 - deltaEndY ** 2);
       const plusX = this.center.x + discriminant;
       const minusX = this.center.x - discriminant;
 
@@ -385,17 +389,29 @@ class CircularTrackSegment extends TrackSegment {
     }
 
     return collidingPoints.some((point) => {
-      let angleToCenter = Math.atan2(point.y - this.center.y, point.x - this.center.x);
+      let angleToCenter = Math.atan2(
+        point.y - this.center.y,
+        point.x - this.center.x,
+      );
       while (angleToCenter < initialAngleFromCenter) {
         angleToCenter += Math.PI * 2;
       }
-      return (angleToCenter > initialAngleFromCenter && angleToCenter < finalAngleFromCenter);
+      return (
+        angleToCenter > initialAngleFromCenter &&
+        angleToCenter < finalAngleFromCenter
+      );
     });
   }
 
   toJSON(): JSONTrackSegment {
-    const stations = this.stations.length > 0 ? this.stations.map((station) => ({ distanceAlong: station.distanceAlong, alignment: station.alignment })) : undefined;
-    return ({
+    const stations =
+      this.stations.length > 0
+        ? this.stations.map((station) => ({
+            distanceAlong: station.distanceAlong,
+            alignment: station.alignment,
+          }))
+        : undefined;
+    return {
       id: this.id,
       start: this.start,
       end: this.end,
@@ -404,7 +420,8 @@ class CircularTrackSegment extends TrackSegment {
       atStart: this.atStart.map((seg) => seg.id),
       atEnd: this.atEnd.map((seg) => seg.id),
       stations: stations,
-    });
+      trainStartPositions: this.trainStartPositions,
+    };
   }
 }
 

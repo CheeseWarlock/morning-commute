@@ -1,7 +1,4 @@
-import {
-  distanceEffortToDistance,
-  getNextJunction,
-} from "../utils";
+import { distanceEffortToDistance, getNextJunction } from "../utils";
 import CircularTrackSegment from "./CircularTrackSegment";
 import { TRAIN_STRATEGIES } from "./Game";
 import GameObject from "./GameObject";
@@ -121,6 +118,10 @@ class Train implements GameObject {
       this.followingCars.push(new TrainFollowingCar(this.position));
       _followingCarCount -= 1;
     }
+
+    if (this.#currentSegment.stations.length) {
+      this.#hasStoppedAtStationThisSegment = true;
+    }
   }
 
   get heading() {
@@ -164,10 +165,10 @@ class Train implements GameObject {
 
     // The physical distance we WANT to move
     // If there's no stations, this will be equal to distanceEffortToMove
-    const physicalDistanceAfterThisUpdate = distanceEffortFunction(this.#currentDistanceEffort + distanceEffortToMove);
+    const physicalDistanceAfterThisUpdate = distanceEffortFunction(
+      this.#currentDistanceEffort + distanceEffortToMove,
+    );
     // TODO: Distance effort function is over the total segment length, not the amount we're moving this update
-
-
 
     if (this.#currentSegment.stations.length) {
       // There's a station around here
@@ -178,8 +179,8 @@ class Train implements GameObject {
       const stationDistanceEffort = stationDistance + (this.#slowdown ? 8 : 0);
 
       const isArrivingAtStation =
-        this.#currentDistanceEffort + distanceEffortToMove >= stationDistanceEffort &&
-        !this.#hasStoppedAtStationThisSegment;
+        this.#currentDistanceEffort + distanceEffortToMove >=
+          stationDistanceEffort && !this.#hasStoppedAtStationThisSegment;
 
       if (isArrivingAtStation) {
         this.#addToCollisionSegments(
@@ -193,19 +194,18 @@ class Train implements GameObject {
           stationDistanceEffort - this.#currentDistanceEffort;
         const millisToStation = (1000 * distanceEffortToStation) / this.#speed;
         const distanceMoved = stationDistance - this.#currentDistance;
-        
+
         this.#timeLeftToProcess -= millisToStation;
         this.#currentDistanceEffort = stationDistanceEffort;
         this.#currentDistance = stationDistance;
-        this.#stopTime =
-          this.#waitTime;
+        this.#stopTime = this.#waitTime;
         this.state = TRAIN_STATE.STOPPED_AT_STATION;
         this.#hasStoppedAtStationThisSegment = true;
-        
+
         return distanceMoved;
       }
     }
-    
+
     if (physicalDistanceAfterThisUpdate > this.#currentSegment.length) {
       // Move to end of segment and go to next segment
       this.#addToCollisionSegments(
@@ -214,8 +214,9 @@ class Train implements GameObject {
         Math.min(physicalDistanceAfterThisUpdate, this.#currentSegment.length),
         this.#currentlyReversing,
       );
-      const excessDistance = physicalDistanceAfterThisUpdate - this.#currentSegment.length;
-      this.#timeLeftToProcess = excessDistance * 1000 / this.#speed;
+      const excessDistance =
+        physicalDistanceAfterThisUpdate - this.#currentSegment.length;
+      this.#timeLeftToProcess = (excessDistance * 1000) / this.#speed;
       this.#selectNewTrackSegment();
       return distanceEffortToMove - excessDistance;
     } else {
@@ -226,7 +227,8 @@ class Train implements GameObject {
         Math.min(physicalDistanceAfterThisUpdate, this.#currentSegment.length),
         this.#currentlyReversing,
       );
-      const distanceMoved = physicalDistanceAfterThisUpdate - this.#currentDistance;
+      const distanceMoved =
+        physicalDistanceAfterThisUpdate - this.#currentDistance;
       this.#currentDistance = physicalDistanceAfterThisUpdate;
       this.#currentDistanceEffort += distanceEffortToMove;
       this.#timeLeftToProcess = 0;
@@ -281,6 +283,9 @@ class Train implements GameObject {
 
   #isPassengerToHandle() {
     const station = this.#upcomingStations[0];
+    if (!station) {
+      console.log("Shouyldn't happen");
+    }
     const passengerToDropOff = this.passengers.find(
       (p) => p.destination === station,
     );
@@ -311,7 +316,10 @@ class Train implements GameObject {
   }
 
   #selectNewTrackSegment() {
-    this.#previousSegments.push({ segment: this.#currentSegment, reversing: this.#currentlyReversing });
+    this.#previousSegments.push({
+      segment: this.#currentSegment,
+      reversing: this.#currentlyReversing,
+    });
     const currentSegment = this.#currentSegment;
     const currentConnectionPoint = this.#currentlyReversing
       ? this.#currentSegment.start
@@ -362,7 +370,7 @@ class Train implements GameObject {
     this.#currentSegment = selectedTrack;
     this.#upcomingStations = selectedTrack.stations.slice();
     this.#hasStoppedAtStationThisSegment = false;
-    
+
     this.#currentlyReversing = selectedTrack.atEnd.includes(currentSegment);
   }
 

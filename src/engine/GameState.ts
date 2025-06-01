@@ -12,28 +12,33 @@ class GameState {
   constructor(network: Network, autoGeneratePassengers: boolean = true) {
     this.network = network;
     this.autoGeneratePassengers = autoGeneratePassengers;
-    this.network.stations.forEach(station => {
+    this.network.stations.forEach((station) => {
       this.waitingPassengers.set(station, []);
     });
   }
 
   initializeTrains() {
-    const properSegments = this.network.segments.filter(
-      (s) => s.id.startsWith("ee3adb0a"),
-    );
-    this.trains.push(
-      new Train(
-        { segment: properSegments[0], distanceAlong: 0, reversing: false },
-        {
-          slowdown: true,
-          waitTime: 2000,
-          waitTimePerPassenger: 500,
-          speed: 100,
-          followingCarCount: 4,
-        },
-        this,
-      ),
-    );
+    this.network.segments.forEach((seg) => {
+      seg.trainStartPositions.forEach((startPosition) => {
+        this.trains.push(
+          new Train(
+            {
+              segment: seg,
+              distanceAlong: startPosition.distanceAlong,
+              reversing: startPosition.reverse,
+            },
+            {
+              slowdown: true,
+              waitTime: 2000,
+              waitTimePerPassenger: 500,
+              speed: 100,
+              followingCarCount: 4,
+            },
+            this,
+          ),
+        );
+      });
+    });
   }
 
   update(deltaT: number) {
@@ -76,4 +81,4 @@ class GameState {
   }
 }
 
-export default GameState; 
+export default GameState;

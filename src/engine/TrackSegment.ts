@@ -53,6 +53,7 @@ abstract class TrackSegment {
     distanceAlong: number;
     alignment: ALIGNMENT;
   };
+  trainStartPositions: { distanceAlong: number; reverse: boolean }[] = [];
 
   constructor() {
     this.id = uuidv4();

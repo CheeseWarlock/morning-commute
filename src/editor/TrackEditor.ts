@@ -72,6 +72,10 @@ export enum EDITOR_STATE {
    * Selecting multiple segments
    */
   MULTI_SELECT = "MULTI_SELECT",
+  /**
+   * Adding a train start position
+   */
+  SET_START_POSITION = "SET_START_POSITION",
 }
 
 type EDITOR_STATE_PAYLOADS =
@@ -129,6 +133,9 @@ type EDITOR_STATE_PAYLOADS =
       state: EDITOR_STATE.DRAG_SELECT;
       /** Drag start point in screen coordinates */
       dragStartPoint?: Point;
+    }
+  | {
+      state: EDITOR_STATE.SET_START_POSITION;
     };
 
 const SELECTION_DISTANCE_PIXELS = 15;
@@ -201,23 +208,23 @@ class TrackEditor {
         case EDITOR_STATE.PAN: {
           const { dragStartPoint, originalOffset } = this.currentStateWithData;
           if (!dragStartPoint || !originalOffset) return;
-          
+
           const dragVector = {
             x: this.mousePos!.x - dragStartPoint.x,
             y: this.mousePos!.y - dragStartPoint.y,
           };
-          
+
           // Convert screen drag vector to game coordinates by just dividing by scale
           const dragVectorGamePosition = {
             x: dragVector.x / this.#scale,
             y: dragVector.y / this.#scale,
           };
-          
+
           this.#offset = {
             x: originalOffset.x + dragVectorGamePosition.x,
             y: originalOffset.y + dragVectorGamePosition.y,
           };
-          
+
           this.update();
           break;
         }
@@ -230,17 +237,31 @@ class TrackEditor {
           if (pointType === SELECTION_TYPE.START && !canMoveStart) return;
           if (pointType === SELECTION_TYPE.END && !canMoveEnd) return;
 
-          const selectedPoint = pointType === SELECTION_TYPE.START ? segment.start : segment.end;
+          const selectedPoint =
+            pointType === SELECTION_TYPE.START ? segment.start : segment.end;
 
           if (segment instanceof LinearTrackSegment) {
             if (canMoveStart && canMoveEnd) {
               selectedPoint.x = gamePosition.x;
               selectedPoint.y = gamePosition.y;
             } else {
-              const line1 = { x1: segment.start.x, y1: segment.start.y, x2: segment.end.x, y2: segment.end.y };
-              const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
+              const line1 = {
+                x1: segment.start.x,
+                y1: segment.start.y,
+                x2: segment.end.x,
+                y2: segment.end.y,
+              };
+              const angle = Math.atan2(
+                line1.y2 - line1.y1,
+                line1.x2 - line1.x1,
+              );
               const perpendicularAngle = angle + Math.PI / 2;
-              const line2 = { x1: gamePosition.x, y1: gamePosition.y, x2: gamePosition.x + Math.cos(perpendicularAngle), y2: gamePosition.y + Math.sin(perpendicularAngle) };
+              const line2 = {
+                x1: gamePosition.x,
+                y1: gamePosition.y,
+                x2: gamePosition.x + Math.cos(perpendicularAngle),
+                y2: gamePosition.y + Math.sin(perpendicularAngle),
+              };
               const intersection = getIntersection(line1, line2);
               if (intersection) {
                 selectedPoint.x = intersection.x;
@@ -276,23 +297,29 @@ class TrackEditor {
         }
 
         case EDITOR_STATE.MOVE_SEGMENT: {
-          const { segment, dragStartPoint, originalStart, originalEnd, originalCenter } = this.currentStateWithData;
+          const {
+            segment,
+            dragStartPoint,
+            originalStart,
+            originalEnd,
+            originalCenter,
+          } = this.currentStateWithData;
           const gamePosition = this.untransformPosition(this.mousePos);
           const dragVector = {
             x: gamePosition.x - dragStartPoint.x,
             y: gamePosition.y - dragStartPoint.y,
           };
-          
+
           segment.start.x = originalStart.x + dragVector.x;
           segment.start.y = originalStart.y + dragVector.y;
           segment.end.x = originalEnd.x + dragVector.x;
           segment.end.y = originalEnd.y + dragVector.y;
-          
+
           if (segment instanceof CircularTrackSegment && originalCenter) {
             segment.center.x = originalCenter.x + dragVector.x;
             segment.center.y = originalCenter.y + dragVector.y;
           }
-          
+
           this.dispatchUpdate();
           break;
         }
@@ -307,195 +334,242 @@ class TrackEditor {
     canvas.onmousedown = () => {
       if (!this.mousePos) return;
       const gamePosition = this.untransformPosition(this.mousePos);
-      
-      switch (this.currentStateWithData.state) {
-        case EDITOR_STATE.SELECT:
-          {
-            if (this.#hoverSegment) {
-              this.#onSelect?.(this.#hoverSegment);
-              this.update();
 
-              if (this.#hoverSelectionType === SELECTION_TYPE.SEGMENT) {
-                // Only allow moving segments with no connections
-                const canMoveSegment = this.#hoverSegment.atStart.length === 0 && this.#hoverSegment.atEnd.length === 0;
-                if (canMoveSegment) {
-                  const gamePosition = this.untransformPosition(this.mousePos);
-                  this.setcurrentStateWithData({
-                    state: EDITOR_STATE.MOVE_SEGMENT,
-                    segment: this.#hoverSegment,
-                    dragStartPoint: gamePosition,
-                    originalStart: {...this.#hoverSegment.start},
-                    originalEnd: {...this.#hoverSegment.end},
-                    originalCenter: this.#hoverSegment instanceof CircularTrackSegment ? {...this.#hoverSegment.center} : undefined,
-                  });
-                } else {
-                  // Just select it if we can't move it
-                  this.setcurrentStateWithData({
-                    state: EDITOR_STATE.SELECT,
-                    selectedSegment: this.#hoverSegment,
-                    selectionType: this.#hoverSelectionType,
-                  });
-                }
-              } else if (this.#hoverSelectionType === SELECTION_TYPE.START || this.#hoverSelectionType === SELECTION_TYPE.END) {
+      switch (this.currentStateWithData.state) {
+        case EDITOR_STATE.SELECT: {
+          if (this.#hoverSegment) {
+            this.#onSelect?.(this.#hoverSegment);
+            this.update();
+
+            if (this.#hoverSelectionType === SELECTION_TYPE.SEGMENT) {
+              // Only allow moving segments with no connections
+              const canMoveSegment =
+                this.#hoverSegment.atStart.length === 0 &&
+                this.#hoverSegment.atEnd.length === 0;
+              if (canMoveSegment) {
+                const gamePosition = this.untransformPosition(this.mousePos);
                 this.setcurrentStateWithData({
-                  state: EDITOR_STATE.MOVE_POINT,
+                  state: EDITOR_STATE.MOVE_SEGMENT,
                   segment: this.#hoverSegment,
-                  pointType: this.#hoverSelectionType,
+                  dragStartPoint: gamePosition,
+                  originalStart: { ...this.#hoverSegment.start },
+                  originalEnd: { ...this.#hoverSegment.end },
+                  originalCenter:
+                    this.#hoverSegment instanceof CircularTrackSegment
+                      ? { ...this.#hoverSegment.center }
+                      : undefined,
                 });
               } else {
+                // Just select it if we can't move it
                 this.setcurrentStateWithData({
                   state: EDITOR_STATE.SELECT,
                   selectedSegment: this.#hoverSegment,
                   selectionType: this.#hoverSelectionType,
                 });
               }
+            } else if (
+              this.#hoverSelectionType === SELECTION_TYPE.START ||
+              this.#hoverSelectionType === SELECTION_TYPE.END
+            ) {
+              this.setcurrentStateWithData({
+                state: EDITOR_STATE.MOVE_POINT,
+                segment: this.#hoverSegment,
+                pointType: this.#hoverSelectionType,
+              });
             } else {
-              // Clicked on nothing - start panning
-              this.setcurrentStateWithData({
-                state: EDITOR_STATE.PAN,
-                dragStartPoint: this.mousePos,
-                originalOffset: { ...this.#offset },
-              });
-              this.#canvas.style.cursor = "grabbing";
-            }
-            break;
-          }
-        case EDITOR_STATE.CREATE_LINEAR_SEGMENT_START:
-          {
-            const isLockedToSegment = this.#hoverSegment && this.#hoverSelectionType !== SELECTION_TYPE.SEGMENT;
-            this.setcurrentStateWithData({
-              state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END,
-              lockedToSegment: isLockedToSegment ? this.#hoverSegment : undefined,
-              lockedToEnd: isLockedToSegment ? this.#hoverSelectionType === SELECTION_TYPE.END ? SELECTION_TYPE.END : SELECTION_TYPE.START : undefined,
-              segmentStart: {
-                x: isLockedToSegment ? this.#hoverSelectionType === SELECTION_TYPE.START ? this.#hoverSegment!.start.x : this.#hoverSegment!.end.x : gamePosition.x,
-                y: isLockedToSegment ? this.#hoverSelectionType === SELECTION_TYPE.START ? this.#hoverSegment!.start.y : this.#hoverSegment!.end.y : gamePosition.y,
-              },
-            });
-            break;
-          }
-
-        case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END:
-          {
-            const previewSegment = new LinearTrackSegment(this.currentStateWithData.segmentStart, gamePosition);
-
-            // If we're locked to a segment, constrain the angle
-            if (this.currentStateWithData.lockedToSegment && this.currentStateWithData.lockedToEnd) {
-              const lockedSegment = this.currentStateWithData.lockedToSegment;
-              const angle = this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START ? 
-                lockedSegment.initialAngle + Math.PI : 
-                lockedSegment.finalAngle;
-              
-              // Calculate the distance from the start point to the mouse
-              const dx = gamePosition.x - this.currentStateWithData.segmentStart.x;
-              const dy = gamePosition.y - this.currentStateWithData.segmentStart.y;
-              const distance = Math.sqrt(dx * dx + dy * dy);
-              
-              // Set the end point using the locked angle and calculated distance
-              previewSegment.end.x = this.currentStateWithData.segmentStart.x + Math.cos(angle) * distance;
-              previewSegment.end.y = this.currentStateWithData.segmentStart.y + Math.sin(angle) * distance;
-            }
-
-            this.network.segments.push(previewSegment);
-            this.dispatchUpdate();
-            this.setcurrentStateWithData({
-              state: EDITOR_STATE.SELECT,
-            });
-            break;
-          }
-
-        case EDITOR_STATE.CREATE_CONNECTION_START:
-          {
-            if (
-              this.#hoverSegment &&
-              (this.#hoverSelectionType === SELECTION_TYPE.START ||
-                this.#hoverSelectionType === SELECTION_TYPE.END)
-            ) {
-              this.setcurrentStateWithData({
-                state: EDITOR_STATE.CREATE_CONNECTION_END,
-                connectionSegment: this.#hoverSegment,
-                connectedAtEnd: this.#hoverSelectionType === SELECTION_TYPE.END,
-              });
-            }
-            break;
-          }
-
-        case EDITOR_STATE.CREATE_CONNECTION_END:
-          {
-            if (
-              this.#hoverSegment &&
-              (this.#hoverSelectionType === SELECTION_TYPE.START ||
-                this.#hoverSelectionType === SELECTION_TYPE.END)
-            ) {
-              const newSegments = connectSegments(
-                this.currentStateWithData.connectionSegment,
-                this.currentStateWithData.connectedAtEnd,
-                this.#hoverSegment,
-                this.#hoverSelectionType === SELECTION_TYPE.END,
-              );
-
-              newSegments[0].connect(this.currentStateWithData.connectionSegment);
-              newSegments[0].connect(this.#hoverSegment);
-              if (newSegments[1]) {
-                newSegments[0].connect(newSegments[1]);
-                newSegments[1].connect(this.#hoverSegment);
-                newSegments[1].connect(this.currentStateWithData.connectionSegment);
-              }
-              this.network.segments.push(...newSegments);
-              this.dispatchUpdate();
-
-              this.setcurrentStateWithData({
-                state: EDITOR_STATE.SELECT,
-              });
-            } else if (this.#hoverSegment) {
               this.setcurrentStateWithData({
                 state: EDITOR_STATE.SELECT,
                 selectedSegment: this.#hoverSegment,
                 selectionType: this.#hoverSelectionType,
               });
             }
-            break;
-          }
-
-        case EDITOR_STATE.CREATE_STATION:
-          {
-            if (!this.#hoverSegment) break;
-            if (!this.mousePos) break;
-            const stationGamePosition = this.untransformPosition(this.mousePos);
-            const closestPoint = this.#hoverSegment.distanceToPosition({
-              x: stationGamePosition.x,
-              y: stationGamePosition.y,
-            });
-            const newStation = new Station(
-              this.#hoverSegment,
-              closestPoint.distanceAlong * this.#hoverSegment.length,
-              closestPoint.alignment,
-            );
-            this.network.stations.push(newStation);
-            this.#hoverSegment.stations.push(newStation);
-            this.dispatchUpdate();
-            break;
-          }
-
-        case EDITOR_STATE.DRAG_SELECT:
-          {
-            const startPoint = this.mousePos;
-            if (!startPoint) return;
+          } else {
+            // Clicked on nothing - start panning
             this.setcurrentStateWithData({
-              state: EDITOR_STATE.DRAG_SELECT,
-              dragStartPoint: startPoint,
+              state: EDITOR_STATE.PAN,
+              dragStartPoint: this.mousePos,
+              originalOffset: { ...this.#offset },
             });
-            break;
+            this.#canvas.style.cursor = "grabbing";
+          }
+          break;
+        }
+        case EDITOR_STATE.CREATE_LINEAR_SEGMENT_START: {
+          const isLockedToSegment =
+            this.#hoverSegment &&
+            this.#hoverSelectionType !== SELECTION_TYPE.SEGMENT;
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END,
+            lockedToSegment: isLockedToSegment ? this.#hoverSegment : undefined,
+            lockedToEnd: isLockedToSegment
+              ? this.#hoverSelectionType === SELECTION_TYPE.END
+                ? SELECTION_TYPE.END
+                : SELECTION_TYPE.START
+              : undefined,
+            segmentStart: {
+              x: isLockedToSegment
+                ? this.#hoverSelectionType === SELECTION_TYPE.START
+                  ? this.#hoverSegment!.start.x
+                  : this.#hoverSegment!.end.x
+                : gamePosition.x,
+              y: isLockedToSegment
+                ? this.#hoverSelectionType === SELECTION_TYPE.START
+                  ? this.#hoverSegment!.start.y
+                  : this.#hoverSegment!.end.y
+                : gamePosition.y,
+            },
+          });
+          break;
+        }
+
+        case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END: {
+          const previewSegment = new LinearTrackSegment(
+            this.currentStateWithData.segmentStart,
+            gamePosition,
+          );
+
+          // If we're locked to a segment, constrain the angle
+          if (
+            this.currentStateWithData.lockedToSegment &&
+            this.currentStateWithData.lockedToEnd
+          ) {
+            const lockedSegment = this.currentStateWithData.lockedToSegment;
+            const angle =
+              this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START
+                ? lockedSegment.initialAngle + Math.PI
+                : lockedSegment.finalAngle;
+
+            // Calculate the distance from the start point to the mouse
+            const dx =
+              gamePosition.x - this.currentStateWithData.segmentStart.x;
+            const dy =
+              gamePosition.y - this.currentStateWithData.segmentStart.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Set the end point using the locked angle and calculated distance
+            previewSegment.end.x =
+              this.currentStateWithData.segmentStart.x +
+              Math.cos(angle) * distance;
+            previewSegment.end.y =
+              this.currentStateWithData.segmentStart.y +
+              Math.sin(angle) * distance;
           }
 
-        case EDITOR_STATE.QUERY_POINT:
-          {
-            const point = this.mousePos;
-            if (!point) return;
-            
-            const gameSelectionDistance = SELECTION_DISTANCE_PIXELS / this.#scale;
-            const segments = this.network.segments.filter((segment) => {
-            const distanceToLine = segment.distanceToPosition(gamePosition).distance;
+          this.network.segments.push(previewSegment);
+          this.dispatchUpdate();
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.SELECT,
+          });
+          break;
+        }
+
+        case EDITOR_STATE.CREATE_CONNECTION_START: {
+          if (
+            this.#hoverSegment &&
+            (this.#hoverSelectionType === SELECTION_TYPE.START ||
+              this.#hoverSelectionType === SELECTION_TYPE.END)
+          ) {
+            this.setcurrentStateWithData({
+              state: EDITOR_STATE.CREATE_CONNECTION_END,
+              connectionSegment: this.#hoverSegment,
+              connectedAtEnd: this.#hoverSelectionType === SELECTION_TYPE.END,
+            });
+          }
+          break;
+        }
+
+        case EDITOR_STATE.CREATE_CONNECTION_END: {
+          if (
+            this.#hoverSegment &&
+            (this.#hoverSelectionType === SELECTION_TYPE.START ||
+              this.#hoverSelectionType === SELECTION_TYPE.END)
+          ) {
+            const newSegments = connectSegments(
+              this.currentStateWithData.connectionSegment,
+              this.currentStateWithData.connectedAtEnd,
+              this.#hoverSegment,
+              this.#hoverSelectionType === SELECTION_TYPE.END,
+            );
+
+            newSegments[0].connect(this.currentStateWithData.connectionSegment);
+            newSegments[0].connect(this.#hoverSegment);
+            if (newSegments[1]) {
+              newSegments[0].connect(newSegments[1]);
+              newSegments[1].connect(this.#hoverSegment);
+              newSegments[1].connect(
+                this.currentStateWithData.connectionSegment,
+              );
+            }
+            this.network.segments.push(...newSegments);
+            this.dispatchUpdate();
+
+            this.setcurrentStateWithData({
+              state: EDITOR_STATE.SELECT,
+            });
+          } else if (this.#hoverSegment) {
+            this.setcurrentStateWithData({
+              state: EDITOR_STATE.SELECT,
+              selectedSegment: this.#hoverSegment,
+              selectionType: this.#hoverSelectionType,
+            });
+          }
+          break;
+        }
+
+        case EDITOR_STATE.CREATE_STATION: {
+          if (!this.#hoverSegment) break;
+          if (!this.mousePos) break;
+          const stationGamePosition = this.untransformPosition(this.mousePos);
+          const closestPoint = this.#hoverSegment.distanceToPosition({
+            x: stationGamePosition.x,
+            y: stationGamePosition.y,
+          });
+          const newStation = new Station(
+            this.#hoverSegment,
+            closestPoint.distanceAlong * this.#hoverSegment.length,
+            closestPoint.alignment,
+          );
+          this.network.stations.push(newStation);
+          this.#hoverSegment.stations.push(newStation);
+          this.dispatchUpdate();
+          break;
+        }
+
+        case EDITOR_STATE.SET_START_POSITION: {
+          if (!this.#hoverSegment) break;
+          if (!this.mousePos) break;
+          const stationGamePosition = this.untransformPosition(this.mousePos);
+          const closestPoint = this.#hoverSegment.distanceToPosition({
+            x: stationGamePosition.x,
+            y: stationGamePosition.y,
+          });
+          this.#hoverSegment.trainStartPositions.push({
+            distanceAlong:
+              closestPoint.distanceAlong * this.#hoverSegment.length,
+            reverse: closestPoint.alignment === ALIGNMENT.LEFT,
+          });
+          this.dispatchUpdate();
+          break;
+        }
+
+        case EDITOR_STATE.DRAG_SELECT: {
+          const startPoint = this.mousePos;
+          if (!startPoint) return;
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.DRAG_SELECT,
+            dragStartPoint: startPoint,
+          });
+          break;
+        }
+
+        case EDITOR_STATE.QUERY_POINT: {
+          const point = this.mousePos;
+          if (!point) return;
+
+          const gameSelectionDistance = SELECTION_DISTANCE_PIXELS / this.#scale;
+          const segments = this.network.segments.filter((segment) => {
+            const distanceToLine =
+              segment.distanceToPosition(gamePosition).distance;
             return distanceToLine <= gameSelectionDistance;
           });
           this.setcurrentStateWithData({
@@ -503,30 +577,32 @@ class TrackEditor {
             selectedSegments: segments,
           });
           break;
-          }
+        }
 
-        case EDITOR_STATE.MULTI_SELECT:
-          {
-            this.setcurrentStateWithData({
-              state: EDITOR_STATE.PAN,
-              dragStartPoint: this.mousePos,
-              originalOffset: { ...this.#offset },
-            });
-            break;
-          }
+        case EDITOR_STATE.MULTI_SELECT: {
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.PAN,
+            dragStartPoint: this.mousePos,
+            originalOffset: { ...this.#offset },
+          });
+          break;
+        }
       }
       return;
     };
 
     canvas.onmouseup = () => {
-      if (this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT || 
-          this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT) {
+      if (
+        this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ||
+        this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT
+      ) {
         this.setcurrentStateWithData({
           state: EDITOR_STATE.SELECT,
           selectedSegment: this.currentStateWithData.segment,
-          selectionType: this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ? 
-            this.currentStateWithData.pointType : 
-            SELECTION_TYPE.SEGMENT,
+          selectionType:
+            this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT
+              ? this.currentStateWithData.pointType
+              : SELECTION_TYPE.SEGMENT,
         });
       } else if (this.currentStateWithData.state === EDITOR_STATE.PAN) {
         this.setcurrentStateWithData({
@@ -537,7 +613,10 @@ class TrackEditor {
         if (!this.currentStateWithData.dragStartPoint || !this.mousePos) return;
         this.setcurrentStateWithData({
           state: EDITOR_STATE.MULTI_SELECT,
-          selectedSegments: this.getSegmentsInRectangle(this.currentStateWithData.dragStartPoint, this.mousePos),
+          selectedSegments: this.getSegmentsInRectangle(
+            this.currentStateWithData.dragStartPoint,
+            this.mousePos,
+          ),
         });
         this.#canvas.style.cursor = "default";
       }
@@ -546,7 +625,7 @@ class TrackEditor {
     canvas.onwheel = (ev) => {
       // Prevent the default scroll behavior
       ev.preventDefault();
-      
+
       // Adjust scale based on wheel delta
       // Negative delta means scroll up/zoom in, positive means scroll down/zoom out
       this.adjustScale(-ev.deltaY * 0.001 * this.#scale, true);
@@ -555,48 +634,55 @@ class TrackEditor {
     this.dispatchUpdate();
   }
 
+  clearSegment(
+    segment: TrackSegment,
+    action: "STATIONS" | "TRAIN_START_POSITIONS",
+  ) {
+    const selectedSegment = segment;
+    this.#onSelect?.();
+    this.setcurrentStateWithData({
+      state: EDITOR_STATE.SELECT,
+    });
+    if (action === "STATIONS") {
+      selectedSegment.stations.forEach((station) => {
+        this.network.stations.splice(this.network.stations.indexOf(station), 1);
+      });
+      selectedSegment.stations = [];
+    } else {
+      selectedSegment.trainStartPositions = [];
+    }
+    this.dispatchUpdate();
+  }
+
   deleteSegment(segment: TrackSegment) {
     const selectedSegment = segment;
-        this.#onSelect?.();
-        selectedSegment.stations.forEach((station) => {
-          this.network.stations.splice(this.network.stations.indexOf(station));
-        });
-        this.network.segments.splice(
-          this.network.segments.indexOf(selectedSegment),
-          1,
-        );
-        this.network.segments.forEach((segment) => {
-          if (
-            segment.atStart.indexOf(selectedSegment) > -1
-          ) {
-            segment.atStart.splice(
-              segment.atStart.indexOf(selectedSegment),
-              1,
-            );
-          }
-          if (
-            segment.atEnd.indexOf(selectedSegment) > -1
-          ) {
-            segment.atEnd.splice(
-              segment.atEnd.indexOf(selectedSegment),
-              1,
-            );
-          }
-        });
-        this.setcurrentStateWithData({
-          state: EDITOR_STATE.SELECT,
-        });
-        this.dispatchUpdate();
+    this.#onSelect?.();
+    selectedSegment.stations.forEach((station) => {
+      this.network.stations.splice(this.network.stations.indexOf(station), 1);
+    });
+    this.network.segments.splice(
+      this.network.segments.indexOf(selectedSegment),
+      1,
+    );
+    this.network.segments.forEach((segment) => {
+      if (segment.atStart.indexOf(selectedSegment) > -1) {
+        segment.atStart.splice(segment.atStart.indexOf(selectedSegment), 1);
+      }
+      if (segment.atEnd.indexOf(selectedSegment) > -1) {
+        segment.atEnd.splice(segment.atEnd.indexOf(selectedSegment), 1);
+      }
+    });
+    this.setcurrentStateWithData({
+      state: EDITOR_STATE.SELECT,
+    });
+    this.dispatchUpdate();
   }
 
   /**
    * After this editor makes a change, make sure everything is updated.
    */
   dispatchUpdate() {
-    this.network = new Network(
-      this.network.segments,
-      this.network.stations,
-    );
+    this.network = new Network(this.network.segments, this.network.stations);
     this.network.autoConnect();
     this.onNetworkChanged?.();
     this.update();
@@ -652,8 +738,13 @@ class TrackEditor {
 
   setNetwork(network: Network) {
     this.#hoverSegment = undefined;
-    if (this.currentStateWithData.state === EDITOR_STATE.SELECT && this.currentStateWithData.selectedSegment) {
-      const selection = this.network.segments.indexOf(this.currentStateWithData.selectedSegment);
+    if (
+      this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+      this.currentStateWithData.selectedSegment
+    ) {
+      const selection = this.network.segments.indexOf(
+        this.currentStateWithData.selectedSegment,
+      );
       this.network = network;
       this.setcurrentStateWithData({
         state: EDITOR_STATE.SELECT,
@@ -666,9 +757,15 @@ class TrackEditor {
   }
 
   setcurrentStateWithData(payload: EDITOR_STATE_PAYLOADS) {
-    const currentSelection = this.currentStateWithData.state === EDITOR_STATE.SELECT ? this.currentStateWithData.selectedSegment : undefined;
-    const newSelection = payload.state === EDITOR_STATE.SELECT ? payload.selectedSegment : undefined;
-    
+    const currentSelection =
+      this.currentStateWithData.state === EDITOR_STATE.SELECT
+        ? this.currentStateWithData.selectedSegment
+        : undefined;
+    const newSelection =
+      payload.state === EDITOR_STATE.SELECT
+        ? payload.selectedSegment
+        : undefined;
+
     this.currentStateWithData = payload;
     if (payload.state === EDITOR_STATE.PAN) {
       this.#canvas.style.cursor = "grab";
@@ -680,7 +777,7 @@ class TrackEditor {
       this.#onSelect?.(newSelection);
     }
     this.update();
-    
+
     this.onStateChanged?.(payload);
   }
 
@@ -691,12 +788,17 @@ class TrackEditor {
   adjustScale(delta: number, useMouseCenter: boolean) {
     const oldScale = this.#scale;
     this.#scale = Math.max(0.25, this.#scale + delta);
-    
+
     // If we have a mouse position within the canvas, use that as the zoom center
     let zoomCenter;
-    if ((this.mousePos && 
-        this.mousePos.x >= 0 && this.mousePos.x <= this.#size.x &&
-        this.mousePos.y >= 0 && this.mousePos.y <= this.#size.y) && useMouseCenter) {
+    if (
+      this.mousePos &&
+      this.mousePos.x >= 0 &&
+      this.mousePos.x <= this.#size.x &&
+      this.mousePos.y >= 0 &&
+      this.mousePos.y <= this.#size.y &&
+      useMouseCenter
+    ) {
       // Convert mouse position to game coordinates
       zoomCenter = this.untransformPosition(this.mousePos);
     } else {
@@ -706,18 +808,18 @@ class TrackEditor {
         y: this.#size.y / 2,
       });
     }
-    
+
     // Calculate how much the point moves due to scale change
     const scaleFactor = this.#scale / oldScale;
     const dx = (zoomCenter.x + this.#offset.x) * (1 - scaleFactor);
     const dy = (zoomCenter.y + this.#offset.y) * (1 - scaleFactor);
-    
+
     // Adjust offset to keep the zoom center point fixed
     this.#offset = {
       x: this.#offset.x + dx,
       y: this.#offset.y + dy,
     };
-    
+
     this.onScaleChanged?.(this.#scale);
     this.update();
   }
@@ -751,27 +853,37 @@ class TrackEditor {
     this.#context.lineWidth = 2;
     const fakeSegmentsList = [...this.network.segments];
     if (
-      this.currentStateWithData.state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
+      this.currentStateWithData.state ===
+        EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
       this.mousePos
     ) {
       const gamePosition = this.untransformPosition(this.mousePos);
-      const previewSegment = new LinearTrackSegment(this.currentStateWithData.segmentStart, gamePosition);
+      const previewSegment = new LinearTrackSegment(
+        this.currentStateWithData.segmentStart,
+        gamePosition,
+      );
 
       // If we're locked to a segment, constrain the angle
-      if (this.currentStateWithData.lockedToSegment && this.currentStateWithData.lockedToEnd) {
+      if (
+        this.currentStateWithData.lockedToSegment &&
+        this.currentStateWithData.lockedToEnd
+      ) {
         const lockedSegment = this.currentStateWithData.lockedToSegment;
-        const angle = this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START ? 
-          lockedSegment.initialAngle + Math.PI : 
-          lockedSegment.finalAngle;
-        
+        const angle =
+          this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START
+            ? lockedSegment.initialAngle + Math.PI
+            : lockedSegment.finalAngle;
+
         // Calculate the distance from the start point to the mouse
         const dx = gamePosition.x - this.currentStateWithData.segmentStart.x;
         const dy = gamePosition.y - this.currentStateWithData.segmentStart.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         // Set the end point using the locked angle and calculated distance
-        previewSegment.end.x = this.currentStateWithData.segmentStart.x + Math.cos(angle) * distance;
-        previewSegment.end.y = this.currentStateWithData.segmentStart.y + Math.sin(angle) * distance;
+        previewSegment.end.x =
+          this.currentStateWithData.segmentStart.x + Math.cos(angle) * distance;
+        previewSegment.end.y =
+          this.currentStateWithData.segmentStart.y + Math.sin(angle) * distance;
       }
 
       fakeSegmentsList.push(previewSegment);
@@ -794,10 +906,12 @@ class TrackEditor {
 
     fakeSegmentsList.forEach((segment) => {
       if (!this.#context) return;
-      if ((this.currentStateWithData.state === EDITOR_STATE.SELECT && 
-          segment === this.currentStateWithData.selectedSegment) || 
-          (this.currentStateWithData.state === EDITOR_STATE.MULTI_SELECT &&
-            this.currentStateWithData.selectedSegments.includes(segment))) {
+      if (
+        (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+          segment === this.currentStateWithData.selectedSegment) ||
+        (this.currentStateWithData.state === EDITOR_STATE.MULTI_SELECT &&
+          this.currentStateWithData.selectedSegments.includes(segment))
+      ) {
         this.#context.strokeStyle = "rgb(255, 255, 255)";
         this.#context.lineWidth = 4;
       } else if (segment === this.#hoverSegment) {
@@ -840,7 +954,8 @@ class TrackEditor {
 
       // Draw endpoint highlight rings if needed
       if (
-        (this.#hoverSelectionType === SELECTION_TYPE.START && segment === this.#hoverSegment) ||
+        (this.#hoverSelectionType === SELECTION_TYPE.START &&
+          segment === this.#hoverSegment) ||
         (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
           this.currentStateWithData.selectionType === SELECTION_TYPE.START &&
           segment === this.currentStateWithData.selectedSegment)
@@ -848,7 +963,8 @@ class TrackEditor {
         this.#drawEndpointHighlight(segment.start);
       }
       if (
-        (this.#hoverSelectionType === SELECTION_TYPE.END && segment === this.#hoverSegment) ||
+        (this.#hoverSelectionType === SELECTION_TYPE.END &&
+          segment === this.#hoverSegment) ||
         (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
           this.currentStateWithData.selectionType === SELECTION_TYPE.END &&
           segment === this.currentStateWithData.selectedSegment)
@@ -857,8 +973,10 @@ class TrackEditor {
       }
 
       // Draw arrow in the middle
-      if (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
-          this.currentStateWithData.selectedSegment === segment) {
+      if (
+        this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+        this.currentStateWithData.selectedSegment === segment
+      ) {
         this.#drawArrowInMiddle(segment);
       }
 
@@ -872,6 +990,28 @@ class TrackEditor {
         const d = segment.length - 0.1 * segment.length;
         const a = segment.getAngleAlong(d);
         this.#drawRedX(segment, d, a);
+      }
+
+      // Draw a green triangle if this is a train start point
+      segment.trainStartPositions.forEach((position) => {
+        this.#drawStartArrow(segment, position.distanceAlong, position.reverse);
+      });
+
+      if (
+        this.currentStateWithData.state === EDITOR_STATE.SET_START_POSITION &&
+        this.#hoverSegment &&
+        this.mousePos
+      ) {
+        const stationGamePosition = this.untransformPosition(this.mousePos);
+        const closestPoint = this.#hoverSegment.distanceToPosition({
+          x: stationGamePosition.x,
+          y: stationGamePosition.y,
+        });
+        this.#drawStartArrow(
+          this.#hoverSegment,
+          closestPoint.distanceAlong * this.#hoverSegment.length,
+          closestPoint.alignment === ALIGNMENT.LEFT,
+        );
       }
 
       this.#context.closePath();
@@ -921,8 +1061,8 @@ class TrackEditor {
       angleFromForward +=
         station.alignment === ALIGNMENT.LEFT ? -Math.PI / 2 : Math.PI / 2;
 
-      targetPosition.x += Math.cos(angleFromForward) * 8 / this.#scale;
-      targetPosition.y += Math.sin(angleFromForward) * 8 / this.#scale;
+      targetPosition.x += (Math.cos(angleFromForward) * 8) / this.#scale;
+      targetPosition.y += (Math.sin(angleFromForward) * 8) / this.#scale;
       targetPosition.x += this.#offset.x;
       targetPosition.y += this.#offset.y;
       targetPosition.x *= this.#scale;
@@ -1000,11 +1140,17 @@ class TrackEditor {
       if (
         (!closestType ||
           closestType === SELECTION_TYPE.SEGMENT ||
-          ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment)) &&
+          (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+            seg === this.currentStateWithData.selectedSegment) ||
+          seg === this.#hoverSegment) &&
         distanceToStart < gameSelectionDistance
       ) {
         closestSegment = seg;
-        if ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment) {
+        if (
+          (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+            seg === this.currentStateWithData.selectedSegment) ||
+          seg === this.#hoverSegment
+        ) {
           closest = -1;
         } else {
           closest = distanceToLine;
@@ -1015,11 +1161,17 @@ class TrackEditor {
       if (
         (!closestType ||
           closestType === SELECTION_TYPE.SEGMENT ||
-          ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment)) &&
+          (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+            seg === this.currentStateWithData.selectedSegment) ||
+          seg === this.#hoverSegment) &&
         distanceToEnd < gameSelectionDistance
       ) {
         closestSegment = seg;
-        if ((this.currentStateWithData.state === EDITOR_STATE.SELECT && seg === this.currentStateWithData.selectedSegment) || seg === this.#hoverSegment) {
+        if (
+          (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
+            seg === this.currentStateWithData.selectedSegment) ||
+          seg === this.#hoverSegment
+        ) {
           closest = -1;
         } else {
           closest = distanceToLine;
@@ -1106,7 +1258,9 @@ class TrackEditor {
   #drawArrowInMiddle(segment: TrackSegment) {
     if (!this.#context) return;
     const mid = segment.length / 2;
-    const canvasPosition = this.transformPosition(segment.getPositionAlong(mid).point);
+    const canvasPosition = this.transformPosition(
+      segment.getPositionAlong(mid).point,
+    );
     const angle = segment.getAngleAlong(mid) + Math.PI;
     this.#context.strokeStyle = "rgb(222, 200, 0)";
     this.#context.beginPath();
@@ -1146,16 +1300,26 @@ class TrackEditor {
 
   #drawGridLines(interval: number) {
     if (!this.#context) return;
-    
+
     const scaledInterval = interval * this.#scale;
     this.#context.strokeStyle = "rgba(255, 255, 255, 0.2)";
     this.#context.lineWidth = 1;
     this.#context.beginPath();
-    for (let x = ((this.#offset.x * this.#scale) % scaledInterval) - scaledInterval; x < this.#size.x; x += scaledInterval) {
+    for (
+      let x =
+        ((this.#offset.x * this.#scale) % scaledInterval) - scaledInterval;
+      x < this.#size.x;
+      x += scaledInterval
+    ) {
       this.#context.moveTo(x, 0);
       this.#context.lineTo(x, this.#size.y);
     }
-    for (let y = ((this.#offset.y * this.#scale) % scaledInterval) - scaledInterval; y < this.#size.y; y += scaledInterval) {
+    for (
+      let y =
+        ((this.#offset.y * this.#scale) % scaledInterval) - scaledInterval;
+      y < this.#size.y;
+      y += scaledInterval
+    ) {
       this.#context.moveTo(0, y);
       this.#context.lineTo(this.#size.x, y);
     }
@@ -1173,9 +1337,41 @@ class TrackEditor {
     this.#context.lineWidth = 2;
     this.#context.setLineDash([10, 5]);
     this.#context.beginPath();
-    this.#context.rect(startPoint.x, startPoint.y, endPoint.x - startPoint.x, endPoint.y - startPoint.y);
+    this.#context.rect(
+      startPoint.x,
+      startPoint.y,
+      endPoint.x - startPoint.x,
+      endPoint.y - startPoint.y,
+    );
     this.#context.stroke();
     this.#context.setLineDash([]);
+  }
+
+  #drawStartArrow(
+    segment: TrackSegment,
+    distanceAlong: number,
+    reverse: boolean,
+  ) {
+    if (!this.#context) return;
+
+    this.#context.fillStyle = "rgb(50,240,30)";
+    const SIZE = 12;
+    // Get the point and angle on the segment
+    const pos = segment.getPositionAlong(distanceAlong).point;
+    const angle =
+      segment.getAngleAlong(distanceAlong) + (reverse ? Math.PI : 0);
+    const canvasPos = this.transformPosition(pos);
+    this.#context.save();
+    this.#context.translate(canvasPos.x, canvasPos.y);
+    this.#context.rotate(angle);
+    this.#context.beginPath();
+    // Draw an equilateral triangle pointing right (along +X), then rotate
+    this.#context.moveTo(SIZE, 0);
+    this.#context.lineTo(-SIZE * 0.6, SIZE * 0.6);
+    this.#context.lineTo(-SIZE * 0.6, -SIZE * 0.6);
+    this.#context.closePath();
+    this.#context.fill();
+    this.#context.restore();
   }
 }
 
