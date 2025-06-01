@@ -2,7 +2,6 @@ import Network from "./Network";
 import Train from "./Train";
 import Station from "./Station";
 import Passenger from "./Passenger";
-import TrackSegment from "./TrackSegment";
 
 class GameState {
   network: Network;
