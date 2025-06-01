@@ -150,8 +150,6 @@ describe("train motion", () => {
       secondTrain.update(90);
       secondTimeElapsed += 90;
     }
-    console.log("firstResult", firstResult);
-    console.log("secondResult", secondTrain.position.x);
     expect(firstTimeElapsed).toBeCloseTo(secondTimeElapsed, 1);
     expect(secondTrain.position.x).toBeCloseTo(firstResult, 4);
   });
@@ -823,7 +821,7 @@ describe("nextJunction", () => {
 });
 
 describe("the odd case from the editor", () => {
-  it("works", () => {
+  it("doesn't allow a train to reverse along a segment that it just came from", () => {
     const network = loadNetworkFromJSON(MadeInEditor as JSONTrackSegment[]);
     const game = new Game(network, new FakeController());
     const targetSegment = network.segments.find((s) => s.id.startsWith("ee3adb0a"))!;

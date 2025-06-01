@@ -13,6 +13,7 @@ describe("Game update", () => {
       new Train(
         { segment: network.segments[0], distanceAlong: 0, reversing: false },
         { speed: 10 },
+        game.gameState
       ),
     );
 
@@ -31,6 +32,7 @@ it.skip("can detect collisions", () => {
       waitTimePerPassenger: 0,
       speed: 10,
     },
+    game.gameState
   );
   const trainB = new Train(
     { segment: game.network.segments[2], distanceAlong: 0, reversing: false },
@@ -39,6 +41,7 @@ it.skip("can detect collisions", () => {
       waitTimePerPassenger: 0,
       speed: 10,
     },
+    game.gameState
   );
 
   game.gameState.trains.push(trainA);
@@ -60,11 +63,12 @@ it.skip("can detect collisions", () => {
 describe("should be like normal", () => {
   const network = build().network;
   it("can navigate in reverse along track segments", () => {
+    const gameState = new GameState(network);
     const train = new Train(
       { segment: network.segments[0], distanceAlong: 0, reversing: false },
       { speed: 10 },
+      gameState
     );
-    const gameState = new GameState(network);
     gameState.trains.push(train);
     gameState.update(1000);
     expect(gameState.trains[0].position.x).toBeCloseTo(10);
