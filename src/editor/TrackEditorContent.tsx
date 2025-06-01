@@ -130,15 +130,16 @@ const TrackEditorContent = ({
               </div>
             </div>
             {/* Construction Actions */}
-            <div className="flex flex-row justify-between items-center gap-4">
+            <div className="flex flex-row justify-between items-center gap-4 items-center">
               <div className="flex gap-2 bg-white rounded shadow px-3 py-2">
+                <span className="text-lg font-bold text-zinc-500">Add:</span>
                 <Button
                   selected={
                     buttonBarState ===
                       EDITOR_STATE.CREATE_LINEAR_SEGMENT_START ||
                     buttonBarState === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END
                   }
-                  value="Add Line"
+                  value="Line Segment"
                   onClick={() => {
                     trackEditorRef.current?.setcurrentStateWithData({
                       state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_START,
@@ -151,7 +152,7 @@ const TrackEditorContent = ({
                     buttonBarState === EDITOR_STATE.CREATE_CONNECTION_START ||
                     buttonBarState === EDITOR_STATE.CREATE_CONNECTION_END
                   }
-                  value="Add Connection"
+                  value="Connecting Curve"
                   onClick={() => {
                     trackEditorRef.current?.setcurrentStateWithData({
                       state: EDITOR_STATE.CREATE_CONNECTION_START,
@@ -161,7 +162,7 @@ const TrackEditorContent = ({
                 />
                 <Button
                   selected={buttonBarState === EDITOR_STATE.CREATE_STATION}
-                  value="Add Station"
+                  value="Station"
                   onClick={() => {
                     trackEditorRef.current?.setcurrentStateWithData({
                       state: EDITOR_STATE.CREATE_STATION,
@@ -171,7 +172,7 @@ const TrackEditorContent = ({
                 />
                 <Button
                   selected={buttonBarState === EDITOR_STATE.SET_START_POSITION}
-                  value="Add Train Start Position"
+                  value="Train Start"
                   onClick={() => {
                     trackEditorRef.current?.setcurrentStateWithData({
                       state: EDITOR_STATE.SET_START_POSITION,

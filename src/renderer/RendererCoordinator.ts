@@ -1,15 +1,17 @@
 import Game from "../engine/Game";
+import BabylonRenderer from "./basic/babylon/BabylonRenderer";
 import IRenderer from "./basic/IRenderer";
 
 class RendererCoordinator {
   game: Game;
   renderers: IRenderer[];
   #lastTime: number = 0;
+  frameRequest: number;
 
   constructor(game: Game, renderers: IRenderer[] = []) {
     this.game = game;
     this.renderers = renderers;
-    requestAnimationFrame((cb) => {
+    this.frameRequest = requestAnimationFrame((cb) => {
       this.#lastTime = cb;
       this.update(0);
     });
@@ -20,11 +22,20 @@ class RendererCoordinator {
     this.renderers.forEach((renderer) => {
       renderer.update();
     });
-    requestAnimationFrame((cb) => {
+    this.frameRequest = requestAnimationFrame((cb) => {
       const deltaT = cb - this.#lastTime;
       this.update(deltaT);
       this.#lastTime = cb;
     });
+  }
+
+  stop() {
+    this.renderers.forEach((renderer) => {
+      if (renderer instanceof BabylonRenderer) {
+        renderer.cleanup();
+      }
+    });
+    cancelAnimationFrame(this.frameRequest);
   }
 }
 

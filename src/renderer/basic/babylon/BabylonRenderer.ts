@@ -40,6 +40,7 @@ class BabylonRenderer implements IRenderer {
   stationNumberSprites: BABYLON.Sprite[][] = [];
   trainNumberSprites: BABYLON.Sprite[] = [];
   camera: BABYLON.Camera;
+  engine?: BABYLON.Engine;
 
   constructor(element: HTMLElement, game: Game) {
     this.game = game;
@@ -60,6 +61,7 @@ class BabylonRenderer implements IRenderer {
       preserveDrawingBuffer: true,
       stencil: true,
     });
+    this.engine = engine;
     // CreateScene function that creates and return the scene
     const scene = new BABYLON.Scene(engine);
     this.#scene = scene;
@@ -367,9 +369,8 @@ class BabylonRenderer implements IRenderer {
 
   update() {
     this.game.network.stations.forEach((station, i) => {
-      const waitingPassengers = this.game.gameState.waitingPassengers.get(
-        station,
-      )!;
+      const waitingPassengers =
+        this.game.gameState.waitingPassengers.get(station)!;
       this.stationNumberSprites[i][0].cellIndex =
         (waitingPassengers.length + 9) % 10;
       this.stationNumberSprites[i][1].cellIndex =
@@ -444,6 +445,12 @@ class BabylonRenderer implements IRenderer {
         theseSpheres[i + 1].position.z = -car.position.y;
       });
     });
+  }
+
+  cleanup() {
+    if (!this.engine) return;
+    this.engine.dispose();
+    delete this.engine;
   }
 }
 
