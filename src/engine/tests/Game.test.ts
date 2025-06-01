@@ -22,44 +22,6 @@ describe("Game update", () => {
   });
 });
 
-it.skip("can detect collisions", () => {
-  const network = build().network;
-  const game = new Game(network, new FakeController());
-  const trainA = new Train(
-    { segment: game.network.segments[0], distanceAlong: 0, reversing: false },
-    {
-      waitTime: 0,
-      waitTimePerPassenger: 0,
-      speed: 10,
-    },
-    game.gameState
-  );
-  const trainB = new Train(
-    { segment: game.network.segments[2], distanceAlong: 0, reversing: false },
-    {
-      waitTime: 0,
-      waitTimePerPassenger: 0,
-      speed: 10,
-    },
-    game.gameState
-  );
-
-  game.gameState.trains.push(trainA);
-  game.gameState.trains.push(trainB);
-
-  game.update(2000 + 1000 * Math.PI * 2);
-
-  expect(game.gameState.trains[0].position.x).toBeCloseTo(20 + 10 * Math.PI * 2);
-  expect(game.gameState.trains[1].position.x).toBeCloseTo(100);
-
-  // Now a collision should happen
-  game.update(2500);
-  expect(game.gameState.trains[0].position.x).toBeCloseTo(45 + 10 * Math.PI * 2);
-  expect(game.gameState.trains[1].position.x).toBeCloseTo(75);
-
-  expect(game.collision).toBe(true);
-});
-
 describe("should be like normal", () => {
   const network = build().network;
   it("can navigate in reverse along track segments", () => {

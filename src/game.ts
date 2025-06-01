@@ -33,4 +33,4 @@ const map3 = new BabylonRenderer(
   document.querySelector("#renderCanvasHolder")!,
   game,
 );
-const coordinator = new RendererCoordinator(game, [map, map2, map3]);
+new RendererCoordinator(game, [map, map2, map3]);

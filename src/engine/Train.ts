@@ -1,6 +1,5 @@
 import {
   distanceEffortToDistance,
-  easyNavigate,
   getNextJunction,
 } from "../utils";
 import CircularTrackSegment from "./CircularTrackSegment";

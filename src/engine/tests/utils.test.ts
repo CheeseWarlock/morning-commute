@@ -135,9 +135,6 @@ describe("distance effort function", () => {
     expect(distanceEffortToDistance(10, 7.5, 5)).toBeCloseTo(7.5);
     expect(distanceEffortToDistance(12, 7.5, 5)).toBeCloseTo(7.9);
     expect(distanceEffortToDistance(16, 7.5, 5)).toBeCloseTo(11);
-  });
-
-  it("uses its parameters properly", () => {
     expect(distanceEffortToDistance(10, 12.5, 3)).toBeCloseTo(10);
     expect(distanceEffortToDistance(14, 12.5, 3)).toBeCloseTo(12.5);
     expect(distanceEffortToDistance(21, 12.5, 3)).toBeCloseTo(18);

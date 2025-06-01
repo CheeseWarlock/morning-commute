@@ -6,7 +6,9 @@ describe("a single LinearTrackSegment", () => {
   const pointC = { x: 10, y: 10 };
 
   it("should construct a track segment", () => {
-    new LinearTrackSegment(pointA, pointB);
+    const segment = new LinearTrackSegment(pointA, pointB);
+    expect(segment.start).toEqual(pointA);
+    expect(segment.end).toEqual(pointB);
   });
 
   it("should calculate distance along a track segment for a y=0 line", () => {
@@ -104,7 +106,7 @@ describe("angleAlong", () => {
 
   it("returns the inverted angle when reversing", () => {
     const segmentA = new LinearTrackSegment(pointA, pointB);
-    let angleAlong = segmentA.getAngleAlong(5, true);
+    const angleAlong = segmentA.getAngleAlong(5, true);
     expect(angleAlong).toBeCloseTo(Math.PI, 4);
   });
 });

@@ -1,6 +1,6 @@
 import React from "react";
 
-const Button = (props: any) => {
+const Button = (props: { selected?: boolean, onClick?: () => void, value: string, disabled?: boolean }) => {
   const { selected, onClick, value, disabled } = props;
   return <input className={
     "m-1 px-3 p-1 rounded border font-mono font-bold text-white shadow-md" +

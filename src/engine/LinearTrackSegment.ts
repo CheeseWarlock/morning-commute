@@ -40,19 +40,19 @@ class LinearTrackSegment extends TrackSegment {
     const startY = this.start.y;
     const endY = this.end.y;
 
-    var A = point.x - startX;
-    var B = point.y - startY;
-    var C = endX - startX;
-    var D = endY - startY;
+    const A = point.x - startX;
+    const B = point.y - startY;
+    const C = endX - startX;
+    const D = endY - startY;
 
-    var dot = A * C + B * D;
-    var len_sq = C * C + D * D;
-    var param = -1;
+    const dot = A * C + B * D;
+    const len_sq = C * C + D * D;
+    let param = -1;
     if (len_sq != 0)
       //in case of 0 length line
       param = dot / len_sq;
 
-    var xx, yy;
+    let xx, yy;
 
     if (param < 0) {
       xx = startX;
@@ -65,8 +65,8 @@ class LinearTrackSegment extends TrackSegment {
       yy = startY + param * D;
     }
 
-    var dx = point.x - xx;
-    var dy = point.y - yy;
+    const dx = point.x - xx;
+    const dy = point.y - yy;
 
     // Get the angle now
     let angleA = Math.atan2(point.y - this.start.y, point.x - this.start.x);

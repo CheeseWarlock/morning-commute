@@ -1,4 +1,3 @@
-import Station, { ALIGNMENT } from "../../Station";
 import NetworkBuilder from "../NetworkBuilder";
 
 const builder = new NetworkBuilder();

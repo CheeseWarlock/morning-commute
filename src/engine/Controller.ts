@@ -41,7 +41,7 @@ class Controller implements IController {
 
 export class FakeController implements IController {
   subscribers: Map<KEYS, (() => void)[]> = new Map();
-  on(key: KEYS, func: () => void) {}
+  on() {}
 }
 
 export default Controller;

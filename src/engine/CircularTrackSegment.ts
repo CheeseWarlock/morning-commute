@@ -371,7 +371,7 @@ class CircularTrackSegment extends TrackSegment {
     }
 
     // now filter the points to only include the ones that are within the arc of the segment
-    let initialAngleFromCenter = Math.atan2(
+    const initialAngleFromCenter = Math.atan2(
       (this.counterClockWise ? this.end : this.start).y - this.center.y,
       (this.counterClockWise ? this.end : this.start).x - this.center.x,
     );

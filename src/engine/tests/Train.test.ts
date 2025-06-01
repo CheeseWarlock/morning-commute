@@ -205,6 +205,7 @@ describe("train motion", () => {
     train.update(4000);
     train.update(4000);
     train.update(2000);
+    expect(train.position.x).toBeDefined();
   });
 
   it("can navigate a long distance in a single update", () => {
@@ -389,15 +390,15 @@ describe("train following cars", () => {
 
 describe("passenger pickup and dropoff", () => {
   const network = SimpleStation;
-  const badStation = new Station({} as any, 0, ALIGNMENT.LEFT);
+  const badStation = new Station(new LinearTrackSegment({ x: 0, y: 0 }, { x: 0, y: 0 }), 0, ALIGNMENT.LEFT);
   it("drops off passengers whose station match", () => {
     const train = new Train(
       { segment: network.segments[0], distanceAlong: 0, reversing: false },
       { speed: 10, slowdown: true },
       new GameState(network, false)
     );
-    train.passengers.push(new Passenger({} as any, network.stations[0]));
-    train.passengers.push(new Passenger({} as any, badStation));
+    train.passengers.push(new Passenger(badStation, network.stations[0]));
+    train.passengers.push(new Passenger(badStation, badStation));
     expect(train.passengers.length).toBe(2);
     train.update(10000);
     expect(train.passengers.length).toBe(1);
@@ -440,6 +441,10 @@ describe("passenger pickup and dropoff", () => {
 });
 
 describe("wait time, including per-passenger", () => {
+  /**
+   * A station that is not connected to the network.
+   */
+  const dummyStation = new Station(new LinearTrackSegment({ x: 0, y: 0 }, { x: 0, y: 0 }), 0, ALIGNMENT.LEFT);
   it("allows zero wait times", () => {
     const network = build().network;
     network.stations = [];
@@ -486,7 +491,7 @@ describe("wait time, including per-passenger", () => {
     
     gameState.waitingPassengers.set(
       network.stations[0],
-      [new Passenger(network.stations[0], {} as any)],
+      [new Passenger(network.stations[0], dummyStation)],
     );
 
     // Station is at 50
@@ -510,7 +515,7 @@ describe("wait time, including per-passenger", () => {
     );
     gameState.waitingPassengers.set(network.stations[0], []);
     gameState.waitingPassengers.get(network.stations[0])!.push(
-      new Passenger(network.stations[0], {} as any),
+      new Passenger(network.stations[0], dummyStation),
     );
     // Station is at 50
     // Get to station, wait, wait for passenger, move again
@@ -732,6 +737,7 @@ describe("nextJunction", () => {
   });
 
   it("finds the next junction across many segments", () => {
+
     const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 10, y: 0 });
     const segment2 = new LinearTrackSegment({ x: 10, y: 0 }, { x: 20, y: 0 });
     const segment3 = new LinearTrackSegment({ x: 20, y: 0 }, { x: 30, y: 0 });

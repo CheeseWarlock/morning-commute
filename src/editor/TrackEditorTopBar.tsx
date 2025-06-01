@@ -67,7 +67,7 @@ export default function TrackEditorTopBar(
                 const loadedNetwork = loadNetworkFromJSON(parsed);
                 setNetwork(loadedNetwork);
               } catch (e) {
-                alert("Invalid JSON");
+                console.error("Invalid JSON", e);
               }
             }}
           />

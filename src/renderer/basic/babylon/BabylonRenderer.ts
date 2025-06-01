@@ -51,27 +51,20 @@ class BabylonRenderer implements IRenderer {
     element.appendChild(aCanvas);
 
     // Get the canvas DOM element
-    var canvas = document.getElementById("renderCanvas");
+    const canvas = document.getElementById("renderCanvas")!;
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      throw new Error("Canvas is not an HTMLCanvasElement");
+    }
     // Load the 3D engine
-    var engine = new BABYLON.Engine(canvas as any, true, {
+    const engine = new BABYLON.Engine(canvas, true, {
       preserveDrawingBuffer: true,
       stencil: true,
     });
     // CreateScene function that creates and return the scene
-    var scene = new BABYLON.Scene(engine);
+    const scene = new BABYLON.Scene(engine);
     this.#scene = scene;
 
-    // var light = new BABYLON.HemisphericLight(
-    //   "light1",
-    //   new BABYLON.Vector3(0, 1, 0),
-    //   scene,
-    // );
-    // const light = new BABYLON.DirectionalLight(
-    //   "light2",
-    //   new BABYLON.Vector3(1, -20, 2),
-    //   scene,
-    // );
-    const light2 = new BABYLON.HemisphericLight(
+    new BABYLON.HemisphericLight(
       "HemiLight",
       new BABYLON.Vector3(0, 1, 0),
       scene,
@@ -176,7 +169,7 @@ class BabylonRenderer implements IRenderer {
     const gameBounds = game.network.getBounds();
 
     const padding = 50;
-    var ground = BABYLON.Mesh.CreateGround(
+    const ground = BABYLON.Mesh.CreateGround(
       "ground1",
       gameBounds.max.x - gameBounds.min.x + padding,
       gameBounds.max.y - gameBounds.min.y + padding,
@@ -253,7 +246,7 @@ class BabylonRenderer implements IRenderer {
       scene,
     );
     this.numberSpriteManager.renderingGroupId = 1;
-    this.game.network.stations.forEach((station, i) => {
+    this.game.network.stations.forEach((station) => {
       const sprites: BABYLON.Sprite[] = [];
       const a = new BABYLON.Sprite("", this.numberSpriteManager);
       const b = new BABYLON.Sprite("", this.numberSpriteManager);
@@ -276,17 +269,15 @@ class BabylonRenderer implements IRenderer {
       b.width = 5;
     });
 
-    this.game.gameState.trains.forEach((train) => {
+    this.game.gameState.trains.forEach(() => {
       this.trainNumberSprites.push(
         new BABYLON.Sprite("", this.numberSpriteManager),
       );
     });
   }
 
-  #setupScene() {}
-
   #convertTrackSegmentToGeometry(segment: TrackSegment) {
-    let myPath: BABYLON.Vector3[] = [];
+    const myPath: BABYLON.Vector3[] = [];
     if (segment instanceof LinearTrackSegment) {
       const segmentCount = Math.max(Math.floor(segment.length / 3), 3);
       for (let i = 0; i <= segmentCount; i++) {

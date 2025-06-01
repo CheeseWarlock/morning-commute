@@ -44,7 +44,7 @@ describe("findCenter", () => {
     ).toBeCloseTo(30);
   });
 
-  it("should be able to reverse engineer an actual circular track segment", () => {
+  it("should be able to reverse engineer an actual circular track segment with a different angle", () => {
     const segment = new CircularTrackSegment(
       { x: 0, y: 30 },
       {

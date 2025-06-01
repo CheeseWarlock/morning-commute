@@ -161,10 +161,10 @@ export function getIntersection(line1: { x1: number, y1: number, x2: number, y2:
   if (denominator == 0) {
     return null;
   }
-  let a = line1.y1 - line2.y1;
-  let b = line1.x1 - line2.x1;
+  const a = line1.y1 - line2.y1;
+  const b = line1.x1 - line2.x1;
   const numerator1 = ((line2.x2 - line2.x1) * a) - ((line2.y2 - line2.y1) * b);
-  let c = numerator1 / denominator;
+  const c = numerator1 / denominator;
 
   const result = {
     x: line1.x1 + (c * (line1.x2 - line1.x1)),
