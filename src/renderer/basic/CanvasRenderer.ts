@@ -4,6 +4,8 @@ import LinearTrackSegment from "../../engine/LinearTrackSegment";
 import Network from "../../engine/Network";
 import Point from "../../engine/Point";
 import { ALIGNMENT } from "../../engine/Station";
+import Train from "../../engine/Train";
+import TrainFollowingCar from "../../engine/TrainFollowingCar";
 import IRenderer from "./IRenderer";
 
 /**
@@ -124,7 +126,7 @@ class CanvasRenderer implements IRenderer {
   }
 
   drawTrains() {
-    this.#network.trains.forEach((train) => {
+    this.#game.gameState.trains.forEach((train: Train) => {
       if (!this.#context) return;
       const canvasPosition = this.transformPosition(train.position);
       this.#context.fillStyle = "rgba(200, 0, 0)";
@@ -133,7 +135,7 @@ class CanvasRenderer implements IRenderer {
       this.#context.closePath();
       this.#context.fill();
 
-      train.followingCars.forEach((car) => {
+      train.followingCars.forEach((car: TrainFollowingCar) => {
         if (!this.#context) return;
         const canvasPosition = this.transformPosition(car.position);
         this.#context.fillStyle = "rgba(200, 0, 200)";
@@ -240,7 +242,8 @@ class CanvasRenderer implements IRenderer {
       this.#context.fillStyle = "rgb(255,255,255)";
       this.#context.font = "12pt sans-serif";
       this.#context.fillText(
-        station.waitingPassengers.length + "",
+        "",
+        //station.waitingPassengers.length + "",
         targetPosition.x,
         targetPosition.y - 10,
       );
