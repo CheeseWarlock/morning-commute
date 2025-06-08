@@ -1,4 +1,4 @@
-import * as BABYLON from "babylonjs";
+import * as BABYLON from "@babylonjs/core";
 import IRenderer from "../IRenderer";
 import Game, { TRAIN_STRATEGIES } from "../../../engine/Game";
 import TrackSegment from "../../../engine/TrackSegment";
@@ -7,6 +7,8 @@ import CircularTrackSegment from "../../../engine/CircularTrackSegment";
 import { ALIGNMENT } from "../../../engine/Station";
 import arrowImage from "../../images/arrow.png";
 import numberImage from "../../images/numbers.png";
+
+import "@babylonjs/loaders";
 
 const PATHS = {
   GROUND: [
@@ -187,6 +189,78 @@ class BabylonRenderer implements IRenderer {
     ground.position.x = (gameBounds.max.x + gameBounds.min.x) / 2;
     ground.position.y = -1;
     ground.position.z = -(gameBounds.max.y + gameBounds.min.y) / 2;
+
+    // Place trees randomly
+    const placeTrees = () => {
+      const TREES_TO_PLACE = 100;
+      const MAX_ATTEMPTS = 200;
+      const MIN_DISTANCE = 20;
+      let treesRemaining = TREES_TO_PLACE;
+      let attempts = 0;
+
+      // First load the tree mesh
+      BABYLON.SceneLoader.ImportMesh(
+        null,
+        "src/renderer/basic/babylon/",
+        "tree.obj",
+        scene,
+        (meshes) => {
+          const treeMesh = meshes[0];
+          if (!(treeMesh instanceof BABYLON.Mesh)) {
+            console.error("Loaded tree is not a mesh");
+            return;
+          }
+
+          // Hide the original mesh
+          treeMesh.setEnabled(false);
+
+          // Now place instances
+          while (treesRemaining > 0 && attempts < MAX_ATTEMPTS) {
+            attempts++;
+
+            // Generate random position within bounds
+            const x =
+              gameBounds.min.x +
+              Math.random() * (gameBounds.max.x - gameBounds.min.x);
+            const y =
+              gameBounds.min.y +
+              Math.random() * (gameBounds.max.y - gameBounds.min.y);
+
+            // Check distance to all track segments
+            let tooClose = false;
+            for (const segment of this.game.network.segments) {
+              const result = segment.distanceToPosition({ x, y });
+              if (result.distance < MIN_DISTANCE) {
+                tooClose = true;
+                break;
+              }
+            }
+
+            // Place tree if not too close to any track
+            if (!tooClose) {
+              const instance = treeMesh.createInstance("treeInstance");
+              instance.position = new BABYLON.Vector3(x, 0, -y);
+
+              // Random rotation around Y axis
+              instance.rotation.y = Math.random() * Math.PI * 2;
+
+              // Random scale variation between 0.8 and 1.2
+              const scaleVariation = 0.8 + Math.random() * 0.9;
+              const yScaleVariation = 0.8 + Math.random() * 0.9;
+              instance.scaling = new BABYLON.Vector3(
+                10 * scaleVariation,
+                10 * yScaleVariation,
+                10 * scaleVariation,
+              );
+
+              treesRemaining--;
+            }
+          }
+        },
+      );
+    };
+
+    placeTrees();
 
     const camera = new BABYLON.ArcRotateCamera(
       "Camera",

@@ -1,0 +1,46 @@
+# Tree model - two stacked hexagonal pyramids
+mtllib tree.mtl
+
+# Vertices for bottom pyramid
+v 0.0 0.8 0.0     # Bottom pyramid top
+# Bottom pyramid base points (regular hexagon)
+v 0.5 0.0 0.0     # Right
+v 0.25 0.0 0.433  # Top right
+v -0.25 0.0 0.433 # Top left
+v -0.5 0.0 0.0    # Left
+v -0.25 0.0 -0.433 # Bottom left
+v 0.25 0.0 -0.433  # Bottom right
+
+# Vertices for top pyramid
+v 0.0 1.25 0.0     # Top pyramid top
+# Top pyramid base points (regular hexagon)
+v 0.25 0.6 0.0     # Right
+v 0.125 0.6 0.216  # Top right
+v -0.125 0.6 0.216 # Top left
+v -0.25 0.6 0.0    # Left
+v -0.125 0.6 -0.216 # Bottom left
+v 0.125 0.6 -0.216  # Bottom right
+
+# Faces for bottom pyramid
+usemtl TreeMaterial
+# Bottom pyramid sides (counter-clockwise when viewed from outside)
+f 1 7 6
+f 1 6 5
+f 1 5 4
+f 1 4 3
+f 1 3 2
+f 1 2 7
+
+# Bottom pyramid base (counter-clockwise when viewed from below)
+f 7 2 3 4 5 6
+
+# Top pyramid sides (counter-clockwise when viewed from outside)
+f 8 14 13
+f 8 13 12
+f 8 12 11
+f 8 11 10
+f 8 10 9
+f 8 9 14
+
+# Top pyramid base (counter-clockwise when viewed from below)
+f 14 9 10 11 12 13 
