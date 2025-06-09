@@ -1,3 +1,5 @@
+mtllib following_car.mtl
+
 # Following train car model
 # Vertices
 v -1.0 -0.5 -0.5  # Front left bottom
@@ -9,10 +11,17 @@ v  1.0 -0.5  0.5  # Back right bottom
 v  1.0  0.5  0.5  # Back right top
 v  1.0  0.5 -0.5  # Back left top
 
+# Texture coordinates
+vt 0.0 0.0  # Bottom left
+vt 1.0 0.0  # Bottom right
+vt 1.0 1.0  # Top right
+vt 0.0 1.0  # Top left
+
+usemtl TrainMaterial
 # Faces
 f 1 2 3 4  # Front face
 f 8 7 6 5  # Back face
 f 1 2 6 5  # Bottom face
 f 4 3 7 8  # Top face
-f 1 4 8 5  # Left face
-f 6 7 3 2  # Right face
+f 1/1 4/4 8/3 5/2  # Left face
+f 6/1 7/4 3/3 2/2  # Right face

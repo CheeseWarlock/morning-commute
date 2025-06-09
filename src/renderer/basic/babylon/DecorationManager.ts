@@ -15,6 +15,15 @@ export class DecorationManager {
   }
 
   private loadTreeMesh() {
+    // Create texture with nearest-neighbor sampling
+    const treeTexture = new BABYLON.Texture(
+      "src/renderer/basic/babylon/models/tree.png",
+      this.scene,
+      false,
+      true,
+      BABYLON.Texture.NEAREST_LINEAR,
+    );
+
     BABYLON.SceneLoader.ImportMesh(
       null,
       "src/renderer/basic/babylon/models/",
@@ -25,6 +34,12 @@ export class DecorationManager {
         if (!(treeMesh instanceof BABYLON.Mesh)) {
           console.error("Loaded tree is not a mesh");
           return;
+        }
+
+        // Apply the texture to the material
+        if (treeMesh.material) {
+          const material = treeMesh.material as BABYLON.StandardMaterial;
+          material.diffuseTexture = treeTexture;
         }
 
         // Hide the original mesh

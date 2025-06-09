@@ -197,17 +197,6 @@ export class TrainManager {
         ).alpha;
         this.turnArrowSprite.angle -= train.nextJunction.angle;
         this.turnArrowSprite.angle += Math.PI;
-
-        // Highlight selected train
-        theseMeshes.forEach((m) => {
-          m.renderOutline = true;
-          m.outlineWidth = 3;
-          m.outlineColor = new BABYLON.Color3(0, 0, 0);
-        });
-      } else {
-        theseMeshes.forEach((m) => {
-          m.renderOutline = false;
-        });
       }
 
       // Update train and car positions and rotations
