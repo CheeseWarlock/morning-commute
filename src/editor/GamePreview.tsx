@@ -4,10 +4,12 @@ import BabylonRenderer from "../renderer/basic/babylon/BabylonRenderer";
 import RendererCoordinator from "../renderer/RendererCoordinator";
 import Game from "../engine/Game";
 import Controller from "../engine/Controller";
+import { TrainDetail } from "./TrainDetail";
 
 export default function GamePreview({ network }: { network: Network }) {
   const rendererHolderRef = useRef<HTMLDivElement>(null);
   const [renderer, setRenderer] = useState<RendererCoordinator | null>(null);
+  const [selectedTrainIndex, setSelectedTrainIndex] = useState<number>(0);
 
   useEffect(() => {
     if (rendererHolderRef.current && !renderer) {
@@ -21,6 +23,11 @@ export default function GamePreview({ network }: { network: Network }) {
         babylonRenderer,
       ]);
       setRenderer(rendererCoordinator);
+
+      // Listen for train selection events
+      game.on("trainSelected", ({ index }) => {
+        setSelectedTrainIndex(index);
+      });
     }
     return () => {
       if (renderer) {
@@ -30,8 +37,17 @@ export default function GamePreview({ network }: { network: Network }) {
   }, [rendererHolderRef.current]);
 
   return (
-    <div>
+    <div className="flex flex-row">
       <div ref={rendererHolderRef} />
+      <TrainDetail
+        trainId={String.fromCharCode(65 + selectedTrainIndex)} // Convert 0 to 'A', 1 to 'B', etc.
+        currentPassengers={5}
+        maxPassengers={6}
+        destinations={[
+          { stationName: "Station A", passengerCount: 3 },
+          { stationName: "Station B", passengerCount: 2 },
+        ]}
+      />
     </div>
   );
 }

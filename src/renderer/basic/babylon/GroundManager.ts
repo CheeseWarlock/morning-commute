@@ -7,7 +7,7 @@ export class GroundManager {
   private groundMaterial: BABYLON.StandardMaterial;
   private ground: BABYLON.Mesh;
 
-  constructor(scene: BABYLON.Scene, game: Game) {
+  constructor(scene: BABYLON.Scene, game: Game, padding: number) {
     this.scene = scene;
     this.game = game;
 
@@ -19,7 +19,6 @@ export class GroundManager {
 
     // Initialize ground
     const gameBounds = this.game.network.getBounds();
-    const padding = 50;
 
     this.ground = BABYLON.Mesh.CreateGround(
       "ground1",

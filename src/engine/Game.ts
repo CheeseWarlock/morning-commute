@@ -2,6 +2,7 @@ import { IController, KEYS } from "./Controller";
 import Network from "./Network";
 import Train from "./Train";
 import GameState from "./GameState";
+import { EventDispatcher } from "../utils/EventDispatcher";
 
 export enum TRAIN_STRATEGIES {
   TURN_LEFT = "left",
@@ -9,10 +10,14 @@ export enum TRAIN_STRATEGIES {
   RANDOM = "random",
 }
 
+interface GameEvents {
+  trainSelected: { train: Train; index: number };
+}
+
 /**
  * The top-level object representing the game logic.
  */
-class Game {
+class Game extends EventDispatcher<GameEvents> {
   network: Network;
   gameState: GameState;
   selectedTrain?: Train;
@@ -22,6 +27,7 @@ class Game {
   collision: boolean = false;
 
   constructor(network: Network, controller: IController) {
+    super();
     this.#controller = controller;
     this.network = network;
     this.gameState = new GameState(network);
@@ -36,11 +42,19 @@ class Game {
       this.#selectedTrainIndex =
         (this.#selectedTrainIndex + 1) % this.gameState.trains.length;
       this.selectedTrain = this.gameState.trains[this.#selectedTrainIndex];
+      this.publish("trainSelected", {
+        train: this.selectedTrain,
+        index: this.#selectedTrainIndex,
+      });
     });
     c.on(KEYS.DOWN, () => {
       this.#selectedTrainIndex =
         (this.#selectedTrainIndex + 1) % this.gameState.trains.length;
       this.selectedTrain = this.gameState.trains[this.#selectedTrainIndex];
+      this.publish("trainSelected", {
+        train: this.selectedTrain,
+        index: this.#selectedTrainIndex,
+      });
     });
     c.on(KEYS.LEFT, () => {
       this.turnStrategies.set(
@@ -63,6 +77,7 @@ class Game {
   initialize() {
     this.gameState.initializeTrains();
     this.selectedTrain = this.gameState.trains[0];
+    this.publish("trainSelected", { train: this.selectedTrain, index: 0 });
   }
 
   update(deltaT: number) {

@@ -23,6 +23,7 @@ class BabylonRenderer implements IRenderer {
   private trackManager: TrackManager;
   private stationManager: StationManager;
   private groundManager: GroundManager;
+  private padding: number = 50;
 
   constructor(element: HTMLElement, game: Game) {
     this.game = game;
@@ -105,7 +106,7 @@ class BabylonRenderer implements IRenderer {
     // Create camera
 
     // Initialize managers
-    this.groundManager = new GroundManager(scene, game);
+    this.groundManager = new GroundManager(scene, game, this.padding);
     this.trackManager = new TrackManager(scene, game);
     this.stationManager = new StationManager(
       scene,
@@ -113,7 +114,7 @@ class BabylonRenderer implements IRenderer {
       this.numberSpriteManager,
       this.camera,
     );
-    this.decorationManager = new DecorationManager(scene, game);
+    this.decorationManager = new DecorationManager(scene, game, this.padding);
     this.trainManager = new TrainManager(
       scene,
       game,

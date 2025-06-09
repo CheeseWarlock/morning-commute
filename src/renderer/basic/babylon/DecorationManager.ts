@@ -7,10 +7,12 @@ export class DecorationManager {
   private game: Game;
   private treeMesh?: BABYLON.Mesh;
   private treeInstances: BABYLON.InstancedMesh[] = [];
+  private padding: number;
 
-  constructor(scene: BABYLON.Scene, game: Game) {
+  constructor(scene: BABYLON.Scene, game: Game, padding: number) {
     this.scene = scene;
     this.game = game;
+    this.padding = padding;
     this.loadTreeMesh();
   }
 
@@ -55,7 +57,7 @@ export class DecorationManager {
 
     const TREES_TO_PLACE = 1000;
     const MAX_ATTEMPTS = 2000;
-    const MIN_DISTANCE = 4;
+    const MIN_DISTANCE = 12;
     let treesRemaining = TREES_TO_PLACE;
     let attempts = 0;
 
@@ -64,22 +66,32 @@ export class DecorationManager {
     const NOISE_SCALE = 0.01; // Adjust this to change the size of noise features
 
     const gameBounds = this.game.network.getBounds();
+    const paddedBounds = {
+      min: {
+        x: gameBounds.min.x - this.padding / 2,
+        y: gameBounds.min.y - this.padding / 2,
+      },
+      max: {
+        x: gameBounds.max.x + this.padding / 2,
+        y: gameBounds.max.y + this.padding / 2,
+      },
+    };
 
     // Now place instances
     while (treesRemaining > 0 && attempts < MAX_ATTEMPTS) {
       attempts++;
 
-      // Generate random position within bounds
+      // Generate random position within padded bounds
       const x =
-        gameBounds.min.x +
-        Math.random() * (gameBounds.max.x - gameBounds.min.x);
+        paddedBounds.min.x +
+        Math.random() * (paddedBounds.max.x - paddedBounds.min.x);
       const y =
-        gameBounds.min.y +
-        Math.random() * (gameBounds.max.y - gameBounds.min.y);
+        paddedBounds.min.y +
+        Math.random() * (paddedBounds.max.y - paddedBounds.min.y);
 
       // Use simplex noise to determine if we should place a tree here
       const noiseValue = noise2D(x * NOISE_SCALE, y * NOISE_SCALE);
-      if (noiseValue < 0.5) continue; // Skip if noise value is too low
+      if (noiseValue < -0.1) continue; // Skip if noise value is too low
 
       // Check distance to all track segments
       let tooClose = false;
@@ -100,8 +112,9 @@ export class DecorationManager {
         instance.rotation.y = Math.random() * Math.PI * 2;
 
         // Random scale variation between 0.8 and 1.7
-        const scaleVariation = 0.8 + Math.random() * 0.9;
-        const yScaleVariation = 0.8 + Math.random() * 0.9;
+        // Scale based on noise value
+        const scaleVariation = 0.7 + noiseValue * 0.65;
+        const yScaleVariation = scaleVariation + Math.random() * 0.6 - 0.3;
         instance.scaling = new BABYLON.Vector3(
           10 * scaleVariation,
           10 * yScaleVariation,
