@@ -184,7 +184,7 @@ const TrackEditorContent = ({
             </div>
           </div>
         </div>
-        {selectedSegment && (
+        {selectedSegment && network.segments.includes(selectedSegment) && (
           <div className="overflow-y-auto">
             <TrackSegmentDetail
               update={updateNetwork}
