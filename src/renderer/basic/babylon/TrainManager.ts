@@ -1,28 +1,26 @@
 import * as BABYLON from "@babylonjs/core";
+import * as GUI from "@babylonjs/gui";
 import Game, { TRAIN_STRATEGIES } from "../../../engine/Game";
 
 export class TrainManager {
   private scene: BABYLON.Scene;
   private game: Game;
   private trainMeshes: BABYLON.Mesh[][] = [];
-  private trainNumberSprites: BABYLON.Sprite[] = [];
   private turnArrowSprite?: BABYLON.Sprite;
-  private numberSpriteManager: BABYLON.SpriteManager;
   private arrowSpriteManager: BABYLON.SpriteManager;
   private frontCarTemplate?: BABYLON.Mesh;
   private followingCarTemplate?: BABYLON.Mesh;
   private isReady: boolean = false;
-  private loadingPromise: Promise<void>;
+  public loadingPromise: Promise<void>;
+  private trainTexts: GUI.TextBlock[] = [];
 
   constructor(
     scene: BABYLON.Scene,
     game: Game,
-    numberSpriteManager: BABYLON.SpriteManager,
     arrowSpriteManager: BABYLON.SpriteManager,
   ) {
     this.scene = scene;
     this.game = game;
-    this.numberSpriteManager = numberSpriteManager;
     this.arrowSpriteManager = arrowSpriteManager;
 
     // Start loading and store the promise
@@ -100,11 +98,33 @@ export class TrainManager {
       });
 
       this.trainMeshes.push(theseMeshes);
+    });
+  }
 
-      // Create train number sprite
-      this.trainNumberSprites.push(
-        new BABYLON.Sprite("", this.numberSpriteManager),
-      );
+  async createTrainTexts(advancedTexture: GUI.AdvancedDynamicTexture) {
+    await this.loadingPromise;
+    this.game.gameState.trains.forEach((train, index) => {
+      const text = new GUI.TextBlock();
+      text.text = `Train ${String.fromCharCode(65 + index)}`;
+      text.color = "white";
+      text.isVisible = true;
+      text.fontSize = 20;
+      text.outlineWidth = 1;
+      text.outlineColor = "black";
+      text.shadowBlur = 5;
+      text.shadowColor = "black";
+      text.shadowOffsetX = 2;
+      text.shadowOffsetY = 2;
+
+      // Get the first car mesh (front car) of this train
+      const trainMeshes = this.getTrainMeshes()[index];
+      if (trainMeshes && trainMeshes[0]) {
+        advancedTexture.addControl(text);
+        text.linkWithMesh(trainMeshes[0]);
+        text.linkOffsetY = -20; // Position above the train
+      }
+
+      this.trainTexts.push(text);
     });
   }
 
@@ -133,11 +153,6 @@ export class TrainManager {
       });
 
       this.trainMeshes.push(theseMeshes);
-
-      // Create train number sprite
-      this.trainNumberSprites.push(
-        new BABYLON.Sprite("", this.numberSpriteManager),
-      );
     });
   }
 
@@ -154,17 +169,6 @@ export class TrainManager {
 
     this.game.gameState.trains.forEach((train, i) => {
       const theseMeshes = this.trainMeshes[i];
-      const thisNumber = this.trainNumberSprites[i];
-
-      // Update number sprite
-      thisNumber.position = new BABYLON.Vector3(
-        train.position.x,
-        10,
-        -train.position.y,
-      );
-      thisNumber.width = 5;
-      thisNumber.height = 10;
-      thisNumber.cellIndex = (train.passengers.length + 9) % 10;
 
       // Update train selection and turn arrow
       if (train === this.game.selectedTrain) {
@@ -214,6 +218,14 @@ export class TrainManager {
         theseMeshes[i + 1].rotation.y += Math.PI;
       });
     });
+
+    // Update text sizes based on selection
+    this.game.gameState.trains.forEach((train, index) => {
+      const text = this.trainTexts[index];
+      if (text) {
+        text.isVisible = this.game.selectedTrain === train;
+      }
+    });
   }
 
   cleanup() {
@@ -221,10 +233,12 @@ export class TrainManager {
       meshes.forEach((mesh) => mesh.dispose());
     });
     this.trainMeshes = [];
-    this.trainNumberSprites.forEach((sprite) => sprite.dispose());
-    this.trainNumberSprites = [];
     this.turnArrowSprite?.dispose();
     this.frontCarTemplate?.dispose();
     this.followingCarTemplate?.dispose();
+  }
+
+  getTrainMeshes(): BABYLON.Mesh[][] {
+    return this.trainMeshes;
   }
 }

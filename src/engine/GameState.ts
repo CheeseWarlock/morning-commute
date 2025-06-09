@@ -104,7 +104,7 @@ class GameState extends EventDispatcher<GameStateEvents> {
               slowdown: true,
               waitTime: 2000,
               waitTimePerPassenger: 500,
-              speed: 100,
+              speed: 20,
               followingCarCount: 4,
             },
             this,
@@ -148,12 +148,6 @@ class GameState extends EventDispatcher<GameStateEvents> {
         const destination =
           destinations[Math.floor(Math.random() * destinations.length)];
         const passenger = new Passenger(station, destination);
-        console.log(
-          "Someone wants to go from",
-          station.name,
-          "to",
-          destination.name,
-        );
         this.waitingPassengers.get(station)?.push(passenger);
       }
     });

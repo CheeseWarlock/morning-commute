@@ -1,8 +1,8 @@
 import * as BABYLON from "@babylonjs/core";
+import * as GUI from "@babylonjs/gui";
 import IRenderer from "../IRenderer";
 import Game from "../../../engine/Game";
 import arrowImage from "../../images/arrow.png";
-import numberImage from "../../images/numbers.png";
 import { DecorationManager } from "./DecorationManager";
 import { TrainManager } from "./TrainManager";
 import { TrackManager } from "./TrackManager";
@@ -15,15 +15,16 @@ class BabylonRenderer implements IRenderer {
   game: Game;
   materials: Map<string, BABYLON.Material> = new Map();
   private arrowSpriteManager: BABYLON.SpriteManager;
-  private numberSpriteManager: BABYLON.SpriteManager;
   camera: BABYLON.Camera;
   engine?: BABYLON.Engine;
+  private scene: BABYLON.Scene;
   private decorationManager: DecorationManager;
   private trainManager: TrainManager;
   private trackManager: TrackManager;
   private stationManager: StationManager;
   private groundManager: GroundManager;
   private padding: number = 50;
+  private advancedTexture?: GUI.AdvancedDynamicTexture;
 
   constructor(element: HTMLElement, game: Game) {
     this.game = game;
@@ -45,12 +46,15 @@ class BabylonRenderer implements IRenderer {
       stencil: true,
     });
     this.engine = engine;
-    const scene = new BABYLON.Scene(engine);
+    this.scene = new BABYLON.Scene(engine);
+
+    // Create fullscreen UI
+    this.advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
     new BABYLON.HemisphericLight(
       "HemiLight",
       new BABYLON.Vector3(0, 1, 0),
-      scene,
+      this.scene,
     );
 
     this.arrowSpriteManager = new BABYLON.SpriteManager(
@@ -58,17 +62,9 @@ class BabylonRenderer implements IRenderer {
       arrowImage,
       2000,
       { width: 64, height: 64 },
-      scene,
+      this.scene,
     );
     this.arrowSpriteManager.renderingGroupId = 1;
-    this.numberSpriteManager = new BABYLON.SpriteManager(
-      "arrowManager",
-      numberImage,
-      10,
-      { width: 32, height: 64 },
-      scene,
-    );
-    this.numberSpriteManager.renderingGroupId = 1;
 
     const USE_UNIVERSAL_CAMERA = false;
     if (USE_UNIVERSAL_CAMERA) {
@@ -103,29 +99,28 @@ class BabylonRenderer implements IRenderer {
       this.camera = camera;
     }
 
-    // Create camera
-
     // Initialize managers
-    this.groundManager = new GroundManager(scene, game, this.padding);
-    this.trackManager = new TrackManager(scene, game);
-    this.stationManager = new StationManager(
-      scene,
+    this.groundManager = new GroundManager(this.scene, game, this.padding);
+    this.trackManager = new TrackManager(this.scene, game);
+    this.stationManager = new StationManager(this.scene, game, this.camera);
+    this.decorationManager = new DecorationManager(
+      this.scene,
       game,
-      this.numberSpriteManager,
-      this.camera,
+      this.padding,
     );
-    this.decorationManager = new DecorationManager(scene, game, this.padding);
     this.trainManager = new TrainManager(
-      scene,
+      this.scene,
       game,
-      this.numberSpriteManager,
       this.arrowSpriteManager,
     );
 
-    engine.runRenderLoop(function () {
-      scene.render();
+    this.stationManager.createStationTexts(this.advancedTexture);
+    this.trainManager.createTrainTexts(this.advancedTexture);
+
+    engine.runRenderLoop(() => {
+      this.scene.render();
     });
-    window.addEventListener("resize", function () {
+    window.addEventListener("resize", () => {
       engine.resize();
     });
   }
@@ -142,9 +137,9 @@ class BabylonRenderer implements IRenderer {
     this.trackManager.cleanup();
     this.stationManager.cleanup();
     this.groundManager.cleanup();
+    this.advancedTexture?.dispose();
     this.engine.dispose();
     delete this.engine;
   }
 }
-
 export default BabylonRenderer;

@@ -75,7 +75,7 @@ export default function GamePreview({ network }: { network: Network }) {
     // Convert to array format for TrainDetail
     const destinations = Array.from(destinationMap.entries()).map(
       ([station, count], index) => ({
-        stationName: `Station ${index + 1}`,
+        stationName: station.name,
         passengerCount: count,
       }),
     );

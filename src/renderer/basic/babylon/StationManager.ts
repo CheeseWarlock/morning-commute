@@ -1,4 +1,5 @@
 import * as BABYLON from "@babylonjs/core";
+import * as GUI from "@babylonjs/gui";
 import Game from "../../../engine/Game";
 import { ALIGNMENT } from "../../../engine/Station";
 
@@ -6,19 +7,12 @@ export class StationManager {
   private scene: BABYLON.Scene;
   private game: Game;
   private stationMaterial: BABYLON.StandardMaterial;
-  private stationNumberSprites: BABYLON.Sprite[][] = [];
-  private numberSpriteManager: BABYLON.SpriteManager;
   private camera: BABYLON.Camera;
+  private stationTexts: GUI.TextBlock[][] = [];
 
-  constructor(
-    scene: BABYLON.Scene,
-    game: Game,
-    numberSpriteManager: BABYLON.SpriteManager,
-    camera: BABYLON.Camera,
-  ) {
+  constructor(scene: BABYLON.Scene, game: Game, camera: BABYLON.Camera) {
     this.scene = scene;
     this.game = game;
-    this.numberSpriteManager = numberSpriteManager;
     this.camera = camera;
 
     // Create station material
@@ -74,51 +68,81 @@ export class StationManager {
       extrusion.rotation.y = angleFromForward + Math.PI / 2;
       extrusion.convertToFlatShadedMesh();
       extrusion.material = this.stationMaterial;
+    });
+  }
 
-      // Create station number sprites
-      const sprites: BABYLON.Sprite[] = [];
-      const a = new BABYLON.Sprite("", this.numberSpriteManager);
-      const b = new BABYLON.Sprite("", this.numberSpriteManager);
-      sprites.push(a);
-      sprites.push(b);
-      this.stationNumberSprites.push(sprites);
-      a.position = new BABYLON.Vector3(
+  createStationTexts(advancedTexture: GUI.AdvancedDynamicTexture) {
+    this.game.network.stations.forEach((station, index) => {
+      // Create container for station text
+      const container = new GUI.Container();
+      container.name = `station_${index}`;
+      container.height = "60px";
+      container.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
+
+      // Station name text
+      const nameText = new GUI.TextBlock();
+      nameText.name = "nameText";
+      nameText.text = station.name;
+      nameText.color = "white";
+      nameText.fontSize = 16;
+      nameText.outlineWidth = 1;
+      nameText.outlineColor = "black";
+      nameText.shadowBlur = 5;
+      nameText.shadowColor = "black";
+      nameText.shadowOffsetX = 2;
+      nameText.shadowOffsetY = 2;
+      nameText.height = "24px";
+      nameText.top = -10;
+      container.addControl(nameText);
+
+      // Waiting passengers text
+      const waitingText = new GUI.TextBlock();
+      waitingText.name = "waitingText";
+      const waitingPassengers =
+        this.game.gameState.waitingPassengers.get(station) || [];
+      waitingText.text = `${waitingPassengers.length} waiting`;
+      waitingText.color = "white";
+      waitingText.fontSize = 12;
+      waitingText.outlineWidth = 1;
+      waitingText.outlineColor = "black";
+      waitingText.shadowBlur = 5;
+      waitingText.shadowColor = "black";
+      waitingText.shadowOffsetX = 2;
+      waitingText.shadowOffsetY = 2;
+      waitingText.height = "20px";
+      waitingText.top = 10;
+      container.addControl(waitingText);
+
+      // Create a mesh to link the text to
+      const stationMesh = BABYLON.MeshBuilder.CreateBox(
+        "stationTextAnchor",
+        { width: 0.1, height: 0.1, depth: 0.1 },
+        this.scene,
+      );
+      stationMesh.position = new BABYLON.Vector3(
         station.position.x,
-        2,
+        5, // Height above station
         -station.position.y,
       );
-      a.height = 10;
-      a.width = 5;
-      b.position = new BABYLON.Vector3(
-        station.position.x - 4,
-        2,
-        -station.position.y,
-      );
-      b.height = 10;
-      b.width = 5;
+      stationMesh.isVisible = false; // Hide the anchor mesh
+
+      if (advancedTexture) {
+        advancedTexture.addControl(container);
+        container.linkWithMesh(stationMesh);
+        container.linkOffsetY = -20; // Position above the station
+      }
+      this.stationTexts.push([nameText, waitingText]);
     });
   }
 
   update() {
-    this.game.network.stations.forEach((station, i) => {
-      const waitingPassengers =
-        this.game.gameState.waitingPassengers.get(station)!;
-      this.stationNumberSprites[i][0].cellIndex =
-        (waitingPassengers.length + 9) % 10;
-      this.stationNumberSprites[i][1].cellIndex =
-        (Math.floor(waitingPassengers.length / 10) + 9) % 10;
-
-      this.stationNumberSprites[i][0].position = new BABYLON.Vector3(
-        station.position.x,
-        2,
-        -station.position.y,
-      );
-      const alpha = (this.camera as BABYLON.ArcRotateCamera).alpha;
-      this.stationNumberSprites[i][1].position = new BABYLON.Vector3(
-        station.position.x + Math.sin(alpha) * 5,
-        2,
-        -station.position.y - Math.cos(alpha) * 5,
-      );
+    this.game.network.stations.forEach((station, index) => {
+      const waitingText = this.stationTexts[index][1];
+      if (waitingText) {
+        const waitingPassengers =
+          this.game.gameState.waitingPassengers.get(station) || [];
+        waitingText.text = `${waitingPassengers.length} waiting`;
+      }
     });
   }
 
