@@ -134,7 +134,10 @@ export default [
       x: 631.3235097932301,
       y: 246.17285368233087,
     },
-    atStart: ["7fe7b393-4520-4251-bce9-deed745cc1db"],
+    atStart: [
+      "7fe7b393-4520-4251-bce9-deed745cc1db",
+      "829f2dbc-7148-41b5-ab19-ab2907be561d",
+    ],
     atEnd: [
       "13944025-2546-46c1-aa90-f775e5b014d7",
       "60651cd3-157b-44ac-95e2-decc94df984f",
@@ -156,6 +159,12 @@ export default [
       "ecd99275-4c44-49ec-937d-4c249c4f5804",
     ],
     atEnd: ["4f27c66c-9f3a-4fff-8bc1-f585a4929618"],
+    stations: [
+      {
+        distanceAlong: 102.20839217355359,
+        alignment: "LEFT",
+      },
+    ],
     trainStartPositions: [],
   },
   {
@@ -169,7 +178,10 @@ export default [
       y: 150.0190075284844,
     },
     atStart: ["6cece042-c2c5-4e2c-9ada-eeab8c7eddbd"],
-    atEnd: ["72d9fb63-70db-461a-a0c3-4ea97742e654"],
+    atEnd: [
+      "72d9fb63-70db-461a-a0c3-4ea97742e654",
+      "a6661313-ca4b-4972-a5a0-e27683df8382",
+    ],
     stations: [
       {
         distanceAlong: 63.14403908142557,
@@ -260,7 +272,10 @@ export default [
       y: 63.86516137463792,
     },
     atStart: ["458a851a-9388-44f5-8ebe-bf6e92835621"],
-    atEnd: ["1d0cb442-05f4-490a-a574-73151ee06ef7"],
+    atEnd: [
+      "1d0cb442-05f4-490a-a574-73151ee06ef7",
+      "c6f3a975-8c9c-442f-87d4-ce2b4d9e3bdb",
+    ],
     trainStartPositions: [],
   },
   {
@@ -387,7 +402,10 @@ export default [
       y: 400,
     },
     atStart: ["fbddf9a4-cc5a-4d0a-af15-83decf227255"],
-    atEnd: ["13944025-2546-46c1-aa90-f775e5b014d7"],
+    atEnd: [
+      "13944025-2546-46c1-aa90-f775e5b014d7",
+      "c966db32-23f5-4a18-84f5-040432857d0c",
+    ],
     trainStartPositions: [],
   },
   {
@@ -440,6 +458,72 @@ export default [
     counterClockWise: false,
     atStart: ["e5da3343-c646-4ae2-b99b-cc40f7df8ee2"],
     atEnd: ["60651cd3-157b-44ac-95e2-decc94df984f"],
+    trainStartPositions: [],
+  },
+  {
+    id: "c966db32-23f5-4a18-84f5-040432857d0c",
+    start: {
+      x: 582.9658598590436,
+      y: 400,
+    },
+    end: {
+      x: 667.1080238817106,
+      y: 400,
+    },
+    atStart: ["0200ce7c-32d6-425b-aef9-905db9d0096f"],
+    atEnd: ["a6661313-ca4b-4972-a5a0-e27683df8382"],
+    trainStartPositions: [],
+  },
+  {
+    id: "a6661313-ca4b-4972-a5a0-e27683df8382",
+    start: {
+      x: 741.3235097932304,
+      y: 150.0190075284844,
+    },
+    end: {
+      x: 667.1080238817106,
+      y: 400,
+    },
+    center: {
+      x: 667.1080238817106,
+      y: 263.9927894640327,
+    },
+    counterClockWise: false,
+    atStart: ["ee3adb0a-d662-41cd-80b9-5b1e17dff39e"],
+    atEnd: ["c966db32-23f5-4a18-84f5-040432857d0c"],
+    trainStartPositions: [],
+  },
+  {
+    id: "829f2dbc-7148-41b5-ab19-ab2907be561d",
+    start: {
+      x: 499.0158174855372,
+      y: 153.86516137463823,
+    },
+    end: {
+      x: 404.975825075813,
+      y: 88.25586434459822,
+    },
+    atStart: ["61b112e5-f2a6-4a47-a9c8-faffbe9b827c"],
+    atEnd: ["c6f3a975-8c9c-442f-87d4-ce2b4d9e3bdb"],
+    trainStartPositions: [],
+  },
+  {
+    id: "c6f3a975-8c9c-442f-87d4-ce2b4d9e3bdb",
+    start: {
+      x: 404.975825075813,
+      y: 88.25586434459822,
+    },
+    end: {
+      x: 410.55427902399845,
+      y: 63.86516137463792,
+    },
+    center: {
+      x: 412.6972027016869,
+      y: 77.188556414179,
+    },
+    counterClockWise: false,
+    atStart: ["829f2dbc-7148-41b5-ab19-ab2907be561d"],
+    atEnd: ["e2418b4d-0606-484a-80b3-83343ec930e0"],
     trainStartPositions: [],
   },
 ];

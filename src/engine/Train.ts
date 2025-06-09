@@ -298,10 +298,7 @@ class Train implements GameObject {
     const passengerToDropOff = this.passengers.find(
       (p) => p.destination === station,
     );
-    const waitingPassengers = this.gameState.waitingPassengers.get(station)!;
-    const atStation = waitingPassengers.length
-      ? waitingPassengers[0]
-      : undefined;
+    const atStation = this.gameState.getNextWaitingPassenger(station);
     return (
       passengerToDropOff ||
       (atStation && this.passengers.length < this.capacity)
@@ -310,17 +307,25 @@ class Train implements GameObject {
 
   #handleOnePassenger() {
     const station = this.#upcomingStations[0];
-    const passengerToDropOff = this.passengers.find(
+    if (!station) return;
+
+    // First, drop off any passengers who want to get off here
+    const passengersToDropOff = this.passengers.filter(
       (p) => p.destination === station,
     );
-    const waitingPassengers = this.gameState.waitingPassengers.get(station)!;
-    if (passengerToDropOff) {
-      this.passengers.splice(this.passengers.indexOf(passengerToDropOff), 1);
-    } else if (
-      waitingPassengers.length &&
-      this.passengers.length < this.capacity
-    ) {
-      this.passengers.push(waitingPassengers.splice(0, 1)[0]);
+    if (passengersToDropOff.length > 0) {
+      const passenger = passengersToDropOff[0];
+      this.passengers = this.passengers.filter((p) => p !== passenger);
+      this.gameState.dropOffPassengerAtStation(station, passenger);
+      this.gameState.updateTrainPassengers(this, this.passengers);
+      return;
+    } else if (this.passengers.length < this.capacity) {
+      const nextPassenger = this.gameState.getNextWaitingPassenger(station);
+      if (nextPassenger) {
+        this.gameState.removeWaitingPassenger(station);
+        this.passengers.push(nextPassenger);
+        this.gameState.updateTrainPassengers(this, this.passengers);
+      }
     }
   }
 

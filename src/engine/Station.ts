@@ -1,3 +1,4 @@
+import { generateName } from "../utils";
 import TrackSegment from "./TrackSegment";
 
 /**
@@ -16,6 +17,7 @@ class Station {
   trackSegment: TrackSegment;
   distanceAlong: number;
   alignment: ALIGNMENT;
+  name: string;
 
   constructor(
     trackSegment: TrackSegment,
@@ -25,6 +27,7 @@ class Station {
     this.trackSegment = trackSegment;
     this.distanceAlong = distanceAlong;
     this.alignment = alignment;
+    this.name = generateName(2);
   }
 
   get position() {
