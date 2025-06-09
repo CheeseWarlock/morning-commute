@@ -409,6 +409,7 @@ class CircularTrackSegment extends TrackSegment {
         ? this.stations.map((station) => ({
             distanceAlong: station.distanceAlong,
             alignment: station.alignment,
+            name: station.name,
           }))
         : undefined;
     return {

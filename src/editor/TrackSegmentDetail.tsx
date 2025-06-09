@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import CircularTrackSegment from "../engine/CircularTrackSegment";
 import Network from "../engine/Network";
 import { findCenter } from "./utils";
@@ -17,6 +17,10 @@ const TrackSegmentDetail = (props: {
   ) => void;
 }) => {
   const { update } = props;
+  const [editingStationIndex, setEditingStationIndex] = useState<number | null>(
+    null,
+  );
+  const [editingStationName, setEditingStationName] = useState<string>("");
 
   const doUpdateProp = (newProp: {
     start?: Partial<Point>;
@@ -76,6 +80,16 @@ const TrackSegmentDetail = (props: {
     }
   };
 
+  const updateStationName = (stationIndex: number, newName: string) => {
+    const newNetwork = new Network(
+      props.network.segments,
+      props.network.stations,
+    );
+    const thisSegment = newNetwork.segments[props.segmentIndex];
+    thisSegment.stations[stationIndex].name = newName;
+    update(newNetwork);
+  };
+
   const segment = props.network.segments[props.segmentIndex];
   const hasConnections = segment.atStart.length > 0 || segment.atEnd.length > 0;
 
@@ -99,15 +113,55 @@ const TrackSegmentDetail = (props: {
       {segment.stations.length > 0 && (
         <>
           <h4 className="text-lg">Stations</h4>
-          <div className="flex flex-row gap-2 items-center">
-            <span>{segment.stations.length}</span>
+          <div className="flex flex-col gap-2">
+            {segment.stations.map((station, index) => (
+              <div key={index} className="flex flex-row gap-2 items-center">
+                <input
+                  type="text"
+                  className="font-mono border border-zinc-300 rounded px-1 bg-white hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                  value={
+                    editingStationIndex === index
+                      ? editingStationName
+                      : station.name
+                  }
+                  onChange={(e) => {
+                    if (editingStationIndex === index) {
+                      setEditingStationName(e.target.value);
+                    }
+                  }}
+                  onFocus={() => {
+                    setEditingStationIndex(index);
+                    setEditingStationName(station.name);
+                  }}
+                  onBlur={() => {
+                    if (editingStationIndex === index) {
+                      updateStationName(index, editingStationName);
+                      setEditingStationIndex(null);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (editingStationIndex === index) {
+                      if (e.key === "Enter") {
+                        updateStationName(index, editingStationName);
+                        setEditingStationIndex(null);
+                      } else if (e.key === "Escape") {
+                        setEditingStationIndex(null);
+                      }
+                    }
+                  }}
+                />
+                <span className="text-sm text-zinc-500">
+                  ({station.distanceAlong.toFixed(2)} along)
+                </span>
+              </div>
+            ))}
             <button
               className="px-2 py-1 text-sm text-red-600 hover:text-red-800 bg-red-100 rounded font-bold"
               onClick={() => {
                 props.clearSegment(segment, "STATIONS");
               }}
             >
-              Delete
+              Delete All
             </button>
           </div>
         </>

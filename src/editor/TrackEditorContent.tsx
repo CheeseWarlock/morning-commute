@@ -188,7 +188,9 @@ const TrackEditorContent = ({
           <div className="overflow-y-auto">
             <TrackSegmentDetail
               update={updateNetwork}
-              segmentIndex={network.segments.indexOf(selectedSegment)}
+              segmentIndex={network.segments.indexOf(
+                network.segments.find((seg) => seg.id === selectedSegment.id)!,
+              )}
               network={network}
               deleteSegment={(segment) =>
                 trackEditorRef.current?.deleteSegment(segment)

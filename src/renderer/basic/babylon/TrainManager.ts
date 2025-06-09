@@ -13,6 +13,7 @@ export class TrainManager {
   private isReady: boolean = false;
   public loadingPromise: Promise<void>;
   private trainTexts: GUI.TextBlock[] = [];
+  private arrowPulseAnimation?: BABYLON.Animation;
 
   constructor(
     scene: BABYLON.Scene,
@@ -22,6 +23,20 @@ export class TrainManager {
     this.scene = scene;
     this.game = game;
     this.arrowSpriteManager = arrowSpriteManager;
+
+    // Create arrow pulse animation
+    this.arrowPulseAnimation = new BABYLON.Animation(
+      "arrowPulse",
+      "width",
+      30,
+      BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE,
+    );
+    this.arrowPulseAnimation.setKeys([
+      { frame: 0, value: 15 },
+      { frame: 15, value: 20 },
+      { frame: 30, value: 15 },
+    ]);
 
     // Start loading and store the promise
     this.loadingPromise = this.loadModels();
@@ -173,15 +188,23 @@ export class TrainManager {
       // Update train selection and turn arrow
       if (train === this.game.selectedTrain) {
         if (!this.turnArrowSprite) {
-          const tree = new BABYLON.Sprite("tree", this.arrowSpriteManager);
-          tree.width = 10;
-          tree.height = 10;
-          this.turnArrowSprite = tree;
+          const arrow = new BABYLON.Sprite("arrow", this.arrowSpriteManager);
+          arrow.width = 15;
+          arrow.height = 15;
+          this.turnArrowSprite = arrow;
+          this.scene.beginDirectAnimation(
+            arrow,
+            [this.arrowPulseAnimation!],
+            0,
+            30,
+            true,
+          );
         }
 
+        // Position arrow above the junction
         this.turnArrowSprite.position = new BABYLON.Vector3(
           train.nextJunction.position.x,
-          2,
+          5, // Higher up
           -train.nextJunction.position.y,
         );
 
@@ -189,13 +212,16 @@ export class TrainManager {
         if (direction === TRAIN_STRATEGIES.TURN_LEFT) {
           this.turnArrowSprite.angle = 0.8;
           this.turnArrowSprite.isVisible = true;
+          this.turnArrowSprite.color = new BABYLON.Color4(0, 1, 0, 1); // Green
         } else if (direction === TRAIN_STRATEGIES.TURN_RIGHT) {
           this.turnArrowSprite.angle = -0.8;
           this.turnArrowSprite.isVisible = true;
+          this.turnArrowSprite.color = new BABYLON.Color4(1, 0, 0, 1); // Red
         } else {
           this.turnArrowSprite.isVisible = false;
         }
 
+        // Adjust arrow angle based on camera and junction
         this.turnArrowSprite.angle -= (
           this.scene.activeCamera as BABYLON.ArcRotateCamera
         ).alpha;

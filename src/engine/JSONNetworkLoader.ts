@@ -23,6 +23,7 @@ export type JSONTrackSegment = {
 export type JSONStation = {
   distanceAlong: number;
   alignment: ALIGNMENT;
+  name: string;
 };
 
 export const loadNetworkFromJSON = (jsonArray: JSONTrackSegment[]) => {
@@ -55,6 +56,7 @@ export const loadNetworkFromJSON = (jsonArray: JSONTrackSegment[]) => {
           segment,
           station.distanceAlong,
           station.alignment,
+          station.name,
         );
         segment.stations.push(stationObject);
         network.stations.push(stationObject);

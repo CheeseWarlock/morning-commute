@@ -184,16 +184,6 @@ class TrackEditor {
     this.network = network;
     this.#onSelect = onSelect;
 
-    document.body.onkeydown = (ev) => {
-      if (
-        this.currentStateWithData.state === EDITOR_STATE.SELECT &&
-        this.currentStateWithData.selectedSegment &&
-        (ev.key === "Backspace" || ev.key === "Delete")
-      ) {
-        this.deleteSegment(this.currentStateWithData.selectedSegment);
-      }
-    };
-
     canvas.onmousemove = (ev) => {
       this.mousePos = { x: ev.offsetX, y: ev.offsetY };
       const gamePosition = this.untransformPosition(this.mousePos);
