@@ -14,6 +14,8 @@ export enum TRAIN_STATE {
   HANDLING_PASSENGERS = "handling-passengers",
 }
 
+const CAR_SPACING = 5.5;
+
 /**
  * Defines a Train's position on the game board.
  */
@@ -115,7 +117,14 @@ class Train implements GameObject {
       _followingCarCount = movementOptions?.followingCarCount;
     }
     while (_followingCarCount > 0) {
-      this.followingCars.push(new TrainFollowingCar(this.position));
+      this.followingCars.push(
+        new TrainFollowingCar(
+          this.position,
+          this.#currentSegment,
+          this.#currentDistance,
+          this.#currentlyReversing,
+        ),
+      );
       _followingCarCount -= 1;
     }
 
@@ -386,7 +395,7 @@ class Train implements GameObject {
     this.#timeLeftToProcess = deltaT;
 
     // Add collision segments for the train and its following cars
-    const distanceBack = this.followingCars.length * 5;
+    const distanceBack = this.followingCars.length * CAR_SPACING;
     this.#addToCollisionSegments(
       this.#currentSegment,
       Math.max(0, this.#currentDistance - distanceBack),
@@ -466,10 +475,13 @@ class Train implements GameObject {
     // Update following cars
     this.followingCars.forEach((car, idx) => {
       let remainingDistance =
-        this.#currentSegment.length - this.#currentDistance + 5 * (idx + 1);
+        this.#currentSegment.length -
+        this.#currentDistance +
+        CAR_SPACING * (idx + 1);
       let targetSegmentIndex = this.#previousSegments.length - 1;
       let targetSegment = this.#currentSegment;
       let wasReversing = this.#currentlyReversing;
+      let lastDistanceAlong = remainingDistance;
 
       let attemptedPosition = targetSegment.getPositionAlong(
         remainingDistance,
@@ -490,10 +502,18 @@ class Train implements GameObject {
             remainingDistance,
             !wasReversing,
           );
+          lastDistanceAlong = remainingDistance;
           remainingDistance = attemptedPosition.excess;
         }
       }
-      car.position = attemptedPosition.point;
+      // car.position = attemptedPosition.point;
+      car.currentSegment = targetSegment;
+      car.distanceAlong = targetSegment.length - lastDistanceAlong;
+      car.isReversing = wasReversing;
+      car.position = targetSegment.getPositionAlong(
+        car.distanceAlong,
+        car.isReversing,
+      ).point;
     });
   }
 }

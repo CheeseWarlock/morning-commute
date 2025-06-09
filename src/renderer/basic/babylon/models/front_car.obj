@@ -1,0 +1,18 @@
+# Front train car model
+# Vertices
+v -1.5 -0.5 -0.5  # Front left bottom
+v -1.5 -0.5  0.5  # Front right bottom
+v -1.0  0.5  0.5  # Front right top
+v -1.0  0.5 -0.5  # Front left top
+v  1.0 -0.5 -0.5  # Back left bottom
+v  1.0 -0.5  0.5  # Back right bottom
+v  1.0  0.5  0.5  # Back right top
+v  1.0  0.5 -0.5  # Back left top
+
+# Faces
+f 1 2 3 4  # Front face
+f 8 7 6 5  # Back face
+f 1 2 6 5  # Bottom face
+f 4 3 7 8  # Top face
+f 1 4 8 5  # Left face
+f 6 7 3 2  # Right face

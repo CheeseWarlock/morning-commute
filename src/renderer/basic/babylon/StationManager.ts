@@ -113,7 +113,7 @@ export class StationManager {
         2,
         -station.position.y,
       );
-      const aa = (this.camera as BABYLON.ArcRotateCamera).alpha;
+      const aa = 0; //(this.camera as BABYLON.ArcRotateCamera).alpha;
       this.stationNumberSprites[i][1].position = new BABYLON.Vector3(
         station.position.x + Math.sin(aa) * 5,
         2,

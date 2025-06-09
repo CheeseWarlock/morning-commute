@@ -69,21 +69,40 @@ class BabylonRenderer implements IRenderer {
     );
     this.numberSpriteManager.renderingGroupId = 1;
 
-    // Create camera
-    const gameBounds = game.network.getBounds();
-    const camera = new BABYLON.ArcRotateCamera(
-      "Camera",
-      (3 * Math.PI) / 2,
-      0.5,
-      700,
-      new BABYLON.Vector3(
+    const USE_UNIVERSAL_CAMERA = false;
+    if (USE_UNIVERSAL_CAMERA) {
+      const gameBounds = game.network.getBounds();
+      const center = new BABYLON.Vector3(
         (gameBounds.max.x + gameBounds.min.x) / 2,
         0,
         -(gameBounds.max.y + gameBounds.min.y) / 2,
-      ),
-    );
-    camera.attachControl(canvas, false);
-    this.camera = camera;
+      );
+
+      const camera = new BABYLON.UniversalCamera(
+        "Camera",
+        new BABYLON.Vector3(center.x, center.y + 100, center.z),
+      );
+      camera.attachControl(canvas, false);
+      camera.setTarget(center);
+      this.camera = camera;
+    } else {
+      const gameBounds = game.network.getBounds();
+      const camera = new BABYLON.ArcRotateCamera(
+        "Camera",
+        (3 * Math.PI) / 2,
+        0.5,
+        700,
+        new BABYLON.Vector3(
+          (gameBounds.max.x + gameBounds.min.x) / 2,
+          0,
+          -(gameBounds.max.y + gameBounds.min.y) / 2,
+        ),
+      );
+      camera.attachControl(canvas, false);
+      this.camera = camera;
+    }
+
+    // Create camera
 
     // Initialize managers
     this.groundManager = new GroundManager(scene, game);

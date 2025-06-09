@@ -17,7 +17,7 @@ export class DecorationManager {
   private loadTreeMesh() {
     BABYLON.SceneLoader.ImportMesh(
       null,
-      "src/renderer/basic/babylon/",
+      "src/renderer/basic/babylon/models/",
       "tree.obj",
       this.scene,
       (meshes) => {

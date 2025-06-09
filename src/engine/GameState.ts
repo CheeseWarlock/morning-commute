@@ -31,7 +31,7 @@ class GameState {
               slowdown: true,
               waitTime: 2000,
               waitTimePerPassenger: 500,
-              speed: 100,
+              speed: 20,
               followingCarCount: 4,
             },
             this,
