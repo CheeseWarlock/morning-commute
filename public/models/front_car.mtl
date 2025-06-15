@@ -1,0 +1,17 @@
+newmtl TrainMaterial
+Ka 1.0 1.0 1.0
+Kd 1.0 1.0 1.0
+Ks 0.0 0.0 0.0
+d 1.0
+illum 1
+map_Ka window.png
+map_Kd window.png
+
+newmtl FrontFaceMaterial
+Ka 1.0 1.0 1.0
+Kd 1.0 1.0 1.0
+Ks 0.0 0.0 0.0
+d 1.0
+illum 1
+map_Ka window2.png
+map_Kd window2.png

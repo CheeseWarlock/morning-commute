@@ -1,9 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 import { createNoise2D } from "simplex-noise";
 import Game from "../../../engine/Game";
-import TreeMaterial from "../../basic/babylon/models/tree.png";
-import Tree from "../../basic/babylon/models/tree.obj?url";
-
 export class DecorationManager {
   private scene: BABYLON.Scene;
   private game: Game;
@@ -21,23 +18,17 @@ export class DecorationManager {
   private loadTreeMesh() {
     // Create texture with nearest-neighbor sampling
     const treeTexture = new BABYLON.Texture(
-      TreeMaterial,
+      "models/tree.png",
       this.scene,
       false,
       true,
       BABYLON.Texture.NEAREST_LINEAR,
     );
 
-    const treeFolder =
-      Tree.split("/")
-        .splice(0, Tree.split("/").length - 1)
-        .join("/") + "/";
-    const treeFile = Tree.split("/")[Tree.split("/").length - 1];
-
     BABYLON.SceneLoader.ImportMesh(
       null,
-      treeFolder,
-      treeFile,
+      "models/",
+      "tree.obj",
       this.scene,
       (meshes) => {
         const treeMesh = meshes[0];
