@@ -7,13 +7,11 @@ export class StationManager {
   private scene: BABYLON.Scene;
   private game: Game;
   private stationMaterial: BABYLON.StandardMaterial;
-  private camera: BABYLON.Camera;
   private stationTexts: GUI.TextBlock[][] = [];
 
-  constructor(scene: BABYLON.Scene, game: Game, camera: BABYLON.Camera) {
+  constructor(scene: BABYLON.Scene, game: Game) {
     this.scene = scene;
     this.game = game;
-    this.camera = camera;
 
     // Create station material
     this.stationMaterial = new BABYLON.StandardMaterial("");

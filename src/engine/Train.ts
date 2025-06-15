@@ -316,7 +316,7 @@ class Train implements GameObject {
     if (passengersToDropOff.length > 0) {
       const passenger = passengersToDropOff[0];
       this.passengers = this.passengers.filter((p) => p !== passenger);
-      this.gameState.dropOffPassengerAtStation(station, passenger);
+      this.gameState.dropOffPassengerAtStation();
       this.gameState.updateTrainPassengers(this, this.passengers);
       return;
     } else if (this.passengers.length < this.capacity) {

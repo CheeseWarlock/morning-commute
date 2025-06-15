@@ -48,7 +48,7 @@ export default function GamePreview({ network }: { network: Network }) {
       });
 
       // Listen for passenger updates
-      game.gameState.on("trainPassengersUpdated", ({ train, passengers }) => {
+      game.gameState.on("trainPassengersUpdated", ({ train }) => {
         if (train === game.selectedTrain) {
           updateTrainPassengerInfo(train);
         }
@@ -74,7 +74,7 @@ export default function GamePreview({ network }: { network: Network }) {
 
     // Convert to array format for TrainDetail
     const destinations = Array.from(destinationMap.entries()).map(
-      ([station, count], index) => ({
+      ([station, count]) => ({
         stationName: station.name,
         passengerCount: count,
       }),

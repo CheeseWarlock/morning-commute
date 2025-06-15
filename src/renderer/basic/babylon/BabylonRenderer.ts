@@ -102,7 +102,7 @@ class BabylonRenderer implements IRenderer {
     // Initialize managers
     this.groundManager = new GroundManager(this.scene, game, this.padding);
     this.trackManager = new TrackManager(this.scene, game);
-    this.stationManager = new StationManager(this.scene, game, this.camera);
+    this.stationManager = new StationManager(this.scene, game);
     this.decorationManager = new DecorationManager(
       this.scene,
       game,

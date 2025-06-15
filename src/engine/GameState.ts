@@ -77,7 +77,7 @@ class GameState extends EventDispatcher<GameStateEvents> {
    * Handle a passenger being dropped off at their destination station.
    * Currently just removes them from the game, but could be extended to track statistics.
    */
-  dropOffPassengerAtStation(station: Station, passenger: Passenger) {
+  dropOffPassengerAtStation() {
     // For now, we just let the passenger disappear
     // In the future, we could track statistics or trigger events here
   }

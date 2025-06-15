@@ -118,7 +118,7 @@ export class TrainManager {
 
   async createTrainTexts(advancedTexture: GUI.AdvancedDynamicTexture) {
     await this.loadingPromise;
-    this.game.gameState.trains.forEach((train, index) => {
+    this.game.gameState.trains.forEach((_train, index) => {
       const text = new GUI.TextBlock();
       text.text = `Train ${String.fromCharCode(65 + index)}`;
       text.color = "white";
