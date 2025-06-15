@@ -1,6 +1,8 @@
 import * as BABYLON from "@babylonjs/core";
 import * as GUI from "@babylonjs/gui";
 import Game, { TRAIN_STRATEGIES } from "../../../engine/Game";
+import Train from "../../basic/babylon/models/front_car.obj?url";
+import FollowingTrain from "../../basic/babylon/models/following_car.obj?url";
 
 export class TrainManager {
   private scene: BABYLON.Scene;
@@ -45,16 +47,28 @@ export class TrainManager {
   private async loadModels() {
     try {
       // Import the OBJ models
+      const frontCarFolder =
+        Train.split("/")
+          .splice(0, Train.split("/").length - 1)
+          .join("/") + "/";
+      const frontCarFile = Train.split("/")[Train.split("/").length - 1];
+      const followingCarFolder =
+        FollowingTrain.split("/")
+          .splice(0, FollowingTrain.split("/").length - 1)
+          .join("/") + "/";
+      const followingCarFile =
+        FollowingTrain.split("/")[FollowingTrain.split("/").length - 1];
+
       const frontCarResult = await BABYLON.SceneLoader.ImportMeshAsync(
         "",
-        "src/renderer/basic/babylon/models/",
-        "front_car.obj",
+        frontCarFolder,
+        frontCarFile,
         this.scene,
       );
       const followingCarResult = await BABYLON.SceneLoader.ImportMeshAsync(
         "",
-        "src/renderer/basic/babylon/models/",
-        "following_car.obj",
+        followingCarFolder,
+        followingCarFile,
         this.scene,
       );
 
