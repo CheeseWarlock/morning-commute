@@ -28,7 +28,7 @@ export default function TrackEditorTopBar({
   const [instructionsMenuOpen, setInstructionsMenuOpen] =
     useState<boolean>(false);
   return (
-    <div className="flex items-center p-2 bg-zinc-50 border-b border-zinc-200 shadow-sm">
+    <div className="flex items-center p-2 bg-zinc-200 border-b border-zinc-300 shadow-sm">
       <div className="flex-1">
         <Button
           disabled={!isNetworkComplete || state === EDITOR_PAGE_STATE.GAME}
@@ -46,7 +46,7 @@ export default function TrackEditorTopBar({
         className="flex-none text-2xl font-bold text-center"
         style={{ minWidth: 0 }}
       >
-        Untitled Train Game
+        Morning Commute 2
       </div>
       {/* Right Actions */}
       <div className="flex-1 flex justify-end gap-2">

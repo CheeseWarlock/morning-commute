@@ -63,10 +63,10 @@ const TrackEditorContent = ({
       <div className="flex flex-row h-full">
         <div>
           <div ref={trackEditorContainer} />
-          <div className="flex flex-col bg-zinc-50 border-b border-zinc-200 shadow-sm gap-2 p-2">
+          <div className="flex flex-col bg-zinc-200 border-b border-zinc-300 shadow-sm gap-2 p-2">
             <div className="flex flex-row justify-between items-center gap-4">
               {/* Selection Actions */}
-              <div className="flex gap-2 bg-white rounded shadow px-3 py-2">
+              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center">
                 <Button
                   selected={
                     buttonBarState === EDITOR_STATE.SELECT ||
@@ -130,8 +130,8 @@ const TrackEditorContent = ({
               </div>
             </div>
             {/* Construction Actions */}
-            <div className="flex flex-row justify-between items-center gap-4 items-center">
-              <div className="flex gap-2 bg-white rounded shadow px-3 py-2">
+            <div className="flex flex-row justify-between items-center gap-4">
+              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center">
                 <span className="text-lg font-bold text-zinc-500">Add:</span>
                 <Button
                   selected={
