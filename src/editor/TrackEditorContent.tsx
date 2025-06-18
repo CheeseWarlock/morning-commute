@@ -112,6 +112,16 @@ const TrackEditorContent = ({
                     setButtonBarState(EDITOR_STATE.DRAG_SELECT);
                   }}
                 />
+                <Button
+                  selected={buttonBarState === EDITOR_STATE.SPLIT}
+                  value="Split"
+                  onClick={() => {
+                    trackEditorRef.current?.setcurrentStateWithData({
+                      state: EDITOR_STATE.SPLIT,
+                    });
+                    setButtonBarState(EDITOR_STATE.SPLIT);
+                  }}
+                />
               </div>
 
               {/* Zoom Controls */}

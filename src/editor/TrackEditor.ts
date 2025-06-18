@@ -89,6 +89,10 @@ export enum EDITOR_STATE {
    * Adding a train start position
    */
   SET_START_POSITION = "SET_START_POSITION",
+  /**
+   * Splitting a track segment into two segments
+   */
+  SPLIT = "SPLIT",
 }
 
 type EDITOR_STATE_PAYLOADS =
@@ -163,6 +167,9 @@ type EDITOR_STATE_PAYLOADS =
     }
   | {
       state: EDITOR_STATE.SET_START_POSITION;
+    }
+  | {
+      state: EDITOR_STATE.SPLIT;
     };
 
 const SELECTION_DISTANCE_PIXELS = 15;
@@ -687,6 +694,61 @@ class TrackEditor {
             dragStartPoint: this.mousePos,
             originalOffset: { ...this.#offset },
           });
+          break;
+        }
+
+        case EDITOR_STATE.SPLIT: {
+          if (!this.#hoverSegment) break;
+          if (!this.mousePos) break;
+
+          const gamePosition = this.untransformPosition(this.mousePos);
+          const closestPoint = this.#hoverSegment.distanceToPosition({
+            x: gamePosition.x,
+            y: gamePosition.y,
+          });
+
+          // Handle linear segments
+          if (this.#hoverSegment instanceof LinearTrackSegment) {
+            const splitPoint = closestPoint.point;
+
+            // Create the first segment: from original start to split point
+            const firstSegment = new LinearTrackSegment(
+              { ...this.#hoverSegment.start },
+              { ...splitPoint },
+            );
+
+            // Create the second segment: from split point to original end
+            const secondSegment = new LinearTrackSegment(
+              { ...splitPoint },
+              { ...this.#hoverSegment.end },
+            );
+
+            // Replace the original segment with the two new ones
+            this.#replaceSegmentWithNewSegments(firstSegment, secondSegment);
+          } else if (this.#hoverSegment instanceof CircularTrackSegment) {
+            const splitPoint = this.#hoverSegment.getPositionAlong(
+              closestPoint.distanceAlong * this.#hoverSegment.length,
+            ).point;
+
+            // Create the first segment: from original start to split point
+            const firstSegment = new CircularTrackSegment(
+              { ...this.#hoverSegment.start },
+              { ...splitPoint },
+              { ...this.#hoverSegment.center },
+              this.#hoverSegment.counterClockWise,
+            );
+
+            // Create the second segment: from split point to original end
+            const secondSegment = new CircularTrackSegment(
+              { ...splitPoint },
+              { ...this.#hoverSegment.end },
+              { ...this.#hoverSegment.center },
+              this.#hoverSegment.counterClockWise,
+            );
+
+            // Replace the original segment with the two new ones
+            this.#replaceSegmentWithNewSegments(firstSegment, secondSegment);
+          }
           break;
         }
       }
@@ -1587,6 +1649,31 @@ class TrackEditor {
       // No angle constraint, use the mouse position directly
       return { endPosition: endPoint };
     }
+  }
+
+  #replaceSegmentWithNewSegments(
+    firstSegment: TrackSegment,
+    secondSegment: TrackSegment,
+  ) {
+    if (!this.#hoverSegment) return;
+
+    // Remove the original segment
+    const originalSegmentIndex = this.network.segments.indexOf(
+      this.#hoverSegment,
+    );
+    if (originalSegmentIndex > -1) {
+      this.network.segments.splice(originalSegmentIndex, 1);
+    }
+
+    // Add the new segments to the network
+    this.network.segments.push(firstSegment);
+    this.network.segments.push(secondSegment);
+
+    // Update the network and return to SELECT state
+    this.dispatchUpdate();
+    this.setcurrentStateWithData({
+      state: EDITOR_STATE.SELECT,
+    });
   }
 }
 
