@@ -273,6 +273,8 @@ const TrackEditorContent = ({
                       trackEditorRef.current.currentStateWithData.lockedToEnd,
                     counterClockwise,
                     angle: circularAngle,
+                    startAngle:
+                      trackEditorRef.current.currentStateWithData.startAngle,
                   });
                 }
               }}
@@ -304,6 +306,8 @@ const TrackEditorContent = ({
                       trackEditorRef.current.currentStateWithData.lockedToEnd,
                     counterClockwise: isCircularCounterClockwise,
                     angle,
+                    startAngle:
+                      trackEditorRef.current.currentStateWithData.startAngle,
                   });
                 }
               }}
