@@ -43,7 +43,7 @@ export default function TrackEditorTopBar({
       </div>
       {/* Center Title */}
       <div
-        className="flex-none text-2xl font-bold text-center"
+        className="flex-none text-4xl font-bold text-center overpass-bold relative top-1"
         style={{ minWidth: 0 }}
       >
         Morning Commute 2
