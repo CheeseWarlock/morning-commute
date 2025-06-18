@@ -477,12 +477,16 @@ class TrackEditor {
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END: {
           const { endPosition } =
             this.#calculateLinearSegmentParams(gamePosition);
-          const previewSegment = new LinearTrackSegment(
+          const newSegment = new LinearTrackSegment(
             this.currentStateWithData.segmentStart,
             endPosition,
           );
+          // Connect the segment if we started from a segment
+          if (this.currentStateWithData.lockedToSegment) {
+            newSegment.connect(this.currentStateWithData.lockedToSegment);
+          }
 
-          this.network.segments.push(previewSegment);
+          this.network.segments.push(newSegment);
           this.dispatchUpdate();
           this.setcurrentStateWithData({
             state: EDITOR_STATE.SELECT,
@@ -1684,10 +1688,47 @@ class TrackEditor {
   ) {
     if (!this.#hoverSegment) return;
 
-    // Remove the original segment
-    const originalSegmentIndex = this.network.segments.indexOf(
-      this.#hoverSegment,
-    );
+    const originalSegment = this.#hoverSegment;
+
+    // Store the original connections before removing the segment
+    const segmentsConnectedToStart = [...originalSegment.atStart];
+    const segmentsConnectedToEnd = [...originalSegment.atEnd];
+
+    segmentsConnectedToStart.forEach((connectedSegment) => {
+      if (connectedSegment.atStart.includes(originalSegment)) {
+        connectedSegment.atStart.splice(
+          connectedSegment.atStart.indexOf(originalSegment),
+          1,
+        );
+        connectedSegment.atStart.push(firstSegment);
+      }
+      if (connectedSegment.atEnd.includes(originalSegment)) {
+        connectedSegment.atEnd.splice(
+          connectedSegment.atEnd.indexOf(originalSegment),
+          1,
+        );
+        connectedSegment.atEnd.push(firstSegment);
+      }
+    });
+    segmentsConnectedToEnd.forEach((connectedSegment) => {
+      if (connectedSegment.atStart.includes(originalSegment)) {
+        connectedSegment.atStart.splice(
+          connectedSegment.atStart.indexOf(originalSegment),
+          1,
+        );
+        connectedSegment.atStart.push(secondSegment);
+      }
+      if (connectedSegment.atEnd.includes(originalSegment)) {
+        connectedSegment.atEnd.splice(
+          connectedSegment.atEnd.indexOf(originalSegment),
+          1,
+        );
+        connectedSegment.atEnd.push(secondSegment);
+      }
+    });
+
+    // Remove the original segment from the network
+    const originalSegmentIndex = this.network.segments.indexOf(originalSegment);
     if (originalSegmentIndex > -1) {
       this.network.segments.splice(originalSegmentIndex, 1);
     }
@@ -1695,6 +1736,17 @@ class TrackEditor {
     // Add the new segments to the network
     this.network.segments.push(firstSegment);
     this.network.segments.push(secondSegment);
+
+    segmentsConnectedToStart.forEach((connectedSegment) => {
+      firstSegment.atStart.push(connectedSegment);
+    });
+    segmentsConnectedToEnd.forEach((connectedSegment) => {
+      secondSegment.atEnd.push(connectedSegment);
+    });
+
+    // Connect the two new segments to each other at the split point
+    firstSegment.atEnd.push(secondSegment);
+    secondSegment.atStart.push(firstSegment);
 
     // Update the network and return to SELECT state
     this.dispatchUpdate();
