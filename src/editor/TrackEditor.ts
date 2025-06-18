@@ -4,7 +4,7 @@ import Network from "../engine/Network";
 import Point from "../engine/Point";
 import Station, { ALIGNMENT } from "../engine/Station";
 import TrackSegment from "../engine/TrackSegment";
-import { connectSegments, findCenter } from "./utils";
+import { connectSegments, findCenter, calculateCircularCenter } from "./utils";
 import Controller from "../engine/Controller";
 import Game from "../engine/Game";
 import BabylonRenderer from "../renderer/basic/babylon/BabylonRenderer";
@@ -36,6 +36,14 @@ export enum EDITOR_STATE {
    * Choose the second point for a linear track segment.
    */
   CREATE_LINEAR_SEGMENT_END = "CREATE_LINEAR_SEGMENT_END",
+  /**
+   * Choose the first point for a circular track segment.
+   */
+  CREATE_CIRCULAR_SEGMENT_START = "CREATE_CIRCULAR_SEGMENT_START",
+  /**
+   * Choose the second point for a circular track segment.
+   */
+  CREATE_CIRCULAR_SEGMENT_END = "CREATE_CIRCULAR_SEGMENT_END",
   /**
    * Choose the first point for a linear-and-circular connection.
    */
@@ -92,6 +100,19 @@ type EDITOR_STATE_PAYLOADS =
       segmentStart: Point;
       lockedToSegment?: TrackSegment;
       lockedToEnd?: SELECTION_TYPE.START | SELECTION_TYPE.END;
+    }
+  | {
+      state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START;
+      counterClockwise: boolean;
+      angle: number;
+    }
+  | {
+      state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END;
+      segmentStart: Point;
+      lockedToSegment?: TrackSegment;
+      lockedToEnd?: SELECTION_TYPE.START | SELECTION_TYPE.END;
+      counterClockwise: boolean;
+      angle: number;
     }
   | {
       state: EDITOR_STATE.CREATE_CONNECTION_START;
@@ -162,6 +183,7 @@ class TrackEditor {
   };
   onStateChanged?: (payload: EDITOR_STATE_PAYLOADS) => void;
   onNetworkChanged?: () => void;
+
   constructor(options: {
     element: HTMLElement;
     network: Network;
@@ -450,6 +472,110 @@ class TrackEditor {
           this.setcurrentStateWithData({
             state: EDITOR_STATE.SELECT,
           });
+          break;
+        }
+
+        case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START: {
+          if (
+            this.#hoverSegment &&
+            (this.#hoverSelectionType === SELECTION_TYPE.START ||
+              this.#hoverSelectionType === SELECTION_TYPE.END)
+          ) {
+            // If hovering over a segment endpoint, use that point
+            this.setcurrentStateWithData({
+              state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
+              segmentStart:
+                this.#hoverSegment[
+                  this.#hoverSelectionType === SELECTION_TYPE.END
+                    ? "end"
+                    : "start"
+                ],
+              lockedToSegment: this.#hoverSegment,
+              lockedToEnd: this.#hoverSelectionType,
+              counterClockwise: this.currentStateWithData.counterClockwise,
+              angle: this.currentStateWithData.angle,
+            });
+          } else {
+            // Otherwise use the current mouse position
+            const gamePosition = this.untransformPosition(this.mousePos!);
+            this.setcurrentStateWithData({
+              state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
+              segmentStart: gamePosition,
+              counterClockwise: this.currentStateWithData.counterClockwise,
+              angle: this.currentStateWithData.angle,
+            });
+          }
+          break;
+        }
+
+        case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END: {
+          if (
+            this.#hoverSegment &&
+            (this.#hoverSelectionType === SELECTION_TYPE.START ||
+              this.#hoverSelectionType === SELECTION_TYPE.END)
+          ) {
+            // If hovering over a segment endpoint, use that point
+            const endPoint =
+              this.#hoverSegment[
+                this.#hoverSelectionType === SELECTION_TYPE.END
+                  ? "end"
+                  : "start"
+              ];
+            const center = calculateCircularCenter(
+              this.currentStateWithData.segmentStart,
+              endPoint,
+              this.currentStateWithData.angle,
+              this.currentStateWithData.counterClockwise,
+            );
+
+            // Create a new circular segment
+            const newSegment = new CircularTrackSegment(
+              this.currentStateWithData.segmentStart,
+              endPoint,
+              center,
+              this.currentStateWithData.counterClockwise,
+            );
+
+            // Connect the segments if we started from a segment
+            if (this.currentStateWithData.lockedToSegment) {
+              newSegment.connect(this.currentStateWithData.lockedToSegment);
+            }
+            newSegment.connect(this.#hoverSegment);
+            this.network.segments.push(newSegment);
+            this.dispatchUpdate();
+
+            this.setcurrentStateWithData({
+              state: EDITOR_STATE.SELECT,
+            });
+          } else {
+            // Otherwise use the current mouse position
+            const gamePosition = this.untransformPosition(this.mousePos!);
+            const center = calculateCircularCenter(
+              this.currentStateWithData.segmentStart,
+              gamePosition,
+              this.currentStateWithData.angle,
+              this.currentStateWithData.counterClockwise,
+            );
+
+            // Create a new circular segment
+            const newSegment = new CircularTrackSegment(
+              this.currentStateWithData.segmentStart,
+              gamePosition,
+              center,
+              this.currentStateWithData.counterClockwise,
+            );
+
+            // Connect the segment if we started from a segment
+            if (this.currentStateWithData.lockedToSegment) {
+              newSegment.connect(this.currentStateWithData.lockedToSegment);
+            }
+            this.network.segments.push(newSegment);
+            this.dispatchUpdate();
+
+            this.setcurrentStateWithData({
+              state: EDITOR_STATE.SELECT,
+            });
+          }
           break;
         }
 
@@ -1013,6 +1139,43 @@ class TrackEditor {
       this.#context.lineWidth = 2;
       this.#context.beginPath();
       this.#context.arc(this.mousePos!.x, this.mousePos!.y, 15, 0, Math.PI * 2);
+      this.#context.stroke();
+    }
+
+    // Draw preview for circular segment creation
+    if (
+      this.currentStateWithData.state ===
+        EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END &&
+      this.mousePos &&
+      this.#context
+    ) {
+      const gamePosition = this.untransformPosition(this.mousePos);
+      const center = calculateCircularCenter(
+        this.currentStateWithData.segmentStart,
+        gamePosition,
+        this.currentStateWithData.angle,
+        this.currentStateWithData.counterClockwise,
+      );
+
+      // Draw the preview segment
+      this.#context.strokeStyle = "rgba(255, 255, 255, 0.5)";
+      this.#context.lineWidth = 2;
+      this.#context.beginPath();
+      this.#context.arc(
+        this.transformPosition(center).x,
+        this.transformPosition(center).y,
+        this.#scale *
+          Math.sqrt(
+            (center.x - this.currentStateWithData.segmentStart.x) ** 2 +
+              (center.y - this.currentStateWithData.segmentStart.y) ** 2,
+          ),
+        Math.atan2(
+          this.currentStateWithData.segmentStart.y - center.y,
+          this.currentStateWithData.segmentStart.x - center.x,
+        ),
+        Math.atan2(gamePosition.y - center.y, gamePosition.x - center.x),
+        this.currentStateWithData.counterClockwise,
+      );
       this.#context.stroke();
     }
   }

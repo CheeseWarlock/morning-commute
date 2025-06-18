@@ -266,3 +266,56 @@ export const connectSegments = (
 
   return segments;
 };
+
+/**
+ * Calculate the center point for a circular arc between two points.
+ * Uses perpendicular lines to find the intersection point.
+ */
+export function calculateCircularCenter(
+  start: Point,
+  end: Point,
+  angle: number = Math.PI / 4,
+  counterClockWise: boolean = true,
+): Point {
+  // Calculate the angle from start to end
+  const startToEndAngle = Math.atan2(end.y - start.y, end.x - start.x);
+
+  // For a 90-degree clockwise curve, the tangent at start is rotated 45 degrees counterclockwise
+  // For a 90-degree counterclockwise curve, the tangent at start is rotated 45 degrees clockwise
+  const startTangentAngle =
+    startToEndAngle + (counterClockWise ? angle / 2 : -angle / 2);
+
+  // The tangent at end is rotated 45 degrees in the opposite direction
+  const endTangentAngle =
+    startToEndAngle + (counterClockWise ? -angle / 2 : angle / 2);
+
+  // Calculate perpendicular lines (normal to the tangent)
+  const startPerpAngle = startTangentAngle + Math.PI / 2;
+  const endPerpAngle = endTangentAngle + Math.PI / 2;
+
+  // Find intersection of the two perpendicular lines
+  // Line 1: start + t1 * (cos(startPerpAngle), sin(startPerpAngle))
+  // Line 2: end + t2 * (cos(endPerpAngle), sin(endPerpAngle))
+
+  const cos1 = Math.cos(startPerpAngle);
+  const sin1 = Math.sin(startPerpAngle);
+  const cos2 = Math.cos(endPerpAngle);
+  const sin2 = Math.sin(endPerpAngle);
+
+  // Solve for intersection using parametric line equations
+  // start.x + t1*cos1 = end.x + t2*cos2
+  // start.y + t1*sin1 = end.y + t2*sin2
+
+  const det = cos1 * sin2 - sin1 * cos2;
+  if (Math.abs(det) < 1e-10) {
+    // Lines are parallel, use midpoint as fallback
+    return { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  }
+
+  const t1 = ((end.x - start.x) * sin2 - (end.y - start.y) * cos2) / det;
+
+  return {
+    x: start.x + t1 * cos1,
+    y: start.y + t1 * sin1,
+  };
+}
