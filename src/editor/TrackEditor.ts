@@ -604,6 +604,7 @@ class TrackEditor {
               newSegment.connect(this.currentStateWithData.lockedToSegment);
             }
             if (snappingEnd) {
+              console.log("snapping end");
               newSegment.connect(this.#hoverSegment!);
             }
             this.network.segments.push(newSegment);
@@ -1721,6 +1722,46 @@ class TrackEditor {
     if (!this.#hoverSegment) return;
 
     const originalSegment = this.#hoverSegment;
+
+    // Calculate the split distance along the original segment
+    const gamePosition = this.untransformPosition(this.mousePos!);
+    const closestPoint = originalSegment.distanceToPosition({
+      x: gamePosition.x,
+      y: gamePosition.y,
+    });
+    const splitDistanceAlong =
+      closestPoint.distanceAlong * originalSegment.length;
+
+    // Preserve stations by distributing them to the appropriate new segments
+    originalSegment.stations.forEach((station) => {
+      if (station.distanceAlong <= splitDistanceAlong) {
+        // Station is on the first segment
+        firstSegment.stations.push(station);
+        station.trackSegment = firstSegment;
+      } else {
+        // Station is on the second segment, adjust its distance
+        const newDistanceAlong = station.distanceAlong - splitDistanceAlong;
+        station.distanceAlong = newDistanceAlong;
+        secondSegment.stations.push(station);
+        station.trackSegment = secondSegment;
+      }
+    });
+
+    // Preserve train start positions by distributing them to the appropriate new segments
+    originalSegment.trainStartPositions.forEach((startPosition) => {
+      if (startPosition.distanceAlong <= splitDistanceAlong) {
+        // Train start position is on the first segment
+        firstSegment.trainStartPositions.push(startPosition);
+      } else {
+        // Train start position is on the second segment, adjust its distance
+        const newDistanceAlong =
+          startPosition.distanceAlong - splitDistanceAlong;
+        secondSegment.trainStartPositions.push({
+          distanceAlong: newDistanceAlong,
+          reverse: startPosition.reverse,
+        });
+      }
+    });
 
     // Store the original connections before removing the segment
     const segmentsConnectedToStart = [...originalSegment.atStart];
