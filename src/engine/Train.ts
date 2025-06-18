@@ -14,7 +14,7 @@ export enum TRAIN_STATE {
   HANDLING_PASSENGERS = "handling-passengers",
 }
 
-const CAR_SPACING = 5.5;
+const DEFAULT_CAR_SPACING = 5.5;
 
 /**
  * Defines a Train's position on the game board.
@@ -34,6 +34,7 @@ export type TTrainConfigurationOptions = {
   waitTime: number;
   waitTimePerPassenger: number;
   followingCarCount: number;
+  carSpacing: number;
 };
 
 /**
@@ -67,6 +68,7 @@ class Train implements GameObject {
    */
   #hasStoppedAtStationThisSegment: boolean = false;
   #slowdown: boolean;
+  #carSpacing: number = DEFAULT_CAR_SPACING;
   followingCars: TrainFollowingCar[] = [];
   #previousSegments: { segment: TrackSegment; reversing: boolean }[] = [];
   /**
@@ -94,6 +96,7 @@ class Train implements GameObject {
       waitTime: 1000,
       waitTimePerPassenger: 0,
       followingCarCount: 3,
+      carSpacing: DEFAULT_CAR_SPACING,
     };
     const movementOptionsWithDefaults: TTrainConfigurationOptions =
       Object.assign({}, DEFAULT_MOVEMENT_OPTIONS, movementOptions);
@@ -111,6 +114,8 @@ class Train implements GameObject {
     this.#slowdown = movementOptionsWithDefaults.slowdown;
     this.#waitTimePerPassenger =
       movementOptionsWithDefaults.waitTimePerPassenger;
+    this.#carSpacing =
+      movementOptionsWithDefaults.carSpacing ?? DEFAULT_CAR_SPACING;
     let _followingCarCount: number = 3;
 
     if (movementOptions?.followingCarCount != null) {
@@ -400,7 +405,7 @@ class Train implements GameObject {
     this.#timeLeftToProcess = deltaT;
 
     // Add collision segments for the train and its following cars
-    const distanceBack = this.followingCars.length * CAR_SPACING;
+    const distanceBack = this.followingCars.length * this.#carSpacing;
     this.#addToCollisionSegments(
       this.#currentSegment,
       Math.max(0, this.#currentDistance - distanceBack),
@@ -482,7 +487,7 @@ class Train implements GameObject {
       let remainingDistance =
         this.#currentSegment.length -
         this.#currentDistance +
-        CAR_SPACING * (idx + 1);
+        this.#carSpacing * (idx + 1);
       let targetSegmentIndex = this.#previousSegments.length - 1;
       let targetSegment = this.#currentSegment;
       let wasReversing = this.#currentlyReversing;

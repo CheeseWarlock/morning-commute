@@ -325,7 +325,7 @@ describe("train following cars", () => {
   it("places train cars behind the lead car", () => {
     const train = new Train(
       { segment: network.segments[0], distanceAlong: 0, reversing: false },
-      { speed: 10, slowdown: true },
+      { speed: 10, slowdown: true, carSpacing: 5 },
       new GameState(network, false),
     );
     train.update(2000);
@@ -344,7 +344,7 @@ describe("train following cars", () => {
   it("can position following cars properly on a different track segment than the lead car", () => {
     const train = new Train(
       { segment: network.segments[1], distanceAlong: 0, reversing: false },
-      { speed: 10, slowdown: true },
+      { speed: 10, slowdown: true, carSpacing: 5 },
       new GameState(network, false),
     );
     const distanceThroughCurve = (Math.PI / 2) * 30;
@@ -376,7 +376,7 @@ describe("train following cars", () => {
 
     const train = new Train(
       { segment, distanceAlong: 0, reversing: false },
-      { speed: 10 },
+      { speed: 10, carSpacing: 5 },
       new GameState(network, false),
     );
     train.update(1000);
@@ -636,7 +636,7 @@ describe("collision segments", () => {
     const network = new Network([segment], []);
     const train = new Train(
       { segment, distanceAlong: 0, reversing: false },
-      {},
+      { carSpacing: 5 },
       new GameState(network, false),
     );
     train.update(3000);
@@ -658,7 +658,7 @@ describe("collision segments", () => {
     const network = new Network([segment, segment2], []);
     const train = new Train(
       { segment, distanceAlong: 0, reversing: false },
-      {},
+      { carSpacing: 5 },
       new GameState(network, false),
     );
     train.update(3000);
@@ -691,7 +691,7 @@ describe("collision segments", () => {
     const network = new Network([segment, segment2], []);
     const train = new Train(
       { segment: segment2, distanceAlong: 0, reversing: true },
-      {},
+      { carSpacing: 5 },
       new GameState(network, false),
     );
     train.update(3000);
@@ -869,6 +869,7 @@ describe("the odd case from the editor", () => {
       },
       new GameState(network, false),
     );
+    train.strategy = () => TRAIN_STRATEGIES.TURN_RIGHT;
     game.gameState.trains.push(train);
     const initialDist = targetSegment.getPositionAlong(0);
     expect(train.position.x).toBeCloseTo(initialDist.point.x, 4);
