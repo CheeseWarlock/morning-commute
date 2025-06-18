@@ -4,7 +4,12 @@ import Network from "../engine/Network";
 import Point from "../engine/Point";
 import Station, { ALIGNMENT } from "../engine/Station";
 import TrackSegment from "../engine/TrackSegment";
-import { connectSegments, findCenter, calculateCircularCenter } from "./utils";
+import {
+  connectSegments,
+  findCenter,
+  calculateCircularCenter,
+  calculateConstrainedCircleCenter,
+} from "./utils";
 import Controller from "../engine/Controller";
 import Game from "../engine/Game";
 import BabylonRenderer from "../renderer/basic/babylon/BabylonRenderer";
@@ -113,6 +118,7 @@ type EDITOR_STATE_PAYLOADS =
       lockedToEnd?: SELECTION_TYPE.START | SELECTION_TYPE.END;
       counterClockwise: boolean;
       angle: number;
+      startAngle?: number;
     }
   | {
       state: EDITOR_STATE.CREATE_CONNECTION_START;
@@ -481,19 +487,38 @@ class TrackEditor {
             (this.#hoverSelectionType === SELECTION_TYPE.START ||
               this.#hoverSelectionType === SELECTION_TYPE.END)
           ) {
-            // If hovering over a segment endpoint, use that point
+            // If hovering over a segment endpoint, use that point and angle
+            const segmentPoint =
+              this.#hoverSegment[
+                this.#hoverSelectionType === SELECTION_TYPE.END
+                  ? "end"
+                  : "start"
+              ];
+
+            // Calculate the angle at the segment endpoint
+            let segmentAngle;
+            if (this.#hoverSegment instanceof CircularTrackSegment) {
+              // For circular segments, use the final angle if it's the end, initial angle if it's the start
+              segmentAngle =
+                this.#hoverSelectionType === SELECTION_TYPE.END
+                  ? this.#hoverSegment.finalAngle
+                  : this.#hoverSegment.initialAngle;
+            } else {
+              // For linear segments, use the angle of the segment
+              segmentAngle = Math.atan2(
+                this.#hoverSegment.end.y - this.#hoverSegment.start.y,
+                this.#hoverSegment.end.x - this.#hoverSegment.start.x,
+              );
+            }
+
             this.setcurrentStateWithData({
               state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
-              segmentStart:
-                this.#hoverSegment[
-                  this.#hoverSelectionType === SELECTION_TYPE.END
-                    ? "end"
-                    : "start"
-                ],
+              segmentStart: segmentPoint,
               lockedToSegment: this.#hoverSegment,
               lockedToEnd: this.#hoverSelectionType,
               counterClockwise: this.currentStateWithData.counterClockwise,
               angle: this.currentStateWithData.angle,
+              startAngle: segmentAngle,
             });
           } else {
             // Otherwise use the current mouse position
@@ -509,38 +534,69 @@ class TrackEditor {
         }
 
         case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END: {
-          if (
-            this.#hoverSegment &&
-            (this.#hoverSelectionType === SELECTION_TYPE.START ||
-              this.#hoverSelectionType === SELECTION_TYPE.END)
-          ) {
-            // If hovering over a segment endpoint, use that point
-            const endPoint =
-              this.#hoverSegment[
-                this.#hoverSelectionType === SELECTION_TYPE.END
-                  ? "end"
-                  : "start"
-              ];
-            const center = calculateCircularCenter(
+          if (this.currentStateWithData.lockedToSegment) {
+            // Otherwise use the current mouse position
+            const gamePosition = this.untransformPosition(this.mousePos!);
+
+            // Ignore counterclockwise from the state payload
+            // Instead, base it on whether the cursor is left or right of the start point (in the direction of the angle)
+            const outwardAngle =
+              this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START
+                ? (this.currentStateWithData.startAngle || 0) + Math.PI
+                : this.currentStateWithData.startAngle || 0;
+
+            // Determine if cursor is left or right of start point in direction of angle
+            const angleVector = {
+              x: Math.cos(outwardAngle),
+              y: Math.sin(outwardAngle),
+            };
+            const toGamePosition = {
+              x: gamePosition.x - this.currentStateWithData.segmentStart.x,
+              y: gamePosition.y - this.currentStateWithData.segmentStart.y,
+            };
+            const crossProduct =
+              angleVector.x * toGamePosition.y -
+              angleVector.y * toGamePosition.x;
+            const coolcounterClockwise = crossProduct < 0;
+
+            const properCenter = calculateConstrainedCircleCenter(
               this.currentStateWithData.segmentStart,
-              endPoint,
-              this.currentStateWithData.angle,
-              this.currentStateWithData.counterClockwise,
+              outwardAngle,
+              gamePosition,
             );
+
+            // Calculate the end position based on the start point, center, and angle
+            const startToCenter = {
+              x: properCenter.x - this.currentStateWithData.segmentStart.x,
+              y: properCenter.y - this.currentStateWithData.segmentStart.y,
+            };
+            const radius = Math.sqrt(
+              startToCenter.x ** 2 + startToCenter.y ** 2,
+            );
+            const startAngle = Math.atan2(startToCenter.y, startToCenter.x);
+            const endAngle =
+              startAngle +
+              (coolcounterClockwise ? -1 : 1) * this.currentStateWithData.angle;
+
+            const endPosition = {
+              x: properCenter.x - radius * Math.cos(endAngle),
+              y: properCenter.y - radius * Math.sin(endAngle),
+            };
+
+            const center = properCenter;
 
             // Create a new circular segment
             const newSegment = new CircularTrackSegment(
               this.currentStateWithData.segmentStart,
-              endPoint,
+              endPosition,
               center,
-              this.currentStateWithData.counterClockwise,
+              coolcounterClockwise,
             );
 
-            // Connect the segments if we started from a segment
+            // Connect the segment if we started from a segment
             if (this.currentStateWithData.lockedToSegment) {
               newSegment.connect(this.currentStateWithData.lockedToSegment);
             }
-            newSegment.connect(this.#hoverSegment);
             this.network.segments.push(newSegment);
             this.dispatchUpdate();
 
@@ -548,7 +604,6 @@ class TrackEditor {
               state: EDITOR_STATE.SELECT,
             });
           } else {
-            // Otherwise use the current mouse position
             const gamePosition = this.untransformPosition(this.mousePos!);
             const center = calculateCircularCenter(
               this.currentStateWithData.segmentStart,
@@ -1150,14 +1205,25 @@ class TrackEditor {
       this.#context
     ) {
       const gamePosition = this.untransformPosition(this.mousePos);
-      const center = calculateCircularCenter(
-        this.currentStateWithData.segmentStart,
-        gamePosition,
-        this.currentStateWithData.angle,
-        this.currentStateWithData.counterClockwise,
-      );
 
-      // Draw the preview segment
+      let center;
+      if (this.currentStateWithData.startAngle !== undefined) {
+        // We have a start angle constraint, use the constrained circle calculation
+        center = calculateConstrainedCircleCenter(
+          this.currentStateWithData.segmentStart,
+          this.currentStateWithData.startAngle,
+          gamePosition,
+        );
+      } else {
+        // No start angle constraint, use the regular calculation
+        center = calculateCircularCenter(
+          this.currentStateWithData.segmentStart,
+          gamePosition,
+          this.currentStateWithData.angle,
+          this.currentStateWithData.counterClockwise,
+        );
+      }
+
       this.#context.strokeStyle = "rgba(255, 255, 255, 0.5)";
       this.#context.lineWidth = 2;
       this.#context.beginPath();

@@ -319,3 +319,62 @@ export function calculateCircularCenter(
     y: start.y + t1 * sin1,
   };
 }
+
+/**
+ * Calculate the center of a circle that connects a start point at a given angle to a target point.
+ * The circle must be tangent to the start angle at the start point and pass through the target point.
+ */
+export function calculateConstrainedCircleCenter(
+  start: Point,
+  startAngle: number,
+  target: Point,
+): Point {
+  // The center must lie on the line perpendicular to the start angle
+  // and the circle must pass through both the start and target points
+
+  // Calculate the direction perpendicular to the start angle
+  const perpAngle = startAngle + Math.PI / 2;
+
+  // The center is at: start + r * (cos(perpAngle), sin(perpAngle))
+  // The circle must pass through both start and target points
+  // So the distance from center to start = distance from center to target = radius
+
+  // Let's solve this algebraically:
+  // Let center = start + t * (cos(perpAngle), sin(perpAngle))
+  // Then |center - start| = |center - target|
+  // |t * (cos(perpAngle), sin(perpAngle))| = |start + t * (cos(perpAngle), sin(perpAngle)) - target|
+  // |t| = |start - target + t * (cos(perpAngle), sin(perpAngle))|
+
+  const dx = -(target.x - start.x);
+  const dy = -(target.y - start.y);
+
+  const cosPerp = Math.cos(perpAngle);
+  const sinPerp = Math.sin(perpAngle);
+
+  // Square both sides: t² = (dx + t*cosPerp)² + (dy + t*sinPerp)²
+  // t² = dx² + 2*dx*t*cosPerp + t²*cosPerp² + dy² + 2*dy*t*sinPerp + t²*sinPerp²
+  // t² = dx² + dy² + 2*t*(dx*cosPerp + dy*sinPerp) + t²*(cosPerp² + sinPerp²)
+  // Since cosPerp² + sinPerp² = 1, this simplifies to:
+  // t² = dx² + dy² + 2*t*(dx*cosPerp + dy*sinPerp) + t²
+  // 0 = dx² + dy² + 2*t*(dx*cosPerp + dy*sinPerp)
+  // t = -(dx² + dy²) / (2*(dx*cosPerp + dy*sinPerp))
+
+  const numerator = -(dx * dx + dy * dy);
+  const denominator = 2 * (dx * cosPerp + dy * sinPerp);
+
+  if (Math.abs(denominator) < 1e-10) {
+    // Fallback: use a reasonable radius
+    const radius = 100;
+    return {
+      x: start.x + radius * cosPerp,
+      y: start.y + radius * sinPerp,
+    };
+  }
+
+  const t = numerator / denominator;
+
+  return {
+    x: start.x + t * cosPerp,
+    y: start.y + t * sinPerp,
+  };
+}
