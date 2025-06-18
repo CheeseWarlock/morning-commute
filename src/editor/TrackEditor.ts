@@ -1,7 +1,6 @@
 import CircularTrackSegment from "../engine/CircularTrackSegment";
 import LinearTrackSegment from "../engine/LinearTrackSegment";
 import Network from "../engine/Network";
-import Point from "../engine/Point";
 import Station, { ALIGNMENT } from "../engine/Station";
 import TrackSegment from "../engine/TrackSegment";
 import {
@@ -15,6 +14,28 @@ import Game from "../engine/Game";
 import BabylonRenderer from "../renderer/basic/babylon/BabylonRenderer";
 import RendererCoordinator from "../renderer/RendererCoordinator";
 import { getIntersection } from "../utils";
+
+/**
+ * The vague concept of a point.
+ */
+type Point = {
+  x: number;
+  y: number;
+};
+
+declare const __brand: unique symbol;
+type Brand<B> = { [__brand]: B };
+
+export type Branded<T, B> = T & Brand<B>;
+
+/**
+ * A point in screen coordinates.
+ */
+type ScreenPoint = Branded<Point, "ScreenPoint">;
+/**
+ * A point in 2d game world coordinates.
+ */
+type GamePoint = Branded<Point, "GamePoint">;
 
 /**
  * Which end of the segment is selected, or if it's just the whole thing
@@ -106,7 +127,7 @@ type EDITOR_STATE_PAYLOADS =
     }
   | {
       state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END;
-      segmentStart: Point;
+      segmentStart: GamePoint;
       lockedToSegment?: TrackSegment;
       lockedToEnd?: SELECTION_TYPE.START | SELECTION_TYPE.END;
     }
@@ -117,7 +138,7 @@ type EDITOR_STATE_PAYLOADS =
     }
   | {
       state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END;
-      segmentStart: Point;
+      segmentStart: GamePoint;
       lockedToSegment?: TrackSegment;
       lockedToEnd?: SELECTION_TYPE.START | SELECTION_TYPE.END;
       counterClockwise: boolean;
@@ -143,15 +164,15 @@ type EDITOR_STATE_PAYLOADS =
   | {
       state: EDITOR_STATE.MOVE_SEGMENT;
       segment: TrackSegment;
-      dragStartPoint: Point;
-      originalStart: Point;
-      originalEnd: Point;
-      originalCenter?: Point;
+      dragStartPoint: GamePoint;
+      originalStart: GamePoint;
+      originalEnd: GamePoint;
+      originalCenter?: GamePoint;
     }
   | {
       state: EDITOR_STATE.PAN;
-      dragStartPoint?: Point;
-      originalOffset?: Point;
+      dragStartPoint?: ScreenPoint;
+      originalOffset?: ScreenPoint;
     }
   | {
       state: EDITOR_STATE.QUERY_POINT;
@@ -163,7 +184,7 @@ type EDITOR_STATE_PAYLOADS =
   | {
       state: EDITOR_STATE.DRAG_SELECT;
       /** Drag start point in screen coordinates */
-      dragStartPoint?: Point;
+      dragStartPoint?: ScreenPoint;
     }
   | {
       state: EDITOR_STATE.SET_START_POSITION;
@@ -173,14 +194,20 @@ type EDITOR_STATE_PAYLOADS =
     };
 
 const SELECTION_DISTANCE_PIXELS = 15;
-const _dist = (a: Point, b: Point) =>
+const _dist = (a: GamePoint, b: GamePoint) =>
   Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 
 class TrackEditor {
   #canvas: HTMLCanvasElement;
   network: Network;
-  #offset: { x: number; y: number };
-  #size: { x: number; y: number };
+  /**
+   * The offset of the canvas in screen coordinates.
+   */
+  #offset: ScreenPoint;
+  /**
+   * The size of the canvas in screen coordinates.
+   */
+  #size: ScreenPoint;
   #scale: number;
   #context: CanvasRenderingContext2D | null;
   #onSelect?: (segment?: TrackSegment) => void;
@@ -188,7 +215,7 @@ class TrackEditor {
   /**
    * The position of the mouse on the canvas itself.
    */
-  mousePos?: { x: number; y: number };
+  mousePos?: ScreenPoint;
   #hoverSegment?: TrackSegment;
   #hoverSelectionType?: SELECTION_TYPE;
   currentStateWithData: EDITOR_STATE_PAYLOADS = {
@@ -200,15 +227,15 @@ class TrackEditor {
   constructor(options: {
     element: HTMLElement;
     network: Network;
-    offset?: Point;
+    offset?: ScreenPoint;
     scale?: number;
-    size?: Point;
+    size?: ScreenPoint;
     onSelect: (segment?: TrackSegment) => void;
   }) {
     const { element, network, offset, scale, size, onSelect } = options;
-    this.#offset = offset || { x: 0, y: 0 };
+    this.#offset = offset || ({ x: 0, y: 0 } as ScreenPoint);
     this.#scale = scale || 1;
-    this.#size = size || { x: 1200, y: 800 };
+    this.#size = size || ({ x: 1200, y: 800 } as ScreenPoint);
     const canvas = document.createElement("canvas");
     canvas.width = this.#size.x;
     canvas.height = this.#size.y;
@@ -220,7 +247,7 @@ class TrackEditor {
     this.#onSelect = onSelect;
 
     canvas.onmousemove = (ev) => {
-      this.mousePos = { x: ev.offsetX, y: ev.offsetY };
+      this.mousePos = { x: ev.offsetX, y: ev.offsetY } as ScreenPoint;
       const gamePosition = this.untransformPosition(this.mousePos);
 
       if (this.currentStateWithData.state === EDITOR_STATE.SELECT) {
@@ -248,7 +275,7 @@ class TrackEditor {
           this.#offset = {
             x: originalOffset.x + dragVectorGamePosition.x,
             y: originalOffset.y + dragVectorGamePosition.y,
-          };
+          } as ScreenPoint;
 
           this.update();
           break;
@@ -377,11 +404,11 @@ class TrackEditor {
                   state: EDITOR_STATE.MOVE_SEGMENT,
                   segment: this.#hoverSegment,
                   dragStartPoint: gamePosition,
-                  originalStart: { ...this.#hoverSegment.start },
-                  originalEnd: { ...this.#hoverSegment.end },
+                  originalStart: { ...this.#hoverSegment.start } as GamePoint,
+                  originalEnd: { ...this.#hoverSegment.end } as GamePoint,
                   originalCenter:
                     this.#hoverSegment instanceof CircularTrackSegment
-                      ? { ...this.#hoverSegment.center }
+                      ? ({ ...this.#hoverSegment.center } as GamePoint)
                       : undefined,
                 });
               } else {
@@ -442,7 +469,7 @@ class TrackEditor {
                   ? this.#hoverSegment!.start.y
                   : this.#hoverSegment!.end.y
                 : gamePosition.y,
-            },
+            } as GamePoint,
           });
           break;
         }
@@ -495,7 +522,7 @@ class TrackEditor {
 
             this.setcurrentStateWithData({
               state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
-              segmentStart: segmentPoint,
+              segmentStart: segmentPoint as GamePoint,
               lockedToSegment: this.#hoverSegment,
               lockedToEnd: this.#hoverSelectionType,
               counterClockwise: this.currentStateWithData.counterClockwise,
@@ -879,7 +906,7 @@ class TrackEditor {
           -gameBounds.min.y +
           excessY / this.#scale +
           padding / (this.#scale * 2),
-      };
+      } as ScreenPoint;
     } else {
       this.#scale = scaleY;
       const excessX =
@@ -894,7 +921,7 @@ class TrackEditor {
           excessX / this.#scale +
           padding / (this.#scale * 2),
         y: -gameBounds.min.y + padding / (this.#scale * 2),
-      };
+      } as ScreenPoint;
     }
     this.onScaleChanged?.(this.#scale);
     this.update();
@@ -970,7 +997,7 @@ class TrackEditor {
       zoomCenter = this.untransformPosition({
         x: this.#size.x / 2,
         y: this.#size.y / 2,
-      });
+      } as ScreenPoint);
     }
 
     // Calculate how much the point moves due to scale change
@@ -982,7 +1009,7 @@ class TrackEditor {
     this.#offset = {
       x: this.#offset.x + dx,
       y: this.#offset.y + dy,
-    };
+    } as ScreenPoint;
 
     this.onScaleChanged?.(this.#scale);
     this.update();
@@ -991,21 +1018,21 @@ class TrackEditor {
   /**
    * Transform a point from the game world to the canvas.
    */
-  transformPosition(p: Point): Point {
+  transformPosition(p: GamePoint): ScreenPoint {
     return {
       x: (p.x + this.#offset.x) * this.#scale,
       y: (p.y + this.#offset.y) * this.#scale,
-    };
+    } as ScreenPoint;
   }
 
   /**
    * Transform a point from the canvas to the game world.
    */
-  untransformPosition(p: Point): Point {
+  untransformPosition(p: ScreenPoint): GamePoint {
     const result = {
       x: p.x / this.#scale - this.#offset.x,
       y: p.y / this.#scale - this.#offset.y,
-    };
+    } as GamePoint;
     return result;
   }
 
@@ -1108,8 +1135,8 @@ class TrackEditor {
       }
 
       // Draw endpoint dots
-      this.#drawEndpointDot(segment.start);
-      this.#drawEndpointDot(segment.end);
+      this.#drawEndpointDot(segment.start as GamePoint);
+      this.#drawEndpointDot(segment.end as GamePoint);
 
       // Draw endpoint highlight rings if needed
       if (
@@ -1119,7 +1146,7 @@ class TrackEditor {
           this.currentStateWithData.selectionType === SELECTION_TYPE.START &&
           segment === this.currentStateWithData.selectedSegment)
       ) {
-        this.#drawEndpointHighlight(segment.start);
+        this.#drawEndpointHighlight(segment.start as GamePoint);
       }
       if (
         (this.#hoverSelectionType === SELECTION_TYPE.END &&
@@ -1128,7 +1155,7 @@ class TrackEditor {
           this.currentStateWithData.selectionType === SELECTION_TYPE.END &&
           segment === this.currentStateWithData.selectedSegment)
       ) {
-        this.#drawEndpointHighlight(segment.end);
+        this.#drawEndpointHighlight(segment.end as GamePoint);
       }
 
       // Draw arrow in the middle
@@ -1293,8 +1320,8 @@ class TrackEditor {
         closestType = SELECTION_TYPE.SEGMENT;
       }
 
-      const distanceToStart = _dist(seg.start, gamePosition);
-      const distanceToEnd = _dist(seg.end, gamePosition);
+      const distanceToStart = _dist(seg.start as GamePoint, gamePosition);
+      const distanceToEnd = _dist(seg.end as GamePoint, gamePosition);
 
       if (
         (!closestType ||
@@ -1376,7 +1403,7 @@ class TrackEditor {
     new RendererCoordinator(game, [map3]);
   }
 
-  getSegmentsInRectangle(from: Point, to: Point) {
+  getSegmentsInRectangle(from: ScreenPoint, to: ScreenPoint) {
     const gameFrom = this.untransformPosition(from);
     const gameTo = this.untransformPosition(to);
     const upperLeft = {
@@ -1393,7 +1420,7 @@ class TrackEditor {
   }
 
   // --- Drawing helpers ---
-  #drawEndpointDot(point: Point) {
+  #drawEndpointDot(point: GamePoint) {
     if (!this.#context) return;
     const canvasPosition = this.transformPosition(point);
     this.#context.fillStyle = "rgb(100, 100, 255)";
@@ -1403,7 +1430,7 @@ class TrackEditor {
     this.#context.fill();
   }
 
-  #drawEndpointHighlight(point: Point) {
+  #drawEndpointHighlight(point: GamePoint) {
     if (!this.#context) return;
     const canvasPosition = this.transformPosition(point);
     this.#context.strokeStyle = "rgba(255,255,255)";
@@ -1418,7 +1445,7 @@ class TrackEditor {
     if (!this.#context) return;
     const mid = segment.length / 2;
     const canvasPosition = this.transformPosition(
-      segment.getPositionAlong(mid).point,
+      segment.getPositionAlong(mid).point as GamePoint,
     );
     const angle = segment.getAngleAlong(mid) + Math.PI;
     this.#context.strokeStyle = "rgb(222, 200, 0)";
@@ -1441,7 +1468,7 @@ class TrackEditor {
   #drawRedX(segment: TrackSegment, distanceAlong: number, angle: number) {
     if (!this.#context) return;
     const pos = segment.getPositionAlong(distanceAlong).point;
-    const canvasPos = this.transformPosition(pos);
+    const canvasPos = this.transformPosition(pos as GamePoint);
     const size = 10;
     this.#context.save();
     this.#context.translate(canvasPos.x, canvasPos.y);
@@ -1519,7 +1546,7 @@ class TrackEditor {
     const pos = segment.getPositionAlong(distanceAlong).point;
     const angle =
       segment.getAngleAlong(distanceAlong) + (reverse ? Math.PI : 0);
-    const canvasPos = this.transformPosition(pos);
+    const canvasPos = this.transformPosition(pos as GamePoint);
     this.#context.save();
     this.#context.translate(canvasPos.x, canvasPos.y);
     this.#context.rotate(angle);
@@ -1536,9 +1563,9 @@ class TrackEditor {
   /**
    * Calculate circular segment parameters for preview or creation
    */
-  #calculateCircularSegmentParams(endPoint: Point): {
-    center: Point;
-    endPosition: Point;
+  #calculateCircularSegmentParams(endPoint: GamePoint): {
+    center: GamePoint;
+    endPosition: GamePoint;
     counterClockwise: boolean;
   } {
     if (
@@ -1588,9 +1615,9 @@ class TrackEditor {
       const endPosition = {
         x: center.x - radius * Math.cos(endAngle),
         y: center.y - radius * Math.sin(endAngle),
-      };
+      } as GamePoint;
 
-      return { center, endPosition, counterClockwise };
+      return { center: center as GamePoint, endPosition, counterClockwise };
     } else {
       // No start angle constraint, use the regular calculation
       const center = calculateCircularCenter(
@@ -1601,7 +1628,7 @@ class TrackEditor {
       );
 
       return {
-        center,
+        center: center as GamePoint,
         endPosition: endPoint,
         counterClockwise: this.currentStateWithData.counterClockwise,
       };
@@ -1611,8 +1638,8 @@ class TrackEditor {
   /**
    * Calculate linear segment parameters for preview or creation
    */
-  #calculateLinearSegmentParams(endPoint: Point): {
-    endPosition: Point;
+  #calculateLinearSegmentParams(endPoint: GamePoint): {
+    endPosition: GamePoint;
   } {
     if (
       this.currentStateWithData.state !== EDITOR_STATE.CREATE_LINEAR_SEGMENT_END
@@ -1642,7 +1669,7 @@ class TrackEditor {
           this.currentStateWithData.segmentStart.x + Math.cos(angle) * distance,
         y:
           this.currentStateWithData.segmentStart.y + Math.sin(angle) * distance,
-      };
+      } as GamePoint;
 
       return { endPosition };
     } else {
