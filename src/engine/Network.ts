@@ -7,11 +7,16 @@ import { getExtentForTrackSegment } from "./networks/trackutils";
  */
 class Network {
   segments: TrackSegment[] = [];
-  stations: Station[] = [];
 
-  constructor(segments?: TrackSegment[], stations?: Station[]) {
+  constructor(segments?: TrackSegment[]) {
     if (segments) this.segments = segments;
-    if (stations) this.stations = stations;
+  }
+
+  /**
+   * Get all stations from all segments.
+   */
+  get stations(): Station[] {
+    return this.segments.flatMap((segment) => segment.stations);
   }
 
   /**

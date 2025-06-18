@@ -25,7 +25,7 @@ describe("train motion", () => {
   let network: Network;
 
   beforeEach(() => {
-    network = new Network([new LinearTrackSegment(pointA, pointB)], []);
+    network = new Network([new LinearTrackSegment(pointA, pointB)]);
   });
 
   it("should move along its track at a rate equal to its speed", () => {
@@ -455,7 +455,6 @@ describe("wait time, including per-passenger", () => {
   );
   it("allows zero wait times", () => {
     const network = build().network;
-    network.stations = [];
     network.segments.forEach((seg) => {
       seg.stations = [];
     });
@@ -633,7 +632,7 @@ describe("collision segments", () => {
 
   it("reports collision segments of following cars", () => {
     const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 50, y: 0 });
-    const network = new Network([segment], []);
+    const network = new Network([segment]);
     const train = new Train(
       { segment, distanceAlong: 0, reversing: false },
       { carSpacing: 5 },
@@ -655,7 +654,7 @@ describe("collision segments", () => {
     const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 50, y: 0 });
     const segment2 = new LinearTrackSegment({ x: 50, y: 0 }, { x: 100, y: 0 });
     segment.connect(segment2);
-    const network = new Network([segment, segment2], []);
+    const network = new Network([segment, segment2]);
     const train = new Train(
       { segment, distanceAlong: 0, reversing: false },
       { carSpacing: 5 },
@@ -688,7 +687,7 @@ describe("collision segments", () => {
     const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 50, y: 0 });
     const segment2 = new LinearTrackSegment({ x: 50, y: 0 }, { x: 100, y: 0 });
     segment.connect(segment2);
-    const network = new Network([segment, segment2], []);
+    const network = new Network([segment, segment2]);
     const train = new Train(
       { segment: segment2, distanceAlong: 0, reversing: true },
       { carSpacing: 5 },
@@ -759,10 +758,14 @@ describe("nextJunction", () => {
     segment3.connect(segment4);
     segment4.connect(segment5);
     segment4.connect(segment6);
-    const network = new Network(
-      [segment, segment2, segment3, segment4, segment5, segment6],
-      [],
-    );
+    const network = new Network([
+      segment,
+      segment2,
+      segment3,
+      segment4,
+      segment5,
+      segment6,
+    ]);
     const train = new Train(
       { segment, distanceAlong: 0, reversing: false },
       {},
@@ -781,7 +784,7 @@ describe("nextJunction", () => {
     const segment3 = new LinearTrackSegment({ x: 60, y: 20 }, { x: 40, y: 20 });
     segment2.connect(segment);
     segment3.connect(segment);
-    const network = new Network([segment, segment2, segment3], []);
+    const network = new Network([segment, segment2, segment3]);
     const train = new Train(
       { segment, distanceAlong: 0, reversing: true },
       {},
@@ -813,10 +816,14 @@ describe("nextJunction", () => {
     segment2.connect(segment3);
     segment3.connect(segment4);
     segment3.connect(segment5);
-    const network = new Network(
-      [segment0, segment, segment2, segment3, segment4, segment5],
-      [],
-    );
+    const network = new Network([
+      segment0,
+      segment,
+      segment2,
+      segment3,
+      segment4,
+      segment5,
+    ]);
     const train = new Train(
       {
         segment: segment0,

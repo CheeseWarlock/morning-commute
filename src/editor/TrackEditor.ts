@@ -708,7 +708,6 @@ class TrackEditor {
             closestPoint.distanceAlong * this.#hoverSegment.length,
             closestPoint.alignment,
           );
-          this.network.stations.push(newStation);
           this.#hoverSegment.stations.push(newStation);
           this.dispatchUpdate();
           break;
@@ -878,9 +877,6 @@ class TrackEditor {
       state: EDITOR_STATE.SELECT,
     });
     if (action === "STATIONS") {
-      selectedSegment.stations.forEach((station) => {
-        this.network.stations.splice(this.network.stations.indexOf(station), 1);
-      });
       selectedSegment.stations = [];
     } else {
       selectedSegment.trainStartPositions = [];
@@ -891,9 +887,6 @@ class TrackEditor {
   deleteSegment(segment: TrackSegment) {
     const selectedSegment = segment;
     this.#onSelect?.();
-    selectedSegment.stations.forEach((station) => {
-      this.network.stations.splice(this.network.stations.indexOf(station), 1);
-    });
     this.network.segments.splice(
       this.network.segments.indexOf(selectedSegment),
       1,
@@ -916,7 +909,7 @@ class TrackEditor {
    * After this editor makes a change, make sure everything is updated.
    */
   dispatchUpdate() {
-    this.network = new Network(this.network.segments, this.network.stations);
+    this.network = new Network(this.network.segments);
     this.network.autoConnect();
     this.onNetworkChanged?.();
     this.update();

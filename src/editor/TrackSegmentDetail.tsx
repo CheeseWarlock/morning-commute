@@ -81,10 +81,7 @@ const TrackSegmentDetail = (props: {
   };
 
   const updateStationName = (stationIndex: number, newName: string) => {
-    const newNetwork = new Network(
-      props.network.segments,
-      props.network.stations,
-    );
+    const newNetwork = new Network(props.network.segments);
     const thisSegment = newNetwork.segments[props.segmentIndex];
     thisSegment.stations[stationIndex].name = newName;
     update(newNetwork);
