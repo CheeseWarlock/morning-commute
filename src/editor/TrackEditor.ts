@@ -193,6 +193,33 @@ type EDITOR_STATE_PAYLOADS =
       state: EDITOR_STATE.SPLIT;
     };
 
+/**
+ * An action that can be undone and redone.
+ */
+type UndoableAction = {
+  name: string;
+  undoAction: () => void;
+  doAction: () => void;
+};
+
+/**
+ * A stack of undoable actions.
+ */
+type UndoableActionStack = {
+  /**
+   * The maximum number of actions to keep in the history.
+   */
+  historyLength: number;
+  /**
+   * The actions that have been applied, and the ones that have been undone.
+   */
+  actions: UndoableAction[];
+  /**
+   * The index of the last action that was applied.
+   */
+  currentIndex: number;
+};
+
 const SELECTION_DISTANCE_PIXELS = 15;
 const _dist = (a: GamePoint, b: GamePoint) =>
   Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -223,6 +250,12 @@ class TrackEditor {
   };
   onStateChanged?: (payload: EDITOR_STATE_PAYLOADS) => void;
   onNetworkChanged?: () => void;
+
+  #undoableActionStack: UndoableActionStack = {
+    historyLength: 10,
+    actions: [],
+    currentIndex: 0,
+  };
 
   constructor(options: {
     element: HTMLElement;
