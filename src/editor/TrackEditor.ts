@@ -441,37 +441,12 @@ class TrackEditor {
         }
 
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END: {
+          const { endPosition } =
+            this.#calculateLinearSegmentParams(gamePosition);
           const previewSegment = new LinearTrackSegment(
             this.currentStateWithData.segmentStart,
-            gamePosition,
+            endPosition,
           );
-
-          // If we're locked to a segment, constrain the angle
-          if (
-            this.currentStateWithData.lockedToSegment &&
-            this.currentStateWithData.lockedToEnd
-          ) {
-            const lockedSegment = this.currentStateWithData.lockedToSegment;
-            const angle =
-              this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START
-                ? lockedSegment.initialAngle + Math.PI
-                : lockedSegment.finalAngle;
-
-            // Calculate the distance from the start point to the mouse
-            const dx =
-              gamePosition.x - this.currentStateWithData.segmentStart.x;
-            const dy =
-              gamePosition.y - this.currentStateWithData.segmentStart.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            // Set the end point using the locked angle and calculated distance
-            previewSegment.end.x =
-              this.currentStateWithData.segmentStart.x +
-              Math.cos(angle) * distance;
-            previewSegment.end.y =
-              this.currentStateWithData.segmentStart.y +
-              Math.sin(angle) * distance;
-          }
 
           this.network.segments.push(previewSegment);
           this.dispatchUpdate();
@@ -535,62 +510,18 @@ class TrackEditor {
 
         case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END: {
           if (this.currentStateWithData.lockedToSegment) {
-            // Otherwise use the current mouse position
+            // Use the current mouse position
             const gamePosition = this.untransformPosition(this.mousePos!);
 
-            // Ignore counterclockwise from the state payload
-            // Instead, base it on whether the cursor is left or right of the start point (in the direction of the angle)
-            const outwardAngle =
-              this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START
-                ? (this.currentStateWithData.startAngle || 0) + Math.PI
-                : this.currentStateWithData.startAngle || 0;
-
-            // Determine if cursor is left or right of start point in direction of angle
-            const angleVector = {
-              x: Math.cos(outwardAngle),
-              y: Math.sin(outwardAngle),
-            };
-            const toGamePosition = {
-              x: gamePosition.x - this.currentStateWithData.segmentStart.x,
-              y: gamePosition.y - this.currentStateWithData.segmentStart.y,
-            };
-            const crossProduct =
-              angleVector.x * toGamePosition.y -
-              angleVector.y * toGamePosition.x;
-            const coolcounterClockwise = crossProduct < 0;
-
-            const properCenter = calculateConstrainedCircleCenter(
-              this.currentStateWithData.segmentStart,
-              outwardAngle,
-              gamePosition,
-            );
-
-            // Calculate the end position based on the start point, center, and angle
-            const startToCenter = {
-              x: properCenter.x - this.currentStateWithData.segmentStart.x,
-              y: properCenter.y - this.currentStateWithData.segmentStart.y,
-            };
-            const radius = Math.sqrt(
-              startToCenter.x ** 2 + startToCenter.y ** 2,
-            );
-            const startAngle = Math.atan2(startToCenter.y, startToCenter.x);
-            const endAngle =
-              startAngle +
-              (coolcounterClockwise ? -1 : 1) * this.currentStateWithData.angle;
-
-            const endPosition = {
-              x: properCenter.x - radius * Math.cos(endAngle),
-              y: properCenter.y - radius * Math.sin(endAngle),
-            };
-
-            const center = properCenter;
+            const { center, endPosition, counterClockwise } =
+              this.#calculateCircularSegmentParams(gamePosition);
 
             // Create a new circular segment
             const newSegment = new CircularTrackSegment(
               this.currentStateWithData.segmentStart,
               endPosition,
               center,
-              coolcounterClockwise,
+              counterClockwise,
             );
 
             // Connect the segment if we started from a segment
@@ -1022,42 +953,20 @@ class TrackEditor {
   drawTrackSections() {
     if (!this.#context) return;
     this.#context.lineWidth = 2;
-    const fakeSegmentsList = [...this.network.segments];
+    const segmentsWithGhostSegment = [...this.network.segments];
     if (
       this.currentStateWithData.state ===
         EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
       this.mousePos
     ) {
       const gamePosition = this.untransformPosition(this.mousePos);
+      const { endPosition } = this.#calculateLinearSegmentParams(gamePosition);
       const previewSegment = new LinearTrackSegment(
         this.currentStateWithData.segmentStart,
-        gamePosition,
+        endPosition,
       );
 
-      // If we're locked to a segment, constrain the angle
-      if (
-        this.currentStateWithData.lockedToSegment &&
-        this.currentStateWithData.lockedToEnd
-      ) {
-        const lockedSegment = this.currentStateWithData.lockedToSegment;
-        const angle =
-          this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START
-            ? lockedSegment.initialAngle + Math.PI
-            : lockedSegment.finalAngle;
-
-        // Calculate the distance from the start point to the mouse
-        const dx = gamePosition.x - this.currentStateWithData.segmentStart.x;
-        const dy = gamePosition.y - this.currentStateWithData.segmentStart.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        // Set the end point using the locked angle and calculated distance
-        previewSegment.end.x =
-          this.currentStateWithData.segmentStart.x + Math.cos(angle) * distance;
-        previewSegment.end.y =
-          this.currentStateWithData.segmentStart.y + Math.sin(angle) * distance;
-      }
-
-      fakeSegmentsList.push(previewSegment);
+      segmentsWithGhostSegment.push(previewSegment);
     }
     if (
       this.currentStateWithData.state === EDITOR_STATE.CREATE_CONNECTION_END &&
@@ -1072,10 +981,27 @@ class TrackEditor {
         this.#hoverSegment,
         this.#hoverSelectionType === SELECTION_TYPE.END,
       );
-      fakeSegmentsList.push(...connection);
+      segmentsWithGhostSegment.push(...connection);
+    }
+    if (
+      this.currentStateWithData.state ===
+      EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END
+    ) {
+      const { center, endPosition, counterClockwise } =
+        this.#calculateCircularSegmentParams(
+          this.untransformPosition(this.mousePos!),
+        );
+      segmentsWithGhostSegment.push(
+        new CircularTrackSegment(
+          this.currentStateWithData.segmentStart,
+          endPosition,
+          center,
+          counterClockwise,
+        ),
+      );
     }
 
-    fakeSegmentsList.forEach((segment) => {
+    segmentsWithGhostSegment.forEach((segment) => {
       if (!this.#context) return;
       if (
         (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
@@ -1194,54 +1120,6 @@ class TrackEditor {
       this.#context.lineWidth = 2;
       this.#context.beginPath();
       this.#context.arc(this.mousePos!.x, this.mousePos!.y, 15, 0, Math.PI * 2);
-      this.#context.stroke();
-    }
-
-    // Draw preview for circular segment creation
-    if (
-      this.currentStateWithData.state ===
-        EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END &&
-      this.mousePos &&
-      this.#context
-    ) {
-      const gamePosition = this.untransformPosition(this.mousePos);
-
-      let center;
-      if (this.currentStateWithData.startAngle !== undefined) {
-        // We have a start angle constraint, use the constrained circle calculation
-        center = calculateConstrainedCircleCenter(
-          this.currentStateWithData.segmentStart,
-          this.currentStateWithData.startAngle,
-          gamePosition,
-        );
-      } else {
-        // No start angle constraint, use the regular calculation
-        center = calculateCircularCenter(
-          this.currentStateWithData.segmentStart,
-          gamePosition,
-          this.currentStateWithData.angle,
-          this.currentStateWithData.counterClockwise,
-        );
-      }
-
-      this.#context.strokeStyle = "rgba(255, 255, 255, 0.5)";
-      this.#context.lineWidth = 2;
-      this.#context.beginPath();
-      this.#context.arc(
-        this.transformPosition(center).x,
-        this.transformPosition(center).y,
-        this.#scale *
-          Math.sqrt(
-            (center.x - this.currentStateWithData.segmentStart.x) ** 2 +
-              (center.y - this.currentStateWithData.segmentStart.y) ** 2,
-          ),
-        Math.atan2(
-          this.currentStateWithData.segmentStart.y - center.y,
-          this.currentStateWithData.segmentStart.x - center.x,
-        ),
-        Math.atan2(gamePosition.y - center.y, gamePosition.x - center.x),
-        this.currentStateWithData.counterClockwise,
-      );
       this.#context.stroke();
     }
   }
@@ -1591,6 +1469,124 @@ class TrackEditor {
     this.#context.closePath();
     this.#context.fill();
     this.#context.restore();
+  }
+
+  /**
+   * Calculate circular segment parameters for preview or creation
+   */
+  #calculateCircularSegmentParams(endPoint: Point): {
+    center: Point;
+    endPosition: Point;
+    counterClockwise: boolean;
+  } {
+    if (
+      this.currentStateWithData.state !==
+      EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END
+    ) {
+      throw new Error("Not in CREATE_CIRCULAR_SEGMENT_END state");
+    }
+
+    if (this.currentStateWithData.lockedToSegment) {
+      // We have a start angle constraint, use the constrained circle calculation
+      const outwardAngle =
+        this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START
+          ? (this.currentStateWithData.startAngle || 0) + Math.PI
+          : this.currentStateWithData.startAngle || 0;
+
+      // Determine if cursor is left or right of start point in direction of angle
+      const angleVector = {
+        x: Math.cos(outwardAngle),
+        y: Math.sin(outwardAngle),
+      };
+      const toEndPoint = {
+        x: endPoint.x - this.currentStateWithData.segmentStart.x,
+        y: endPoint.y - this.currentStateWithData.segmentStart.y,
+      };
+      const crossProduct =
+        angleVector.x * toEndPoint.y - angleVector.y * toEndPoint.x;
+      const counterClockwise = crossProduct < 0;
+
+      const center = calculateConstrainedCircleCenter(
+        this.currentStateWithData.segmentStart,
+        outwardAngle,
+        endPoint,
+      );
+
+      // Calculate the end position based on the start point, center, and angle
+      const startToCenter = {
+        x: center.x - this.currentStateWithData.segmentStart.x,
+        y: center.y - this.currentStateWithData.segmentStart.y,
+      };
+      const radius = Math.sqrt(startToCenter.x ** 2 + startToCenter.y ** 2);
+      const startAngle = Math.atan2(startToCenter.y, startToCenter.x);
+      const endAngle =
+        startAngle +
+        (counterClockwise ? -1 : 1) * this.currentStateWithData.angle;
+
+      const endPosition = {
+        x: center.x - radius * Math.cos(endAngle),
+        y: center.y - radius * Math.sin(endAngle),
+      };
+
+      return { center, endPosition, counterClockwise };
+    } else {
+      // No start angle constraint, use the regular calculation
+      const center = calculateCircularCenter(
+        this.currentStateWithData.segmentStart,
+        endPoint,
+        this.currentStateWithData.angle,
+        this.currentStateWithData.counterClockwise,
+      );
+
+      return {
+        center,
+        endPosition: endPoint,
+        counterClockwise: this.currentStateWithData.counterClockwise,
+      };
+    }
+  }
+
+  /**
+   * Calculate linear segment parameters for preview or creation
+   */
+  #calculateLinearSegmentParams(endPoint: Point): {
+    endPosition: Point;
+  } {
+    if (
+      this.currentStateWithData.state !== EDITOR_STATE.CREATE_LINEAR_SEGMENT_END
+    ) {
+      throw new Error("Not in CREATE_LINEAR_SEGMENT_END state");
+    }
+
+    // If we're locked to a segment, constrain the angle
+    if (
+      this.currentStateWithData.lockedToSegment &&
+      this.currentStateWithData.lockedToEnd
+    ) {
+      const lockedSegment = this.currentStateWithData.lockedToSegment;
+      const angle =
+        this.currentStateWithData.lockedToEnd === SELECTION_TYPE.START
+          ? lockedSegment.initialAngle + Math.PI
+          : lockedSegment.finalAngle;
+
+      // Calculate the distance from the start point to the mouse
+      const dx = endPoint.x - this.currentStateWithData.segmentStart.x;
+      const dy = endPoint.y - this.currentStateWithData.segmentStart.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Set the end point using the locked angle and calculated distance
+      const endPosition = {
+        x:
+          this.currentStateWithData.segmentStart.x + Math.cos(angle) * distance,
+        y:
+          this.currentStateWithData.segmentStart.y + Math.sin(angle) * distance,
+      };
+
+      return { endPosition };
+    } else {
+      // No angle constraint, use the mouse position directly
+      return { endPosition: endPoint };
+    }
   }
 }
 
