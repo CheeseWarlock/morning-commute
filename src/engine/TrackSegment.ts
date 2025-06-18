@@ -102,20 +102,20 @@ abstract class TrackSegment {
         angles: areAnglesEqual(this.finalAngle, segment.finalAngle + Math.PI),
       },
     ];
-    const matchingPoints = groups.find(
+    const matchingPoints = groups.filter(
       (group) =>
         Math.abs(group.points[0].x - group.points[1].x) < 0.0001 &&
         Math.abs(group.points[0].y - group.points[1].y) < 0.0001,
     );
 
-    if (!matchingPoints) return;
+    if (!matchingPoints.length) return;
 
-    if (ignoreAngles || matchingPoints.angles) {
-      if (!matchingPoints.arrays[0].includes(segment))
-        matchingPoints.arrays[0].push(segment);
-      if (!matchingPoints.arrays[1].includes(this))
-        matchingPoints.arrays[1].push(this);
-    }
+    matchingPoints.forEach((group) => {
+      if (ignoreAngles || group.angles) {
+        if (!group.arrays[0].includes(segment)) group.arrays[0].push(segment);
+        if (!group.arrays[1].includes(this)) group.arrays[1].push(this);
+      }
+    });
   }
 }
 
