@@ -475,15 +475,36 @@ class TrackEditor {
         }
 
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END: {
+          let gamePosition;
+          let snappingEnd = false;
+          if (
+            this.#hoverSelectionType === SELECTION_TYPE.START ||
+            this.#hoverSelectionType === SELECTION_TYPE.END
+          ) {
+            // Let's try and lock tu ah
+            const lockPoint =
+              this.#hoverSelectionType === SELECTION_TYPE.START
+                ? this.#hoverSegment!.start
+                : this.#hoverSegment!.end;
+            snappingEnd = true;
+            gamePosition = lockPoint as GamePoint;
+          } else {
+            // just use the current mouse position
+            gamePosition = this.untransformPosition(this.mousePos!);
+          }
           const { endPosition } =
             this.#calculateLinearSegmentParams(gamePosition);
           const newSegment = new LinearTrackSegment(
             this.currentStateWithData.segmentStart,
             endPosition,
           );
+
           // Connect the segment if we started from a segment
           if (this.currentStateWithData.lockedToSegment) {
             newSegment.connect(this.currentStateWithData.lockedToSegment);
+          }
+          if (snappingEnd) {
+            newSegment.connect(this.#hoverSegment!);
           }
 
           this.network.segments.push(newSegment);
@@ -547,9 +568,25 @@ class TrackEditor {
         }
 
         case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END: {
+          let gamePosition;
+          let snappingEnd = false;
+          if (
+            this.#hoverSelectionType === SELECTION_TYPE.START ||
+            this.#hoverSelectionType === SELECTION_TYPE.END
+          ) {
+            // Let's try and lock tu ah
+            const lockPoint =
+              this.#hoverSelectionType === SELECTION_TYPE.START
+                ? this.#hoverSegment!.start
+                : this.#hoverSegment!.end;
+            snappingEnd = true;
+            gamePosition = lockPoint as GamePoint;
+          } else {
+            // just use the current mouse position
+            gamePosition = this.untransformPosition(this.mousePos!);
+          }
           if (this.currentStateWithData.lockedToSegment) {
             // Use the current mouse position
-            const gamePosition = this.untransformPosition(this.mousePos!);
 
             const { center, endPosition, counterClockwise } =
               this.#calculateCircularSegmentParams(gamePosition);
@@ -566,6 +603,9 @@ class TrackEditor {
             if (this.currentStateWithData.lockedToSegment) {
               newSegment.connect(this.currentStateWithData.lockedToSegment);
             }
+            if (snappingEnd) {
+              newSegment.connect(this.#hoverSegment!);
+            }
             this.network.segments.push(newSegment);
             this.dispatchUpdate();
 
@@ -573,7 +613,6 @@ class TrackEditor {
               state: EDITOR_STATE.SELECT,
             });
           } else {
-            const gamePosition = this.untransformPosition(this.mousePos!);
             const center = calculateCircularCenter(
               this.currentStateWithData.segmentStart,
               gamePosition,
