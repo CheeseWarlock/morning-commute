@@ -532,16 +532,51 @@ class TrackEditor {
             endPosition,
           );
 
-          // Connect the segment if we started from a segment
-          if (this.currentStateWithData.lockedToSegment) {
-            newSegment.connect(this.currentStateWithData.lockedToSegment);
-          }
-          if (snappingEnd) {
-            newSegment.connect(this.#hoverSegment!);
-          }
+          // Create undoable action for creating a linear segment
+          const undoableAction: UndoableAction = {
+            name: "Create Linear Segment",
+            doAction: () => {
+              // Connect the segment if we started from a segment
+              if (
+                this.currentStateWithData.state ===
+                  EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
+                this.currentStateWithData.lockedToSegment
+              ) {
+                newSegment.connect(this.currentStateWithData.lockedToSegment);
+              }
+              if (snappingEnd) {
+                newSegment.connect(this.#hoverSegment!);
+              }
 
-          this.network.segments.push(newSegment);
-          this.dispatchUpdate();
+              this.network.segments.push(newSegment);
+              this.dispatchUpdate();
+            },
+            undoAction: () => {
+              // Remove the segment from the network
+              const segmentIndex = this.network.segments.indexOf(newSegment);
+              if (segmentIndex > -1) {
+                this.network.segments.splice(segmentIndex, 1);
+              }
+
+              // Remove connections from other segments
+              this.network.segments.forEach((segment) => {
+                const startIndex = segment.atStart.indexOf(newSegment);
+                if (startIndex > -1) {
+                  segment.atStart.splice(startIndex, 1);
+                }
+                const endIndex = segment.atEnd.indexOf(newSegment);
+                if (endIndex > -1) {
+                  segment.atEnd.splice(endIndex, 1);
+                }
+              });
+
+              this.dispatchUpdate();
+            },
+          };
+
+          // Push the action to the stack and execute it
+          this.#pushAndDoAction(undoableAction);
+
           this.setcurrentStateWithData({
             state: EDITOR_STATE.SELECT,
           });
@@ -947,6 +982,58 @@ class TrackEditor {
     this.network.autoConnect();
     this.onNetworkChanged?.();
     this.update();
+  }
+
+  get undoStatement() {
+    if (this.#undoableActionStack.currentIndex > 0) {
+      return this.#undoableActionStack.actions[
+        this.#undoableActionStack.currentIndex - 1
+      ].name;
+    }
+    return null;
+  }
+
+  /**
+   * Undo the last action.
+   */
+  undo() {
+    if (this.#undoableActionStack.currentIndex > 0) {
+      this.#undoableActionStack.currentIndex--;
+      const action =
+        this.#undoableActionStack.actions[
+          this.#undoableActionStack.currentIndex
+        ];
+      action.undoAction();
+    }
+  }
+
+  get redoStatement() {
+    if (
+      this.#undoableActionStack.currentIndex <
+      this.#undoableActionStack.actions.length
+    ) {
+      return this.#undoableActionStack.actions[
+        this.#undoableActionStack.currentIndex
+      ].name;
+    }
+    return null;
+  }
+
+  /**
+   * Redo the last undone action.
+   */
+  redo() {
+    if (
+      this.#undoableActionStack.currentIndex <
+      this.#undoableActionStack.actions.length
+    ) {
+      const action =
+        this.#undoableActionStack.actions[
+          this.#undoableActionStack.currentIndex
+        ];
+      action.doAction();
+      this.#undoableActionStack.currentIndex++;
+    }
   }
 
   /**
@@ -1844,7 +1931,7 @@ class TrackEditor {
     this.network.segments.push(secondSegment);
 
     segmentsConnectedToStart.forEach((connectedSegment) => {
-      firstSegment.atStart.push(connectedSegment);
+      firstSegment.atEnd.push(connectedSegment);
     });
     segmentsConnectedToEnd.forEach((connectedSegment) => {
       secondSegment.atEnd.push(connectedSegment);
@@ -1859,6 +1946,23 @@ class TrackEditor {
     this.setcurrentStateWithData({
       state: EDITOR_STATE.SELECT,
     });
+  }
+
+  /**
+   * Push an undoable action to the stack, trim if needed, and execute it.
+   */
+  #pushAndDoAction(action: UndoableAction) {
+    this.#undoableActionStack.actions.push(action);
+    this.#undoableActionStack.currentIndex++;
+    // Trim the stack if it exceeds the history length
+    if (
+      this.#undoableActionStack.actions.length >
+      this.#undoableActionStack.historyLength
+    ) {
+      this.#undoableActionStack.actions.shift();
+      this.#undoableActionStack.currentIndex--;
+    }
+    action.doAction();
   }
 }
 
