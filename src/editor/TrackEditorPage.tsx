@@ -27,7 +27,7 @@ const getNetworkCompleteness = (network: Network) => {
   return (
     network.segments.length === completeSegments.length &&
     isNetworkCoherent(network.segments) &&
-    network.stations.length > 0 &&
+    network.stations.length > 1 &&
     network.segments.some((seg) => seg.trainStartPositions.length > 0)
   );
 };
