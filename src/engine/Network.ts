@@ -21,6 +21,10 @@ class Network {
    * should be connected even if their angles don't match.
    */
   autoConnect(options?: { ignoreAngles?: boolean }) {
+    const priorConnections = this.segments.reduce((acc, segment) => {
+      return acc + segment.atStart.length + segment.atEnd.length;
+    }, 0);
+
     const ignoreAngles = options?.ignoreAngles || false;
     this.segments.forEach((segmentA) => {
       this.segments.forEach((segmentB) => {
@@ -29,6 +33,16 @@ class Network {
         }
       });
     });
+
+    const afterConnections = this.segments.reduce((acc, segment) => {
+      return acc + segment.atStart.length + segment.atEnd.length;
+    }, 0);
+
+    if (afterConnections !== priorConnections) {
+      console.warn(
+        `Auto-connected ${afterConnections - priorConnections} connections`,
+      );
+    }
   }
 
   getBounds() {
