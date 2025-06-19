@@ -953,23 +953,40 @@ class TrackEditor {
 
   deleteSegment(segment: TrackSegment) {
     const selectedSegment = segment;
-    this.#onSelect?.();
-    this.network.segments.splice(
-      this.network.segments.indexOf(selectedSegment),
-      1,
-    );
-    this.network.segments.forEach((segment) => {
-      if (segment.atStart.indexOf(selectedSegment) > -1) {
-        segment.atStart.splice(segment.atStart.indexOf(selectedSegment), 1);
-      }
-      if (segment.atEnd.indexOf(selectedSegment) > -1) {
-        segment.atEnd.splice(segment.atEnd.indexOf(selectedSegment), 1);
-      }
-    });
-    this.setcurrentStateWithData({
-      state: EDITOR_STATE.SELECT,
-    });
-    this.dispatchUpdate();
+    const segmentIndex = this.network.segments.indexOf(selectedSegment);
+
+    // Store all segments that were connected to this one (deduplicate)
+    const connectedSegments = [
+      ...new Set([...selectedSegment.atStart, ...selectedSegment.atEnd]),
+    ];
+
+    // Create the undoable action
+    const undoableAction: UndoableAction = {
+      name: "Delete Segment",
+      doAction: () => {
+        this.#onSelect?.();
+        selectedSegment.disconnectAll(true);
+        this.network.segments.splice(segmentIndex, 1);
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.SELECT,
+        });
+        this.dispatchUpdate();
+      },
+      undoAction: () => {
+        // Restore the segment to the network
+        this.network.segments.splice(segmentIndex, 0, selectedSegment);
+
+        // Restore all connections using the connect method
+        connectedSegments.forEach((connectedSegment) => {
+          selectedSegment.connect(connectedSegment);
+        });
+
+        this.dispatchUpdate();
+      },
+    };
+
+    // Push the action to the stack and execute it
+    this.#pushAndDoAction(undoableAction);
   }
 
   /**
