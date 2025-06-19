@@ -13,7 +13,7 @@ import Controller from "../engine/Controller";
 import Game from "../engine/Game";
 import BabylonRenderer from "../renderer/basic/babylon/BabylonRenderer";
 import RendererCoordinator from "../renderer/RendererCoordinator";
-import { getIntersection } from "../utils";
+import { getIntersection, generateName } from "../utils";
 
 /**
  * The vague concept of a point.
@@ -737,17 +737,39 @@ class TrackEditor {
               this.#hoverSelectionType === SELECTION_TYPE.END,
             );
 
-            newSegments[0].connect(this.currentStateWithData.connectionSegment);
-            newSegments[0].connect(this.#hoverSegment);
-            if (newSegments[1]) {
-              newSegments[0].connect(newSegments[1]);
-              newSegments[1].connect(this.#hoverSegment);
-              newSegments[1].connect(
-                this.currentStateWithData.connectionSegment,
-              );
-            }
-            this.network.segments.push(...newSegments);
-            this.dispatchUpdate();
+            const connectionSegment =
+              this.currentStateWithData.connectionSegment;
+            const hoverSegment = this.#hoverSegment;
+
+            // Create undoable action for creating connection segments
+            const undoableAction: UndoableAction = {
+              name: "Create Connection",
+              doAction: () => {
+                newSegments[0].connect(connectionSegment);
+                newSegments[0].connect(hoverSegment);
+                if (newSegments[1]) {
+                  newSegments[0].connect(newSegments[1]);
+                  newSegments[1].connect(hoverSegment);
+                  newSegments[1].connect(connectionSegment);
+                }
+                this.network.segments.push(...newSegments);
+                this.dispatchUpdate();
+              },
+              undoAction: () => {
+                // Remove all the new segments from the network
+                newSegments.forEach((segment) => {
+                  segment.disconnectAll(true);
+                  const index = this.network.segments.indexOf(segment);
+                  if (index > -1) {
+                    this.network.segments.splice(index, 1);
+                  }
+                });
+                this.dispatchUpdate();
+              },
+            };
+
+            // Push the action to the stack and execute it
+            this.#pushAndDoAction(undoableAction);
 
             this.setcurrentStateWithData({
               state: EDITOR_STATE.SELECT,
@@ -770,30 +792,88 @@ class TrackEditor {
             x: stationGamePosition.x,
             y: stationGamePosition.y,
           });
-          const newStation = new Station(
-            this.#hoverSegment,
-            closestPoint.distanceAlong * this.#hoverSegment.length,
-            closestPoint.alignment,
-          );
-          this.#hoverSegment.stations.push(newStation);
-          this.dispatchUpdate();
+
+          // Generate a stable name for the station
+          const stationName = generateName(2);
+          const distanceAlong =
+            closestPoint.distanceAlong * this.#hoverSegment.length;
+          const alignment = closestPoint.alignment;
+          const segment = this.#hoverSegment;
+
+          // Create undoable action for creating a station
+          const undoableAction: UndoableAction = {
+            name: "Create Station",
+            doAction: () => {
+              const newStation = new Station(
+                segment,
+                distanceAlong,
+                alignment,
+                stationName,
+              );
+              segment.stations.push(newStation);
+              this.dispatchUpdate();
+            },
+            undoAction: () => {
+              // Find and remove the station with the matching properties
+              const stationIndex = segment.stations.findIndex(
+                (station) =>
+                  station.distanceAlong === distanceAlong &&
+                  station.alignment === alignment &&
+                  station.name === stationName,
+              );
+              if (stationIndex > -1) {
+                segment.stations.splice(stationIndex, 1);
+              }
+              this.dispatchUpdate();
+            },
+          };
+
+          // Push the action to the stack and execute it
+          this.#pushAndDoAction(undoableAction);
           break;
         }
 
         case EDITOR_STATE.SET_START_POSITION: {
           if (!this.#hoverSegment) break;
           if (!this.mousePos) break;
-          const stationGamePosition = this.untransformPosition(this.mousePos);
+          const startPosition = this.untransformPosition(this.mousePos);
           const closestPoint = this.#hoverSegment.distanceToPosition({
-            x: stationGamePosition.x,
-            y: stationGamePosition.y,
+            x: startPosition.x,
+            y: startPosition.y,
           });
-          this.#hoverSegment.trainStartPositions.push({
-            distanceAlong:
-              closestPoint.distanceAlong * this.#hoverSegment.length,
-            reverse: closestPoint.alignment === ALIGNMENT.LEFT,
-          });
-          this.dispatchUpdate();
+
+          // Store the train start position properties
+          const distanceAlong =
+            closestPoint.distanceAlong * this.#hoverSegment.length;
+          const reverse = closestPoint.alignment === ALIGNMENT.LEFT;
+          const segment = this.#hoverSegment;
+
+          // Create undoable action for creating a train start position
+          const undoableAction: UndoableAction = {
+            name: "Add Train Start Position",
+            doAction: () => {
+              segment.trainStartPositions.push({
+                distanceAlong,
+                reverse,
+              });
+              this.dispatchUpdate();
+            },
+            undoAction: () => {
+              // Find and remove the train start position with the matching properties
+              const positionIndex = segment.trainStartPositions.findIndex(
+                (position) =>
+                  position.distanceAlong === distanceAlong &&
+                  position.reverse === reverse,
+              );
+              if (positionIndex > -1) {
+                segment.trainStartPositions.splice(positionIndex, 1);
+              }
+              this.dispatchUpdate();
+            },
+          };
+
+          // Push the action to the stack and execute it
+          this.#pushAndDoAction(undoableAction);
           break;
         }
 
