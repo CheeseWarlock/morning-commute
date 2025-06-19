@@ -74,9 +74,11 @@ abstract class TrackSegment {
 
   /**
    * Connects this segment to another segment based on position, regardless of angle.
-   * @param segment
+   * @param segment The segment to connect to.
+   * @param ignoreAngles Whether to ignore the angles of the segments.
+   * @param mutual Whether to connect the other segment back
    */
-  connect(segment: TrackSegment, ignoreAngles: boolean = false) {
+  connect(segment: TrackSegment, ignoreAngles: boolean = false, mutual: boolean = true) {
     const groups = [
       {
         points: [this.start, segment.start],
@@ -113,9 +115,27 @@ abstract class TrackSegment {
     matchingPoints.forEach((group) => {
       if (ignoreAngles || group.angles) {
         if (!group.arrays[0].includes(segment)) group.arrays[0].push(segment);
-        if (!group.arrays[1].includes(this)) group.arrays[1].push(this);
+        if (mutual && !group.arrays[1].includes(this)) group.arrays[1].push(this);
       }
     });
+  }
+
+  disconnect(segment: TrackSegment, mutual: boolean = true) {
+    this.atStart = this.atStart.filter((s) => s !== segment);
+    this.atEnd = this.atEnd.filter((s) => s !== segment);
+    if (mutual) {
+      segment.atStart = segment.atStart.filter((s) => s !== this);
+      segment.atEnd = segment.atEnd.filter((s) => s !== this);
+    }
+  }
+
+  disconnectAll(mutual: boolean = true) {
+    if (mutual) {
+      this.atStart.forEach((s) => s.disconnect(this, false));
+      this.atEnd.forEach((s) => s.disconnect(this, false));
+    }
+    this.atStart = [];
+    this.atEnd = [];
   }
 }
 

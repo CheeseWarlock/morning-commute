@@ -215,7 +215,7 @@ type UndoableActionStack = {
    */
   actions: UndoableAction[];
   /**
-   * The index of the last action that was applied.
+   * The index of the last action that was applied, from the start of the stack.
    */
   currentIndex: number;
 };
@@ -532,44 +532,30 @@ class TrackEditor {
             endPosition,
           );
 
+          const segmentsToConnectTo = [
+            this.currentStateWithData.lockedToSegment,
+            this.#hoverSegment,
+          ].filter(Boolean) as TrackSegment[];
+
           // Create undoable action for creating a linear segment
           const undoableAction: UndoableAction = {
             name: "Create Linear Segment",
             doAction: () => {
               // Connect the segment if we started from a segment
-              if (
-                this.currentStateWithData.state ===
-                  EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
-                this.currentStateWithData.lockedToSegment
-              ) {
-                newSegment.connect(this.currentStateWithData.lockedToSegment);
-              }
-              if (snappingEnd) {
-                newSegment.connect(this.#hoverSegment!);
-              }
+              segmentsToConnectTo.forEach((segment) => {
+                newSegment.connect(segment);
+              });
 
               this.network.segments.push(newSegment);
               this.dispatchUpdate();
             },
             undoAction: () => {
+              newSegment.disconnectAll(true);
               // Remove the segment from the network
               const segmentIndex = this.network.segments.indexOf(newSegment);
               if (segmentIndex > -1) {
                 this.network.segments.splice(segmentIndex, 1);
               }
-
-              // Remove connections from other segments
-              this.network.segments.forEach((segment) => {
-                const startIndex = segment.atStart.indexOf(newSegment);
-                if (startIndex > -1) {
-                  segment.atStart.splice(startIndex, 1);
-                }
-                const endIndex = segment.atEnd.indexOf(newSegment);
-                if (endIndex > -1) {
-                  segment.atEnd.splice(endIndex, 1);
-                }
-              });
-
               this.dispatchUpdate();
             },
           };
@@ -638,6 +624,8 @@ class TrackEditor {
         case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END: {
           let gamePosition;
           let snappingEnd = false;
+          let newSegment: TrackSegment;
+          let segmentsToConnectTo: TrackSegment[] = [];
           if (
             this.#hoverSelectionType === SELECTION_TYPE.START ||
             this.#hoverSelectionType === SELECTION_TYPE.END
@@ -660,7 +648,7 @@ class TrackEditor {
               this.#calculateCircularSegmentParams(gamePosition);
 
             // Create a new circular segment
-            const newSegment = new CircularTrackSegment(
+            newSegment = new CircularTrackSegment(
               this.currentStateWithData.segmentStart,
               endPosition,
               center,
@@ -668,19 +656,8 @@ class TrackEditor {
             );
 
             // Connect the segment if we started from a segment
-            if (this.currentStateWithData.lockedToSegment) {
-              newSegment.connect(this.currentStateWithData.lockedToSegment);
-            }
-            if (snappingEnd) {
-              console.log("snapping end");
-              newSegment.connect(this.#hoverSegment!);
-            }
-            this.network.segments.push(newSegment);
-            this.dispatchUpdate();
-
-            this.setcurrentStateWithData({
-              state: EDITOR_STATE.SELECT,
-            });
+            segmentsToConnectTo.push(this.currentStateWithData.lockedToSegment);
+            if (snappingEnd) segmentsToConnectTo.push(this.#hoverSegment!);
           } else {
             const center = calculateCircularCenter(
               this.currentStateWithData.segmentStart,
@@ -690,7 +667,7 @@ class TrackEditor {
             );
 
             // Create a new circular segment
-            const newSegment = new CircularTrackSegment(
+            newSegment = new CircularTrackSegment(
               this.currentStateWithData.segmentStart,
               gamePosition,
               center,
@@ -699,15 +676,36 @@ class TrackEditor {
 
             // Connect the segment if we started from a segment
             if (this.currentStateWithData.lockedToSegment) {
-              newSegment.connect(this.currentStateWithData.lockedToSegment);
+              segmentsToConnectTo.push(
+                this.currentStateWithData.lockedToSegment,
+              );
             }
-            this.network.segments.push(newSegment);
-            this.dispatchUpdate();
-
-            this.setcurrentStateWithData({
-              state: EDITOR_STATE.SELECT,
-            });
+            if (snappingEnd) segmentsToConnectTo.push(this.#hoverSegment!);
           }
+
+          this.#pushAndDoAction({
+            name: "Create Circular Segment",
+            doAction: () => {
+              this.network.segments.push(newSegment);
+              segmentsToConnectTo.forEach((segment) => {
+                newSegment.connect(segment);
+              });
+              this.dispatchUpdate();
+            },
+            undoAction: () => {
+              const index = this.network.segments.indexOf(newSegment);
+              if (index !== -1) {
+                newSegment.disconnectAll(true);
+                this.network.segments.splice(index, 1);
+                this.dispatchUpdate();
+              }
+            },
+          });
+
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.SELECT,
+          });
+
           break;
         }
 
@@ -984,6 +982,10 @@ class TrackEditor {
     this.update();
   }
 
+  /**
+   * A description of the action that can be currently undone.
+   * If there is no action that can be undone, returns null.
+   */
   get undoStatement() {
     if (this.#undoableActionStack.currentIndex > 0) {
       return this.#undoableActionStack.actions[
@@ -1007,6 +1009,10 @@ class TrackEditor {
     }
   }
 
+  /**
+   * A description of the action that can be currently redone.
+   * If there is no action that can be redone, returns null.
+   */
   get redoStatement() {
     if (
       this.#undoableActionStack.currentIndex <
@@ -1952,6 +1958,19 @@ class TrackEditor {
    * Push an undoable action to the stack, trim if needed, and execute it.
    */
   #pushAndDoAction(action: UndoableAction) {
+    if (
+      this.#undoableActionStack.currentIndex <
+      this.#undoableActionStack.actions.length
+    ) {
+      // Splitting the timeline, so we need to trim the stack
+      this.#undoableActionStack.actions.splice(
+        this.#undoableActionStack.currentIndex,
+        this.#undoableActionStack.actions.length -
+          this.#undoableActionStack.currentIndex,
+      );
+      this.#undoableActionStack.currentIndex =
+        this.#undoableActionStack.actions.length;
+    }
     this.#undoableActionStack.actions.push(action);
     this.#undoableActionStack.currentIndex++;
     // Trim the stack if it exceeds the history length
