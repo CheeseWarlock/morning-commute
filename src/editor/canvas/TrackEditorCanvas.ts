@@ -392,15 +392,17 @@ class TrackEditorCanvas {
     if (!startPoint) return;
     const endPoint = this.#trackEditor.mousePos;
     if (!endPoint) return;
+
+    const startPointScreen = this.#trackEditor.transformPosition(startPoint);
     context.strokeStyle = "rgba(255, 255, 255, 0.5)";
     context.lineWidth = 2;
     context.setLineDash([10, 5]);
     context.beginPath();
     context.rect(
-      startPoint.x,
-      startPoint.y,
-      endPoint.x - startPoint.x,
-      endPoint.y - startPoint.y,
+      startPointScreen.x,
+      startPointScreen.y,
+      endPoint.x - startPointScreen.x,
+      endPoint.y - startPointScreen.y,
     );
     context.stroke();
     context.setLineDash([]);

@@ -184,8 +184,7 @@ type EDITOR_STATE_PAYLOADS =
     }
   | {
       state: EDITOR_STATE.DRAG_SELECT;
-      /** Drag start point in screen coordinates */
-      dragStartPoint?: ScreenPoint;
+      dragStartPoint?: GamePoint;
     }
   | {
       state: EDITOR_STATE.SET_START_POSITION;
@@ -863,7 +862,7 @@ class TrackEditor {
           if (!startPoint) return;
           this.setcurrentStateWithData({
             state: EDITOR_STATE.DRAG_SELECT,
-            dragStartPoint: startPoint,
+            dragStartPoint: this.untransformPosition(startPoint),
           });
           break;
         }
@@ -1103,7 +1102,7 @@ class TrackEditor {
           state: EDITOR_STATE.MULTI_SELECT,
           selectedSegments: this.getSegmentsInRectangle(
             this.currentStateWithData.dragStartPoint,
-            this.mousePos,
+            this.untransformPosition(this.mousePos),
           ),
         });
         this.#trackEditorCanvas.canvas.style.cursor = "default";
@@ -1552,16 +1551,14 @@ class TrackEditor {
     }
   }
 
-  getSegmentsInRectangle(from: ScreenPoint, to: ScreenPoint) {
-    const gameFrom = this.untransformPosition(from);
-    const gameTo = this.untransformPosition(to);
+  getSegmentsInRectangle(from: GamePoint, to: GamePoint) {
     const upperLeft = {
-      x: Math.min(gameFrom.x, gameTo.x),
-      y: Math.min(gameFrom.y, gameTo.y),
+      x: Math.min(from.x, to.x),
+      y: Math.min(from.y, to.y),
     };
     const lowerRight = {
-      x: Math.max(gameFrom.x, gameTo.x),
-      y: Math.max(gameFrom.y, gameTo.y),
+      x: Math.max(from.x, to.x),
+      y: Math.max(from.y, to.y),
     };
     return this.network.segments.filter((seg) => {
       return seg.isWithinRectangle(upperLeft, lowerRight);
