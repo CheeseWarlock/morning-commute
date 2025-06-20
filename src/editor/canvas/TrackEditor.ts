@@ -1250,6 +1250,10 @@ class TrackEditor {
   autoScaleAndOffset() {
     const gameBounds = this.network.getBounds();
 
+    if (this.network.segments.length === 0) {
+      return;
+    }
+
     const padding = 100;
     // The max fittable scale along X
     const scaleX =
