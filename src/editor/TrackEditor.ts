@@ -160,6 +160,9 @@ type EDITOR_STATE_PAYLOADS =
       state: EDITOR_STATE.MOVE_POINT;
       segment: TrackSegment;
       pointType: SELECTION_TYPE.START | SELECTION_TYPE.END;
+      dragStartPoint: GamePoint;
+      originalPoint: GamePoint;
+      originalCenter?: GamePoint;
     }
   | {
       state: EDITOR_STATE.MOVE_SEGMENT;
@@ -456,10 +459,21 @@ class TrackEditor {
               this.#hoverSelectionType === SELECTION_TYPE.START ||
               this.#hoverSelectionType === SELECTION_TYPE.END
             ) {
+              const selectedPoint =
+                this.#hoverSelectionType === SELECTION_TYPE.START
+                  ? this.#hoverSegment!.start
+                  : this.#hoverSegment!.end;
+
               this.setcurrentStateWithData({
                 state: EDITOR_STATE.MOVE_POINT,
                 segment: this.#hoverSegment,
                 pointType: this.#hoverSelectionType,
+                dragStartPoint: gamePosition,
+                originalPoint: { ...selectedPoint } as GamePoint,
+                originalCenter:
+                  this.#hoverSegment instanceof CircularTrackSegment
+                    ? ({ ...this.#hoverSegment.center } as GamePoint)
+                    : undefined,
               });
             } else {
               this.setcurrentStateWithData({
@@ -1015,6 +1029,94 @@ class TrackEditor {
         this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ||
         this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT
       ) {
+        if (this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT) {
+          // Create undoable action for moving segment
+          const { segment, originalStart, originalEnd, originalCenter } =
+            this.currentStateWithData;
+
+          // Capture the final position after the move
+          const finalStart = { ...segment.start } as GamePoint;
+          const finalEnd = { ...segment.end } as GamePoint;
+          const finalCenter =
+            segment instanceof CircularTrackSegment
+              ? ({ ...segment.center } as GamePoint)
+              : undefined;
+
+          const undoableAction: UndoableAction = {
+            name: "Move Segment",
+            doAction: () => {
+              // Set to final position (already done during drag)
+              segment.start.x = finalStart.x;
+              segment.start.y = finalStart.y;
+              segment.end.x = finalEnd.x;
+              segment.end.y = finalEnd.y;
+              if (segment instanceof CircularTrackSegment && finalCenter) {
+                segment.center.x = finalCenter.x;
+                segment.center.y = finalCenter.y;
+              }
+              this.dispatchUpdate();
+            },
+            undoAction: () => {
+              // Restore to original position
+              segment.start.x = originalStart.x;
+              segment.start.y = originalStart.y;
+              segment.end.x = originalEnd.x;
+              segment.end.y = originalEnd.y;
+              if (segment instanceof CircularTrackSegment && originalCenter) {
+                segment.center.x = originalCenter.x;
+                segment.center.y = originalCenter.y;
+              }
+              this.dispatchUpdate();
+            },
+          };
+
+          this.#pushAndDoAction(undoableAction);
+        } else if (
+          this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT
+        ) {
+          // Create undoable action for moving point
+          const { segment, pointType, originalPoint, originalCenter } =
+            this.currentStateWithData;
+
+          const selectedPoint =
+            pointType === SELECTION_TYPE.START ? segment.start : segment.end;
+          const finalPosition = { ...selectedPoint } as GamePoint;
+
+          // For circular segments, also capture the center position
+          const finalCenter =
+            segment instanceof CircularTrackSegment
+              ? ({ ...segment.center } as GamePoint)
+              : undefined;
+
+          const undoableAction: UndoableAction = {
+            name: `Move ${
+              pointType === SELECTION_TYPE.START ? "Start" : "End"
+            } Point`,
+            doAction: () => {
+              // Set to final position (already done during drag)
+              selectedPoint.x = finalPosition.x;
+              selectedPoint.y = finalPosition.y;
+              if (segment instanceof CircularTrackSegment && finalCenter) {
+                segment.center.x = finalCenter.x;
+                segment.center.y = finalCenter.y;
+              }
+              this.dispatchUpdate();
+            },
+            undoAction: () => {
+              // Restore to original position
+              selectedPoint.x = originalPoint.x;
+              selectedPoint.y = originalPoint.y;
+              if (segment instanceof CircularTrackSegment && originalCenter) {
+                segment.center.x = originalCenter.x;
+                segment.center.y = originalCenter.y;
+              }
+              this.dispatchUpdate();
+            },
+          };
+
+          this.#pushAndDoAction(undoableAction);
+        }
+
         this.setcurrentStateWithData({
           state: EDITOR_STATE.SELECT,
           selectedSegment: this.currentStateWithData.segment,
