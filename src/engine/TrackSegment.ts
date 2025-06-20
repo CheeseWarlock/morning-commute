@@ -74,9 +74,11 @@ abstract class TrackSegment {
 
   /**
    * Connects this segment to another segment based on position, regardless of angle.
-   * @param segment
+   * @param segment The segment to connect to.
+   * @param ignoreAngles Whether to ignore the angles of the segments.
+   * @param mutual Whether to connect the other segment back
    */
-  connect(segment: TrackSegment, ignoreAngles: boolean = false) {
+  connect(segment: TrackSegment, ignoreAngles: boolean = false, mutual: boolean = true) {
     const groups = [
       {
         points: [this.start, segment.start],
@@ -102,20 +104,38 @@ abstract class TrackSegment {
         angles: areAnglesEqual(this.finalAngle, segment.finalAngle + Math.PI),
       },
     ];
-    const matchingPoints = groups.find(
+    const matchingPoints = groups.filter(
       (group) =>
         Math.abs(group.points[0].x - group.points[1].x) < 0.0001 &&
         Math.abs(group.points[0].y - group.points[1].y) < 0.0001,
     );
 
-    if (!matchingPoints) return;
+    if (!matchingPoints.length) return;
 
-    if (ignoreAngles || matchingPoints.angles) {
-      if (!matchingPoints.arrays[0].includes(segment))
-        matchingPoints.arrays[0].push(segment);
-      if (!matchingPoints.arrays[1].includes(this))
-        matchingPoints.arrays[1].push(this);
+    matchingPoints.forEach((group) => {
+      if (ignoreAngles || group.angles) {
+        if (!group.arrays[0].includes(segment)) group.arrays[0].push(segment);
+        if (mutual && !group.arrays[1].includes(this)) group.arrays[1].push(this);
+      }
+    });
+  }
+
+  disconnect(segment: TrackSegment, mutual: boolean = true) {
+    this.atStart = this.atStart.filter((s) => s !== segment);
+    this.atEnd = this.atEnd.filter((s) => s !== segment);
+    if (mutual) {
+      segment.atStart = segment.atStart.filter((s) => s !== this);
+      segment.atEnd = segment.atEnd.filter((s) => s !== this);
     }
+  }
+
+  disconnectAll(mutual: boolean = true) {
+    if (mutual) {
+      this.atStart.forEach((s) => s.disconnect(this, false));
+      this.atEnd.forEach((s) => s.disconnect(this, false));
+    }
+    this.atStart = [];
+    this.atEnd = [];
   }
 }
 

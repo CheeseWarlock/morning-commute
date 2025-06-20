@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Overpass:wght@700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,4 +6,11 @@
 .segment-info {
   display: flex;
   flex-direction: column;
+}
+
+.overpass-bold {
+  font-family: "Overpass", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 700;
+  font-style: normal;
 }

@@ -59,7 +59,6 @@ export const loadNetworkFromJSON = (jsonArray: JSONTrackSegment[]) => {
           station.name,
         );
         segment.stations.push(stationObject);
-        network.stations.push(stationObject);
       });
     }
     if (jsonItem.trainStartPositions?.length) {

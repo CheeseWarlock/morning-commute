@@ -81,10 +81,7 @@ const TrackSegmentDetail = (props: {
   };
 
   const updateStationName = (stationIndex: number, newName: string) => {
-    const newNetwork = new Network(
-      props.network.segments,
-      props.network.stations,
-    );
+    const newNetwork = new Network(props.network.segments);
     const thisSegment = newNetwork.segments[props.segmentIndex];
     thisSegment.stations[stationIndex].name = newName;
     update(newNetwork);
@@ -270,7 +267,7 @@ const TrackSegmentDetail = (props: {
       )}
       <div className="my-3">
         <h4 className="text-lg">Connections</h4>
-        <div className="flex flex-row gap-4">
+        <div className="flex flex-col gap-2">
           <div className="flex flex-row items-center gap-2">
             <span>Start:</span>
             <span className="font-mono">
@@ -278,6 +275,18 @@ const TrackSegmentDetail = (props: {
                 " " +
                 (segment.atStart.length > 0 ? "✓" : "✗")}
             </span>
+            {segment.atStart.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {segment.atStart.map((connectedSegment, index) => (
+                  <span
+                    key={index}
+                    className="font-mono text-xs bg-blue-100 px-1 rounded"
+                  >
+                    {connectedSegment.id.substring(0, 8)}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex flex-row items-center gap-2">
             <span>End:</span>
@@ -286,6 +295,18 @@ const TrackSegmentDetail = (props: {
                 " " +
                 (segment.atEnd.length > 0 ? "✓" : "✗")}
             </span>
+            {segment.atEnd.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {segment.atEnd.map((connectedSegment, index) => (
+                  <span
+                    key={index}
+                    className="font-mono text-xs bg-green-100 px-1 rounded"
+                  >
+                    {connectedSegment.id.substring(0, 8)}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -56,7 +56,6 @@ class NetworkBuilder {
   addStationOnLastSegment(distanceAlong: number, alignment: ALIGNMENT) {
     if (!this.#lastSegment) return;
     const station = new Station(this.#lastSegment, distanceAlong, alignment);
-    this.network.stations.push(station);
     this.#lastSegment.stations.push(station);
   }
 

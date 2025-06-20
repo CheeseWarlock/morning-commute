@@ -1,4 +1,4 @@
-import TrackEditor, { EDITOR_STATE } from "./TrackEditor";
+import TrackEditor, { EDITOR_STATE } from "./canvas/TrackEditor";
 import React, { useRef, useEffect, useState } from "react";
 import TrackSegment from "../engine/TrackSegment";
 import TrackSegmentDetail from "./TrackSegmentDetail";
@@ -151,6 +151,26 @@ const TrackEditorContent = ({
                 />
               </div>
             </div>
+            {/* Undo/Redo Actions */}
+            <div className="flex flex-row justify-between items-center gap-4">
+              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center">
+                <span className="text-lg font-bold text-zinc-500">
+                  History:
+                </span>
+                {trackEditorRef.current?.undoStatement && (
+                  <Button
+                    value={`Undo: ${trackEditorRef.current.undoStatement}`}
+                    onClick={() => trackEditorRef.current?.undo()}
+                  />
+                )}
+                {trackEditorRef.current?.redoStatement && (
+                  <Button
+                    value={`Redo: ${trackEditorRef.current.redoStatement}`}
+                    onClick={() => trackEditorRef.current?.redo()}
+                  />
+                )}
+              </div>
+            </div>
             {/* Construction Actions */}
             <div className="flex flex-row justify-between items-center gap-4">
               <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center">
@@ -273,6 +293,8 @@ const TrackEditorContent = ({
                       trackEditorRef.current.currentStateWithData.lockedToEnd,
                     counterClockwise,
                     angle: circularAngle,
+                    startAngle:
+                      trackEditorRef.current.currentStateWithData.startAngle,
                   });
                 }
               }}
@@ -304,6 +326,8 @@ const TrackEditorContent = ({
                       trackEditorRef.current.currentStateWithData.lockedToEnd,
                     counterClockwise: isCircularCounterClockwise,
                     angle,
+                    startAngle:
+                      trackEditorRef.current.currentStateWithData.startAngle,
                   });
                 }
               }}

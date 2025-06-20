@@ -25,7 +25,7 @@ describe("train motion", () => {
   let network: Network;
 
   beforeEach(() => {
-    network = new Network([new LinearTrackSegment(pointA, pointB)], []);
+    network = new Network([new LinearTrackSegment(pointA, pointB)]);
   });
 
   it("should move along its track at a rate equal to its speed", () => {
@@ -325,7 +325,7 @@ describe("train following cars", () => {
   it("places train cars behind the lead car", () => {
     const train = new Train(
       { segment: network.segments[0], distanceAlong: 0, reversing: false },
-      { speed: 10, slowdown: true },
+      { speed: 10, slowdown: true, carSpacing: 5 },
       new GameState(network, false),
     );
     train.update(2000);
@@ -344,7 +344,7 @@ describe("train following cars", () => {
   it("can position following cars properly on a different track segment than the lead car", () => {
     const train = new Train(
       { segment: network.segments[1], distanceAlong: 0, reversing: false },
-      { speed: 10, slowdown: true },
+      { speed: 10, slowdown: true, carSpacing: 5 },
       new GameState(network, false),
     );
     const distanceThroughCurve = (Math.PI / 2) * 30;
@@ -376,7 +376,7 @@ describe("train following cars", () => {
 
     const train = new Train(
       { segment, distanceAlong: 0, reversing: false },
-      { speed: 10 },
+      { speed: 10, carSpacing: 5 },
       new GameState(network, false),
     );
     train.update(1000);
@@ -455,7 +455,6 @@ describe("wait time, including per-passenger", () => {
   );
   it("allows zero wait times", () => {
     const network = build().network;
-    network.stations = [];
     network.segments.forEach((seg) => {
       seg.stations = [];
     });
@@ -633,10 +632,10 @@ describe("collision segments", () => {
 
   it("reports collision segments of following cars", () => {
     const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 50, y: 0 });
-    const network = new Network([segment], []);
+    const network = new Network([segment]);
     const train = new Train(
       { segment, distanceAlong: 0, reversing: false },
-      {},
+      { carSpacing: 5 },
       new GameState(network, false),
     );
     train.update(3000);
@@ -655,10 +654,10 @@ describe("collision segments", () => {
     const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 50, y: 0 });
     const segment2 = new LinearTrackSegment({ x: 50, y: 0 }, { x: 100, y: 0 });
     segment.connect(segment2);
-    const network = new Network([segment, segment2], []);
+    const network = new Network([segment, segment2]);
     const train = new Train(
       { segment, distanceAlong: 0, reversing: false },
-      {},
+      { carSpacing: 5 },
       new GameState(network, false),
     );
     train.update(3000);
@@ -688,10 +687,10 @@ describe("collision segments", () => {
     const segment = new LinearTrackSegment({ x: 0, y: 0 }, { x: 50, y: 0 });
     const segment2 = new LinearTrackSegment({ x: 50, y: 0 }, { x: 100, y: 0 });
     segment.connect(segment2);
-    const network = new Network([segment, segment2], []);
+    const network = new Network([segment, segment2]);
     const train = new Train(
       { segment: segment2, distanceAlong: 0, reversing: true },
-      {},
+      { carSpacing: 5 },
       new GameState(network, false),
     );
     train.update(3000);
@@ -759,10 +758,14 @@ describe("nextJunction", () => {
     segment3.connect(segment4);
     segment4.connect(segment5);
     segment4.connect(segment6);
-    const network = new Network(
-      [segment, segment2, segment3, segment4, segment5, segment6],
-      [],
-    );
+    const network = new Network([
+      segment,
+      segment2,
+      segment3,
+      segment4,
+      segment5,
+      segment6,
+    ]);
     const train = new Train(
       { segment, distanceAlong: 0, reversing: false },
       {},
@@ -781,7 +784,7 @@ describe("nextJunction", () => {
     const segment3 = new LinearTrackSegment({ x: 60, y: 20 }, { x: 40, y: 20 });
     segment2.connect(segment);
     segment3.connect(segment);
-    const network = new Network([segment, segment2, segment3], []);
+    const network = new Network([segment, segment2, segment3]);
     const train = new Train(
       { segment, distanceAlong: 0, reversing: true },
       {},
@@ -813,10 +816,14 @@ describe("nextJunction", () => {
     segment2.connect(segment3);
     segment3.connect(segment4);
     segment3.connect(segment5);
-    const network = new Network(
-      [segment0, segment, segment2, segment3, segment4, segment5],
-      [],
-    );
+    const network = new Network([
+      segment0,
+      segment,
+      segment2,
+      segment3,
+      segment4,
+      segment5,
+    ]);
     const train = new Train(
       {
         segment: segment0,
@@ -869,6 +876,7 @@ describe("the odd case from the editor", () => {
       },
       new GameState(network, false),
     );
+    train.strategy = () => TRAIN_STRATEGIES.TURN_RIGHT;
     game.gameState.trains.push(train);
     const initialDist = targetSegment.getPositionAlong(0);
     expect(train.position.x).toBeCloseTo(initialDist.point.x, 4);

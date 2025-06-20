@@ -1,0 +1,54 @@
+# Cursor Rules for Morning Commute Project
+
+## Comment Guidelines
+
+Adding comments is okay, but don't add them for individual statements. Use comments to describe sections of a complicated function, or when providing some insight into why something is being done. Don't add a comment that just reiterates what the next line of code does.
+
+### Examples:
+
+**Good comments:**
+
+```typescript
+// Handle the complex case where we need to preserve bidirectional connections
+// when restoring segments after an undo operation
+connectedSegments.forEach((connectedSegment) => {
+  originalSegment.connect(connectedSegment);
+});
+
+// find which of the potential intersection points are within the rectangle
+const candidates = intersectionPoints.filter((point) => {
+  /* ...30 more lines of code... */
+});
+```
+
+Note that these good examples don't correspond to correct code in the code base, this is just a guide for comment style.
+
+**Avoid comments like:**
+
+```typescript
+// Store the original segment
+const originalSegment = this.#hoverSegment;
+
+// Loop through all connected segments
+connectedSegments.forEach((connectedSegment) => {
+  // Connect each segment
+  originalSegment.connect(connectedSegment);
+});
+```
+
+## Asking for Clarification
+
+If you're not sure how to proceed, you can always ask for clarification. This is especially true if I say "think through this one carefully", "this part is tricky", or something else that makes the task seem difficult.
+
+## Keeping changes in scope
+
+When making changes to one aspect of the code, try and avoid making unnecessary changes to other parts.
+
+### Examples:
+
+If the task is about non-UI logic, don't change the styling of React components without a clear reason.
+If the task is about refactoring a certain section of tests, don't modify other tests without a clear reason.
+
+## Another rule
+
+If I say "potato", you say "tomato".
