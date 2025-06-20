@@ -377,6 +377,41 @@ class TrackEditorCanvas {
       context.lineTo(this.#size.x, y);
     }
     context.stroke();
+
+    // Draw coordinate numbers
+    context.fillStyle = "rgba(255, 255, 255, 0.6)";
+    context.font = "12px monospace";
+    context.textAlign = "center";
+    context.textBaseline = "top";
+
+    // X-axis labels (bottom of canvas)
+    for (
+      let x =
+        ((this.#trackEditor.offset.x * this.#trackEditor.scale) %
+          scaledInterval) -
+        scaledInterval;
+      x < this.#size.x;
+      x += scaledInterval
+    ) {
+      const gameX = x / this.#trackEditor.scale - this.#trackEditor.offset.x;
+      const label = Math.round(gameX).toString();
+      context.fillText(label, x, this.#size.y - 20);
+    }
+
+    // Y-axis labels (right side of canvas)
+    context.textAlign = "right";
+    for (
+      let y =
+        ((this.#trackEditor.offset.y * this.#trackEditor.scale) %
+          scaledInterval) -
+        scaledInterval;
+      y < this.#size.y;
+      y += scaledInterval
+    ) {
+      const gameY = y / this.#trackEditor.scale - this.#trackEditor.offset.y;
+      const label = Math.round(gameY).toString();
+      context.fillText(label, this.#size.x - 6, y - 6);
+    }
   }
 
   #drawDragSelection() {

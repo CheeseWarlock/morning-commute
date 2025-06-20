@@ -252,873 +252,871 @@ class TrackEditor {
     this.network = network;
     this.#onSelect = onSelect;
 
-    this.#trackEditorCanvas.canvas.onmousemove = (ev) => {
-      this.mousePos = { x: ev.offsetX, y: ev.offsetY } as ScreenPoint;
-      const gamePosition = this.untransformPosition(this.mousePos);
+    this.#trackEditorCanvas.canvas.onmousemove =
+      this.handleMouseMove.bind(this);
+    this.#trackEditorCanvas.canvas.onmousedown =
+      this.handleMouseDown.bind(this);
+    this.#trackEditorCanvas.canvas.onmouseup = this.handleMouseUp.bind(this);
+    this.#trackEditorCanvas.canvas.onwheel = this.handleMouseWheel.bind(this);
+    this.dispatchUpdate();
+  }
 
-      if (this.currentStateWithData.state === EDITOR_STATE.SELECT) {
-        this.updateHoverState();
-        this.update();
-        return;
-      }
+  handleMouseDown() {
+    if (!this.mousePos) return;
+    const gamePosition = this.untransformPosition(this.mousePos);
 
-      switch (this.currentStateWithData.state) {
-        case EDITOR_STATE.PAN: {
-          const { dragStartPoint, originalOffset } = this.currentStateWithData;
-          if (!dragStartPoint || !originalOffset) return;
-
-          const dragVector = {
-            x: this.mousePos!.x - dragStartPoint.x,
-            y: this.mousePos!.y - dragStartPoint.y,
-          };
-
-          // Convert screen drag vector to game coordinates by just dividing by scale
-          const dragVectorGamePosition = {
-            x: dragVector.x / this.scale,
-            y: dragVector.y / this.scale,
-          };
-
-          this.offset = {
-            x: originalOffset.x + dragVectorGamePosition.x,
-            y: originalOffset.y + dragVectorGamePosition.y,
-          } as ScreenPoint;
-
+    switch (this.currentStateWithData.state) {
+      case EDITOR_STATE.SELECT: {
+        if (this.hoverSegment) {
+          this.#onSelect?.(this.hoverSegment);
           this.update();
-          break;
-        }
 
-        case EDITOR_STATE.MOVE_POINT: {
-          const { segment, pointType } = this.currentStateWithData;
-          const canMoveStart = segment.atStart.length === 0;
-          const canMoveEnd = segment.atEnd.length === 0;
-
-          if (pointType === SELECTION_TYPE.START && !canMoveStart) return;
-          if (pointType === SELECTION_TYPE.END && !canMoveEnd) return;
-
-          const selectedPoint =
-            pointType === SELECTION_TYPE.START ? segment.start : segment.end;
-
-          if (segment instanceof LinearTrackSegment) {
-            if (canMoveStart && canMoveEnd) {
-              selectedPoint.x = gamePosition.x;
-              selectedPoint.y = gamePosition.y;
-            } else {
-              const line1 = {
-                x1: segment.start.x,
-                y1: segment.start.y,
-                x2: segment.end.x,
-                y2: segment.end.y,
-              };
-              const angle = Math.atan2(
-                line1.y2 - line1.y1,
-                line1.x2 - line1.x1,
-              );
-              const perpendicularAngle = angle + Math.PI / 2;
-              const line2 = {
-                x1: gamePosition.x,
-                y1: gamePosition.y,
-                x2: gamePosition.x + Math.cos(perpendicularAngle),
-                y2: gamePosition.y + Math.sin(perpendicularAngle),
-              };
-              const intersection = getIntersection(line1, line2);
-              if (intersection) {
-                selectedPoint.x = intersection.x;
-                selectedPoint.y = intersection.y;
-              }
-            }
-          } else if (segment instanceof CircularTrackSegment) {
-            if (canMoveStart && canMoveEnd) {
-              let newCenter;
-              if (pointType === SELECTION_TYPE.START) {
-                newCenter = findCenter(
-                  gamePosition,
-                  segment.end,
-                  segment.theta,
-                  segment.counterClockWise,
-                );
-              } else {
-                newCenter = findCenter(
-                  segment.start,
-                  gamePosition,
-                  segment.theta,
-                  segment.counterClockWise,
-                );
-              }
-              selectedPoint.x = gamePosition.x;
-              selectedPoint.y = gamePosition.y;
-              segment.center.x = newCenter.x;
-              segment.center.y = newCenter.y;
-            }
-          }
-          this.dispatchUpdate();
-          break;
-        }
-
-        case EDITOR_STATE.MOVE_SEGMENT: {
-          const {
-            segment,
-            dragStartPoint,
-            originalStart,
-            originalEnd,
-            originalCenter,
-          } = this.currentStateWithData;
-          const gamePosition = this.untransformPosition(this.mousePos);
-          const dragVector = {
-            x: gamePosition.x - dragStartPoint.x,
-            y: gamePosition.y - dragStartPoint.y,
-          };
-
-          segment.start.x = originalStart.x + dragVector.x;
-          segment.start.y = originalStart.y + dragVector.y;
-          segment.end.x = originalEnd.x + dragVector.x;
-          segment.end.y = originalEnd.y + dragVector.y;
-
-          if (segment instanceof CircularTrackSegment && originalCenter) {
-            segment.center.x = originalCenter.x + dragVector.x;
-            segment.center.y = originalCenter.y + dragVector.y;
-          }
-
-          this.dispatchUpdate();
-          break;
-        }
-
-        default:
-          this.updateHoverState();
-          this.update();
-          break;
-      }
-    };
-
-    this.#trackEditorCanvas.canvas.onmousedown = () => {
-      if (!this.mousePos) return;
-      const gamePosition = this.untransformPosition(this.mousePos);
-
-      switch (this.currentStateWithData.state) {
-        case EDITOR_STATE.SELECT: {
-          if (this.hoverSegment) {
-            this.#onSelect?.(this.hoverSegment);
-            this.update();
-
-            if (this.hoverSelectionType === SELECTION_TYPE.SEGMENT) {
-              // Only allow moving segments with no connections
-              const canMoveSegment =
-                this.hoverSegment.atStart.length === 0 &&
-                this.hoverSegment.atEnd.length === 0;
-              if (canMoveSegment) {
-                const gamePosition = this.untransformPosition(this.mousePos);
-                this.setcurrentStateWithData({
-                  state: EDITOR_STATE.MOVE_SEGMENT,
-                  segment: this.hoverSegment,
-                  dragStartPoint: gamePosition,
-                  originalStart: { ...this.hoverSegment.start } as GamePoint,
-                  originalEnd: { ...this.hoverSegment.end } as GamePoint,
-                  originalCenter:
-                    this.hoverSegment instanceof CircularTrackSegment
-                      ? ({ ...this.hoverSegment.center } as GamePoint)
-                      : undefined,
-                });
-              } else {
-                // Just select it if we can't move it
-                this.setcurrentStateWithData({
-                  state: EDITOR_STATE.SELECT,
-                  selectedSegment: this.hoverSegment,
-                  selectionType: this.hoverSelectionType,
-                });
-              }
-            } else if (
-              this.hoverSelectionType === SELECTION_TYPE.START ||
-              this.hoverSelectionType === SELECTION_TYPE.END
-            ) {
-              const selectedPoint =
-                this.hoverSelectionType === SELECTION_TYPE.START
-                  ? this.hoverSegment!.start
-                  : this.hoverSegment!.end;
-
+          if (this.hoverSelectionType === SELECTION_TYPE.SEGMENT) {
+            // Only allow moving segments with no connections
+            const canMoveSegment =
+              this.hoverSegment.atStart.length === 0 &&
+              this.hoverSegment.atEnd.length === 0;
+            if (canMoveSegment) {
+              const gamePosition = this.untransformPosition(this.mousePos);
               this.setcurrentStateWithData({
-                state: EDITOR_STATE.MOVE_POINT,
+                state: EDITOR_STATE.MOVE_SEGMENT,
                 segment: this.hoverSegment,
-                pointType: this.hoverSelectionType,
                 dragStartPoint: gamePosition,
-                originalPoint: { ...selectedPoint } as GamePoint,
+                originalStart: { ...this.hoverSegment.start } as GamePoint,
+                originalEnd: { ...this.hoverSegment.end } as GamePoint,
                 originalCenter:
                   this.hoverSegment instanceof CircularTrackSegment
                     ? ({ ...this.hoverSegment.center } as GamePoint)
                     : undefined,
               });
             } else {
+              // Just select it if we can't move it
               this.setcurrentStateWithData({
                 state: EDITOR_STATE.SELECT,
                 selectedSegment: this.hoverSegment,
                 selectionType: this.hoverSelectionType,
               });
             }
-          } else {
-            // Clicked on nothing - start panning
-            this.setcurrentStateWithData({
-              state: EDITOR_STATE.PAN,
-              dragStartPoint: this.mousePos,
-              originalOffset: { ...this.offset },
-            });
-            this.#trackEditorCanvas.canvas.style.cursor = "grabbing";
-          }
-          break;
-        }
-        case EDITOR_STATE.CREATE_LINEAR_SEGMENT_START: {
-          const isLockedToSegment =
-            this.hoverSegment &&
-            this.hoverSelectionType !== SELECTION_TYPE.SEGMENT;
-          this.setcurrentStateWithData({
-            state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END,
-            lockedToSegment: isLockedToSegment ? this.hoverSegment : undefined,
-            lockedToEnd: isLockedToSegment
-              ? this.hoverSelectionType === SELECTION_TYPE.END
-                ? SELECTION_TYPE.END
-                : SELECTION_TYPE.START
-              : undefined,
-            segmentStart: {
-              x: isLockedToSegment
-                ? this.hoverSelectionType === SELECTION_TYPE.START
-                  ? this.hoverSegment!.start.x
-                  : this.hoverSegment!.end.x
-                : gamePosition.x,
-              y: isLockedToSegment
-                ? this.hoverSelectionType === SELECTION_TYPE.START
-                  ? this.hoverSegment!.start.y
-                  : this.hoverSegment!.end.y
-                : gamePosition.y,
-            } as GamePoint,
-          });
-          break;
-        }
-
-        case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END: {
-          let gamePosition;
-          if (
+          } else if (
             this.hoverSelectionType === SELECTION_TYPE.START ||
             this.hoverSelectionType === SELECTION_TYPE.END
           ) {
-            // Let's try and lock tu ah
-            const lockPoint =
+            const selectedPoint =
               this.hoverSelectionType === SELECTION_TYPE.START
                 ? this.hoverSegment!.start
                 : this.hoverSegment!.end;
-            gamePosition = lockPoint as GamePoint;
-          } else {
-            // just use the current mouse position
-            gamePosition = this.untransformPosition(this.mousePos!);
-          }
-          const { endPosition } =
-            this.#calculateLinearSegmentParams(gamePosition);
-          const newSegment = new LinearTrackSegment(
-            this.currentStateWithData.segmentStart,
-            endPosition,
-          );
-
-          const segmentsToConnectTo = [
-            this.currentStateWithData.lockedToSegment,
-            this.hoverSegment,
-          ].filter(Boolean) as TrackSegment[];
-
-          // Create undoable action for creating a linear segment
-          const undoableAction: UndoableAction = {
-            name: "Create Linear Segment",
-            doAction: () => {
-              // Connect the segment if we started from a segment
-              segmentsToConnectTo.forEach((segment) => {
-                newSegment.connect(segment);
-              });
-
-              this.network.segments.push(newSegment);
-              this.dispatchUpdate();
-            },
-            undoAction: () => {
-              newSegment.disconnectAll(true);
-              // Remove the segment from the network
-              const segmentIndex = this.network.segments.indexOf(newSegment);
-              if (segmentIndex > -1) {
-                this.network.segments.splice(segmentIndex, 1);
-              }
-              this.dispatchUpdate();
-            },
-          };
-
-          // Push the action to the stack and execute it
-          this.#undoableActionManager.pushAndDoAction(undoableAction);
-
-          this.setcurrentStateWithData({
-            state: EDITOR_STATE.SELECT,
-          });
-          break;
-        }
-
-        case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START: {
-          if (
-            this.hoverSegment &&
-            (this.hoverSelectionType === SELECTION_TYPE.START ||
-              this.hoverSelectionType === SELECTION_TYPE.END)
-          ) {
-            // If hovering over a segment endpoint, use that point and angle
-            const segmentPoint =
-              this.hoverSegment[
-                this.hoverSelectionType === SELECTION_TYPE.END ? "end" : "start"
-              ];
-
-            // Calculate the angle at the segment endpoint
-            let segmentAngle;
-            if (this.hoverSegment instanceof CircularTrackSegment) {
-              // For circular segments, use the final angle if it's the end, initial angle if it's the start
-              segmentAngle =
-                this.hoverSelectionType === SELECTION_TYPE.END
-                  ? this.hoverSegment.finalAngle
-                  : this.hoverSegment.initialAngle;
-            } else {
-              // For linear segments, use the angle of the segment
-              segmentAngle = Math.atan2(
-                this.hoverSegment.end.y - this.hoverSegment.start.y,
-                this.hoverSegment.end.x - this.hoverSegment.start.x,
-              );
-            }
 
             this.setcurrentStateWithData({
-              state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
-              segmentStart: segmentPoint as GamePoint,
-              lockedToSegment: this.hoverSegment,
-              lockedToEnd: this.hoverSelectionType,
-              counterClockwise: this.currentStateWithData.counterClockwise,
-              angle: this.currentStateWithData.angle,
-              startAngle: segmentAngle,
+              state: EDITOR_STATE.MOVE_POINT,
+              segment: this.hoverSegment,
+              pointType: this.hoverSelectionType,
+              dragStartPoint: gamePosition,
+              originalPoint: { ...selectedPoint } as GamePoint,
+              originalCenter:
+                this.hoverSegment instanceof CircularTrackSegment
+                  ? ({ ...this.hoverSegment.center } as GamePoint)
+                  : undefined,
             });
           } else {
-            // Otherwise use the current mouse position
-            const gamePosition = this.untransformPosition(this.mousePos!);
-            this.setcurrentStateWithData({
-              state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
-              segmentStart: gamePosition,
-              counterClockwise: this.currentStateWithData.counterClockwise,
-              angle: this.currentStateWithData.angle,
-            });
-          }
-          break;
-        }
-
-        case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END: {
-          let gamePosition;
-          let snappingEnd = false;
-          let newSegment: TrackSegment;
-          let segmentsToConnectTo: TrackSegment[] = [];
-          if (
-            this.hoverSelectionType === SELECTION_TYPE.START ||
-            this.hoverSelectionType === SELECTION_TYPE.END
-          ) {
-            // Let's try and lock tu ah
-            const lockPoint =
-              this.hoverSelectionType === SELECTION_TYPE.START
-                ? this.hoverSegment!.start
-                : this.hoverSegment!.end;
-            snappingEnd = true;
-            gamePosition = lockPoint as GamePoint;
-          } else {
-            // just use the current mouse position
-            gamePosition = this.untransformPosition(this.mousePos!);
-          }
-          if (this.currentStateWithData.lockedToSegment) {
-            // Use the current mouse position
-
-            const { center, endPosition, counterClockwise } =
-              this.#calculateCircularSegmentParams(gamePosition);
-
-            // Create a new circular segment
-            newSegment = new CircularTrackSegment(
-              this.currentStateWithData.segmentStart,
-              endPosition,
-              center,
-              counterClockwise,
-            );
-
-            // Connect the segment if we started from a segment
-            segmentsToConnectTo.push(this.currentStateWithData.lockedToSegment);
-            if (snappingEnd) segmentsToConnectTo.push(this.hoverSegment!);
-          } else {
-            const center = calculateCircularCenter(
-              this.currentStateWithData.segmentStart,
-              gamePosition,
-              this.currentStateWithData.angle,
-              this.currentStateWithData.counterClockwise,
-            );
-
-            // Create a new circular segment
-            newSegment = new CircularTrackSegment(
-              this.currentStateWithData.segmentStart,
-              gamePosition,
-              center,
-              this.currentStateWithData.counterClockwise,
-            );
-
-            // Connect the segment if we started from a segment
-            if (this.currentStateWithData.lockedToSegment) {
-              segmentsToConnectTo.push(
-                this.currentStateWithData.lockedToSegment,
-              );
-            }
-            if (snappingEnd) segmentsToConnectTo.push(this.hoverSegment!);
-          }
-
-          this.#undoableActionManager.pushAndDoAction({
-            name: "Create Circular Segment",
-            doAction: () => {
-              this.network.segments.push(newSegment);
-              segmentsToConnectTo.forEach((segment) => {
-                newSegment.connect(segment);
-              });
-              this.dispatchUpdate();
-            },
-            undoAction: () => {
-              const index = this.network.segments.indexOf(newSegment);
-              if (index !== -1) {
-                newSegment.disconnectAll(true);
-                this.network.segments.splice(index, 1);
-                this.dispatchUpdate();
-              }
-            },
-          });
-
-          this.setcurrentStateWithData({
-            state: EDITOR_STATE.SELECT,
-          });
-
-          break;
-        }
-
-        case EDITOR_STATE.CREATE_CONNECTION_START: {
-          if (
-            this.hoverSegment &&
-            (this.hoverSelectionType === SELECTION_TYPE.START ||
-              this.hoverSelectionType === SELECTION_TYPE.END)
-          ) {
-            this.setcurrentStateWithData({
-              state: EDITOR_STATE.CREATE_CONNECTION_END,
-              connectionSegment: this.hoverSegment,
-              connectedAtEnd: this.hoverSelectionType === SELECTION_TYPE.END,
-            });
-          }
-          break;
-        }
-
-        case EDITOR_STATE.CREATE_CONNECTION_END: {
-          if (
-            this.hoverSegment &&
-            (this.hoverSelectionType === SELECTION_TYPE.START ||
-              this.hoverSelectionType === SELECTION_TYPE.END)
-          ) {
-            const newSegments = connectSegments(
-              this.currentStateWithData.connectionSegment,
-              this.currentStateWithData.connectedAtEnd,
-              this.hoverSegment,
-              this.hoverSelectionType === SELECTION_TYPE.END,
-            );
-
-            const connectionSegment =
-              this.currentStateWithData.connectionSegment;
-            const hoverSegment = this.hoverSegment;
-
-            // Create undoable action for creating connection segments
-            const undoableAction: UndoableAction = {
-              name: "Create Connection",
-              doAction: () => {
-                newSegments[0].connect(connectionSegment);
-                newSegments[0].connect(hoverSegment);
-                if (newSegments[1]) {
-                  newSegments[0].connect(newSegments[1]);
-                  newSegments[1].connect(hoverSegment);
-                  newSegments[1].connect(connectionSegment);
-                }
-                this.network.segments.push(...newSegments);
-                this.dispatchUpdate();
-              },
-              undoAction: () => {
-                // Remove all the new segments from the network
-                newSegments.forEach((segment) => {
-                  segment.disconnectAll(true);
-                  const index = this.network.segments.indexOf(segment);
-                  if (index > -1) {
-                    this.network.segments.splice(index, 1);
-                  }
-                });
-                this.dispatchUpdate();
-              },
-            };
-
-            // Push the action to the stack and execute it
-            this.#undoableActionManager.pushAndDoAction(undoableAction);
-
-            this.setcurrentStateWithData({
-              state: EDITOR_STATE.SELECT,
-            });
-          } else if (this.hoverSegment) {
             this.setcurrentStateWithData({
               state: EDITOR_STATE.SELECT,
               selectedSegment: this.hoverSegment,
               selectionType: this.hoverSelectionType,
             });
           }
-          break;
-        }
-
-        case EDITOR_STATE.CREATE_STATION: {
-          if (!this.hoverSegment) break;
-          if (!this.mousePos) break;
-          const stationGamePosition = this.untransformPosition(this.mousePos);
-          const closestPoint = this.hoverSegment.distanceToPosition({
-            x: stationGamePosition.x,
-            y: stationGamePosition.y,
-          });
-
-          // Generate a stable name for the station
-          const stationName = generateName(2);
-          const distanceAlong =
-            closestPoint.distanceAlong * this.hoverSegment.length;
-          const alignment = closestPoint.alignment;
-          const segment = this.hoverSegment;
-
-          // Create undoable action for creating a station
-          const undoableAction: UndoableAction = {
-            name: "Create Station",
-            doAction: () => {
-              const newStation = new Station(
-                segment,
-                distanceAlong,
-                alignment,
-                stationName,
-              );
-              segment.stations.push(newStation);
-              this.dispatchUpdate();
-            },
-            undoAction: () => {
-              // Find and remove the station with the matching properties
-              const stationIndex = segment.stations.findIndex(
-                (station) =>
-                  station.distanceAlong === distanceAlong &&
-                  station.alignment === alignment &&
-                  station.name === stationName,
-              );
-              if (stationIndex > -1) {
-                segment.stations.splice(stationIndex, 1);
-              }
-              this.dispatchUpdate();
-            },
-          };
-
-          // Push the action to the stack and execute it
-          this.#undoableActionManager.pushAndDoAction(undoableAction);
-          break;
-        }
-
-        case EDITOR_STATE.SET_START_POSITION: {
-          if (!this.hoverSegment) break;
-          if (!this.mousePos) break;
-          const startPosition = this.untransformPosition(this.mousePos);
-          const closestPoint = this.hoverSegment.distanceToPosition({
-            x: startPosition.x,
-            y: startPosition.y,
-          });
-
-          // Store the train start position properties
-          const distanceAlong =
-            closestPoint.distanceAlong * this.hoverSegment.length;
-          const reverse = closestPoint.alignment === ALIGNMENT.LEFT;
-          const segment = this.hoverSegment;
-
-          // Create undoable action for creating a train start position
-          const undoableAction: UndoableAction = {
-            name: "Add Train Start Position",
-            doAction: () => {
-              segment.trainStartPositions.push({
-                distanceAlong,
-                reverse,
-              });
-              this.dispatchUpdate();
-            },
-            undoAction: () => {
-              // Find and remove the train start position with the matching properties
-              const positionIndex = segment.trainStartPositions.findIndex(
-                (position) =>
-                  position.distanceAlong === distanceAlong &&
-                  position.reverse === reverse,
-              );
-              if (positionIndex > -1) {
-                segment.trainStartPositions.splice(positionIndex, 1);
-              }
-              this.dispatchUpdate();
-            },
-          };
-
-          // Push the action to the stack and execute it
-          this.#undoableActionManager.pushAndDoAction(undoableAction);
-          break;
-        }
-
-        case EDITOR_STATE.DRAG_SELECT: {
-          const startPoint = this.mousePos;
-          if (!startPoint) return;
-          this.setcurrentStateWithData({
-            state: EDITOR_STATE.DRAG_SELECT,
-            dragStartPoint: this.untransformPosition(startPoint),
-          });
-          break;
-        }
-
-        case EDITOR_STATE.QUERY_POINT: {
-          const point = this.mousePos;
-          if (!point) return;
-
-          const gameSelectionDistance = SELECTION_DISTANCE_PIXELS / this.scale;
-          const segments = this.network.segments.filter((segment) => {
-            const distanceToLine =
-              segment.distanceToPosition(gamePosition).distance;
-            return distanceToLine <= gameSelectionDistance;
-          });
-          this.setcurrentStateWithData({
-            state: EDITOR_STATE.MULTI_SELECT,
-            selectedSegments: segments,
-          });
-          break;
-        }
-
-        case EDITOR_STATE.MULTI_SELECT: {
+        } else {
+          // Clicked on nothing - start panning
           this.setcurrentStateWithData({
             state: EDITOR_STATE.PAN,
             dragStartPoint: this.mousePos,
             originalOffset: { ...this.offset },
           });
-          break;
+          this.#trackEditorCanvas.canvas.style.cursor = "grabbing";
         }
+        break;
+      }
+      case EDITOR_STATE.CREATE_LINEAR_SEGMENT_START: {
+        const isLockedToSegment =
+          this.hoverSegment &&
+          this.hoverSelectionType !== SELECTION_TYPE.SEGMENT;
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.CREATE_LINEAR_SEGMENT_END,
+          lockedToSegment: isLockedToSegment ? this.hoverSegment : undefined,
+          lockedToEnd: isLockedToSegment
+            ? this.hoverSelectionType === SELECTION_TYPE.END
+              ? SELECTION_TYPE.END
+              : SELECTION_TYPE.START
+            : undefined,
+          segmentStart: {
+            x: isLockedToSegment
+              ? this.hoverSelectionType === SELECTION_TYPE.START
+                ? this.hoverSegment!.start.x
+                : this.hoverSegment!.end.x
+              : gamePosition.x,
+            y: isLockedToSegment
+              ? this.hoverSelectionType === SELECTION_TYPE.START
+                ? this.hoverSegment!.start.y
+                : this.hoverSegment!.end.y
+              : gamePosition.y,
+          } as GamePoint,
+        });
+        break;
+      }
 
-        case EDITOR_STATE.SPLIT: {
-          if (!this.hoverSegment) break;
-          if (!this.mousePos) break;
+      case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END: {
+        let gamePosition;
+        if (
+          this.hoverSelectionType === SELECTION_TYPE.START ||
+          this.hoverSelectionType === SELECTION_TYPE.END
+        ) {
+          // Let's try and lock tu ah
+          const lockPoint =
+            this.hoverSelectionType === SELECTION_TYPE.START
+              ? this.hoverSegment!.start
+              : this.hoverSegment!.end;
+          gamePosition = lockPoint as GamePoint;
+        } else {
+          // just use the current mouse position
+          gamePosition = this.untransformPosition(this.mousePos!);
+        }
+        const { endPosition } =
+          this.#calculateLinearSegmentParams(gamePosition);
+        const newSegment = new LinearTrackSegment(
+          this.currentStateWithData.segmentStart,
+          endPosition,
+        );
 
-          const splitResult = this.#replaceSegmentWithNewSegments();
+        const segmentsToConnectTo = [
+          this.currentStateWithData.lockedToSegment,
+          this.hoverSegment,
+        ].filter(Boolean) as TrackSegment[];
 
-          if (!splitResult) break;
+        // Create undoable action for creating a linear segment
+        const undoableAction: UndoableAction = {
+          name: "Create Linear Segment",
+          doAction: () => {
+            // Connect the segment if we started from a segment
+            segmentsToConnectTo.forEach((segment) => {
+              newSegment.connect(segment);
+            });
 
-          const [firstSegment, secondSegment] = splitResult;
-          const originalSegment = this.hoverSegment;
+            this.network.segments.push(newSegment);
+            this.dispatchUpdate();
+          },
+          undoAction: () => {
+            newSegment.disconnectAll(true);
+            // Remove the segment from the network
+            const segmentIndex = this.network.segments.indexOf(newSegment);
+            if (segmentIndex > -1) {
+              this.network.segments.splice(segmentIndex, 1);
+            }
+            this.dispatchUpdate();
+          },
+        };
 
-          const currentConnections = this.hoverSegment.atStart.concat(
-            this.hoverSegment.atEnd,
+        // Push the action to the stack and execute it
+        this.#undoableActionManager.pushAndDoAction(undoableAction);
+
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.SELECT,
+        });
+        break;
+      }
+
+      case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START: {
+        if (
+          this.hoverSegment &&
+          (this.hoverSelectionType === SELECTION_TYPE.START ||
+            this.hoverSelectionType === SELECTION_TYPE.END)
+        ) {
+          // If hovering over a segment endpoint, use that point and angle
+          const segmentPoint =
+            this.hoverSegment[
+              this.hoverSelectionType === SELECTION_TYPE.END ? "end" : "start"
+            ];
+
+          // Calculate the angle at the segment endpoint
+          let segmentAngle;
+          if (this.hoverSegment instanceof CircularTrackSegment) {
+            // For circular segments, use the final angle if it's the end, initial angle if it's the start
+            segmentAngle =
+              this.hoverSelectionType === SELECTION_TYPE.END
+                ? this.hoverSegment.finalAngle
+                : this.hoverSegment.initialAngle;
+          } else {
+            // For linear segments, use the angle of the segment
+            segmentAngle = Math.atan2(
+              this.hoverSegment.end.y - this.hoverSegment.start.y,
+              this.hoverSegment.end.x - this.hoverSegment.start.x,
+            );
+          }
+
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
+            segmentStart: segmentPoint as GamePoint,
+            lockedToSegment: this.hoverSegment,
+            lockedToEnd: this.hoverSelectionType,
+            counterClockwise: this.currentStateWithData.counterClockwise,
+            angle: this.currentStateWithData.angle,
+            startAngle: segmentAngle,
+          });
+        } else {
+          // Otherwise use the current mouse position
+          const gamePosition = this.untransformPosition(this.mousePos!);
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
+            segmentStart: gamePosition,
+            counterClockwise: this.currentStateWithData.counterClockwise,
+            angle: this.currentStateWithData.angle,
+          });
+        }
+        break;
+      }
+
+      case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END: {
+        let gamePosition;
+        let snappingEnd = false;
+        let newSegment: TrackSegment;
+        let segmentsToConnectTo: TrackSegment[] = [];
+        if (
+          this.hoverSelectionType === SELECTION_TYPE.START ||
+          this.hoverSelectionType === SELECTION_TYPE.END
+        ) {
+          // Let's try and lock tu ah
+          const lockPoint =
+            this.hoverSelectionType === SELECTION_TYPE.START
+              ? this.hoverSegment!.start
+              : this.hoverSegment!.end;
+          snappingEnd = true;
+          gamePosition = lockPoint as GamePoint;
+        } else {
+          // just use the current mouse position
+          gamePosition = this.untransformPosition(this.mousePos!);
+        }
+        if (this.currentStateWithData.lockedToSegment) {
+          // Use the current mouse position
+
+          const { center, endPosition, counterClockwise } =
+            this.#calculateCircularSegmentParams(gamePosition);
+
+          // Create a new circular segment
+          newSegment = new CircularTrackSegment(
+            this.currentStateWithData.segmentStart,
+            endPosition,
+            center,
+            counterClockwise,
           );
 
+          // Connect the segment if we started from a segment
+          segmentsToConnectTo.push(this.currentStateWithData.lockedToSegment);
+          if (snappingEnd) segmentsToConnectTo.push(this.hoverSegment!);
+        } else {
+          const center = calculateCircularCenter(
+            this.currentStateWithData.segmentStart,
+            gamePosition,
+            this.currentStateWithData.angle,
+            this.currentStateWithData.counterClockwise,
+          );
+
+          // Create a new circular segment
+          newSegment = new CircularTrackSegment(
+            this.currentStateWithData.segmentStart,
+            gamePosition,
+            center,
+            this.currentStateWithData.counterClockwise,
+          );
+
+          // Connect the segment if we started from a segment
+          if (this.currentStateWithData.lockedToSegment) {
+            segmentsToConnectTo.push(this.currentStateWithData.lockedToSegment);
+          }
+          if (snappingEnd) segmentsToConnectTo.push(this.hoverSegment!);
+        }
+
+        this.#undoableActionManager.pushAndDoAction({
+          name: "Create Circular Segment",
+          doAction: () => {
+            this.network.segments.push(newSegment);
+            segmentsToConnectTo.forEach((segment) => {
+              newSegment.connect(segment);
+            });
+            this.dispatchUpdate();
+          },
+          undoAction: () => {
+            const index = this.network.segments.indexOf(newSegment);
+            if (index !== -1) {
+              newSegment.disconnectAll(true);
+              this.network.segments.splice(index, 1);
+              this.dispatchUpdate();
+            }
+          },
+        });
+
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.SELECT,
+        });
+
+        break;
+      }
+
+      case EDITOR_STATE.CREATE_CONNECTION_START: {
+        if (
+          this.hoverSegment &&
+          (this.hoverSelectionType === SELECTION_TYPE.START ||
+            this.hoverSelectionType === SELECTION_TYPE.END)
+        ) {
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.CREATE_CONNECTION_END,
+            connectionSegment: this.hoverSegment,
+            connectedAtEnd: this.hoverSelectionType === SELECTION_TYPE.END,
+          });
+        }
+        break;
+      }
+
+      case EDITOR_STATE.CREATE_CONNECTION_END: {
+        if (
+          this.hoverSegment &&
+          (this.hoverSelectionType === SELECTION_TYPE.START ||
+            this.hoverSelectionType === SELECTION_TYPE.END)
+        ) {
+          const newSegments = connectSegments(
+            this.currentStateWithData.connectionSegment,
+            this.currentStateWithData.connectedAtEnd,
+            this.hoverSegment,
+            this.hoverSelectionType === SELECTION_TYPE.END,
+          );
+
+          const connectionSegment = this.currentStateWithData.connectionSegment;
+          const hoverSegment = this.hoverSegment;
+
+          // Create undoable action for creating connection segments
           const undoableAction: UndoableAction = {
-            name: "Split Segment",
+            name: "Create Connection",
             doAction: () => {
-              originalSegment.disconnectAll(true);
-              this.network.segments.splice(
-                this.network.segments.indexOf(originalSegment),
-                1,
-              );
-
-              this.network.segments.push(firstSegment);
-              this.network.segments.push(secondSegment);
-              currentConnections.forEach((connection) => {
-                connection.connect(firstSegment);
-                connection.connect(secondSegment);
-              });
-              firstSegment.connect(secondSegment);
-
-              // Distribute stations to the new segments
-              originalSegment.stations.forEach((station) => {
-                if (station.distanceAlong <= firstSegment.length) {
-                  if (!firstSegment.stations.includes(station)) {
-                    firstSegment.stations.push(station);
-                  }
-                  station.trackSegment = firstSegment;
-                } else {
-                  if (!secondSegment.stations.includes(station)) {
-                    secondSegment.stations.push(station);
-                  }
-                  station.distanceAlong =
-                    station.distanceAlong - firstSegment.length;
-                  station.trackSegment = secondSegment;
-                }
-              });
-
+              newSegments[0].connect(connectionSegment);
+              newSegments[0].connect(hoverSegment);
+              if (newSegments[1]) {
+                newSegments[0].connect(newSegments[1]);
+                newSegments[1].connect(hoverSegment);
+                newSegments[1].connect(connectionSegment);
+              }
+              this.network.segments.push(...newSegments);
               this.dispatchUpdate();
             },
             undoAction: () => {
-              firstSegment.disconnectAll(true);
-              secondSegment.disconnectAll(true);
-              this.network.segments.splice(
-                this.network.segments.indexOf(firstSegment),
-                1,
-              );
-              this.network.segments.splice(
-                this.network.segments.indexOf(secondSegment),
-                1,
-              );
-              this.network.segments.push(originalSegment);
-              currentConnections.forEach((connection) => {
-                connection.connect(originalSegment);
-              });
-
-              // Consolidate stations on the original segment
-              firstSegment.stations.forEach((station) => {
-                station.trackSegment = originalSegment;
-                if (!originalSegment.stations.includes(station)) {
-                  originalSegment.stations.push(station);
+              // Remove all the new segments from the network
+              newSegments.forEach((segment) => {
+                segment.disconnectAll(true);
+                const index = this.network.segments.indexOf(segment);
+                if (index > -1) {
+                  this.network.segments.splice(index, 1);
                 }
               });
-              secondSegment.stations.forEach((station) => {
-                station.distanceAlong =
-                  station.distanceAlong + firstSegment.length;
-                station.trackSegment = originalSegment;
-                if (!originalSegment.stations.includes(station)) {
-                  originalSegment.stations.push(station);
-                }
-              });
-
               this.dispatchUpdate();
             },
           };
 
+          // Push the action to the stack and execute it
           this.#undoableActionManager.pushAndDoAction(undoableAction);
+
           this.setcurrentStateWithData({
             state: EDITOR_STATE.SELECT,
           });
-          break;
+        } else if (this.hoverSegment) {
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.SELECT,
+            selectedSegment: this.hoverSegment,
+            selectionType: this.hoverSelectionType,
+          });
         }
+        break;
       }
-      return;
-    };
 
-    this.#trackEditorCanvas.canvas.onmouseup = () => {
-      if (
-        this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ||
-        this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT
-      ) {
-        if (this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT) {
-          // Create undoable action for moving segment
-          const { segment, originalStart, originalEnd, originalCenter } =
-            this.currentStateWithData;
-
-          // Capture the final position after the move
-          const finalStart = { ...segment.start } as GamePoint;
-          const finalEnd = { ...segment.end } as GamePoint;
-          const finalCenter =
-            segment instanceof CircularTrackSegment
-              ? ({ ...segment.center } as GamePoint)
-              : undefined;
-
-          const undoableAction: UndoableAction = {
-            name: "Move Segment",
-            doAction: () => {
-              // Set to final position (already done during drag)
-              segment.start.x = finalStart.x;
-              segment.start.y = finalStart.y;
-              segment.end.x = finalEnd.x;
-              segment.end.y = finalEnd.y;
-              if (segment instanceof CircularTrackSegment && finalCenter) {
-                segment.center.x = finalCenter.x;
-                segment.center.y = finalCenter.y;
-              }
-              this.dispatchUpdate();
-            },
-            undoAction: () => {
-              // Restore to original position
-              segment.start.x = originalStart.x;
-              segment.start.y = originalStart.y;
-              segment.end.x = originalEnd.x;
-              segment.end.y = originalEnd.y;
-              if (segment instanceof CircularTrackSegment && originalCenter) {
-                segment.center.x = originalCenter.x;
-                segment.center.y = originalCenter.y;
-              }
-              this.dispatchUpdate();
-            },
-          };
-
-          this.#undoableActionManager.pushAndDoAction(undoableAction);
-        } else if (
-          this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT
-        ) {
-          // Create undoable action for moving point
-          const { segment, pointType, originalPoint, originalCenter } =
-            this.currentStateWithData;
-
-          const selectedPoint =
-            pointType === SELECTION_TYPE.START ? segment.start : segment.end;
-          const finalPosition = { ...selectedPoint } as GamePoint;
-
-          // For circular segments, also capture the center position
-          const finalCenter =
-            segment instanceof CircularTrackSegment
-              ? ({ ...segment.center } as GamePoint)
-              : undefined;
-
-          const undoableAction: UndoableAction = {
-            name: `Move ${
-              pointType === SELECTION_TYPE.START ? "Start" : "End"
-            } Point`,
-            doAction: () => {
-              // Set to final position (already done during drag)
-              selectedPoint.x = finalPosition.x;
-              selectedPoint.y = finalPosition.y;
-              if (segment instanceof CircularTrackSegment && finalCenter) {
-                segment.center.x = finalCenter.x;
-                segment.center.y = finalCenter.y;
-              }
-              this.dispatchUpdate();
-            },
-            undoAction: () => {
-              // Restore to original position
-              selectedPoint.x = originalPoint.x;
-              selectedPoint.y = originalPoint.y;
-              if (segment instanceof CircularTrackSegment && originalCenter) {
-                segment.center.x = originalCenter.x;
-                segment.center.y = originalCenter.y;
-              }
-              this.dispatchUpdate();
-            },
-          };
-
-          this.#undoableActionManager.pushAndDoAction(undoableAction);
-        }
-
-        this.setcurrentStateWithData({
-          state: EDITOR_STATE.SELECT,
-          selectedSegment: this.currentStateWithData.segment,
-          selectionType:
-            this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT
-              ? this.currentStateWithData.pointType
-              : SELECTION_TYPE.SEGMENT,
+      case EDITOR_STATE.CREATE_STATION: {
+        if (!this.hoverSegment) break;
+        if (!this.mousePos) break;
+        const stationGamePosition = this.untransformPosition(this.mousePos);
+        const closestPoint = this.hoverSegment.distanceToPosition({
+          x: stationGamePosition.x,
+          y: stationGamePosition.y,
         });
-      } else if (this.currentStateWithData.state === EDITOR_STATE.PAN) {
-        this.setcurrentStateWithData({
-          state: EDITOR_STATE.SELECT,
+
+        // Generate a stable name for the station
+        const stationName = generateName(2);
+        const distanceAlong =
+          closestPoint.distanceAlong * this.hoverSegment.length;
+        const alignment = closestPoint.alignment;
+        const segment = this.hoverSegment;
+
+        // Create undoable action for creating a station
+        const undoableAction: UndoableAction = {
+          name: "Create Station",
+          doAction: () => {
+            const newStation = new Station(
+              segment,
+              distanceAlong,
+              alignment,
+              stationName,
+            );
+            segment.stations.push(newStation);
+            this.dispatchUpdate();
+          },
+          undoAction: () => {
+            // Find and remove the station with the matching properties
+            const stationIndex = segment.stations.findIndex(
+              (station) =>
+                station.distanceAlong === distanceAlong &&
+                station.alignment === alignment &&
+                station.name === stationName,
+            );
+            if (stationIndex > -1) {
+              segment.stations.splice(stationIndex, 1);
+            }
+            this.dispatchUpdate();
+          },
+        };
+
+        // Push the action to the stack and execute it
+        this.#undoableActionManager.pushAndDoAction(undoableAction);
+        break;
+      }
+
+      case EDITOR_STATE.SET_START_POSITION: {
+        if (!this.hoverSegment) break;
+        if (!this.mousePos) break;
+        const startPosition = this.untransformPosition(this.mousePos);
+        const closestPoint = this.hoverSegment.distanceToPosition({
+          x: startPosition.x,
+          y: startPosition.y,
         });
-        this.#trackEditorCanvas.canvas.style.cursor = "default";
-      } else if (this.currentStateWithData.state === EDITOR_STATE.DRAG_SELECT) {
-        if (!this.currentStateWithData.dragStartPoint || !this.mousePos) return;
+
+        // Store the train start position properties
+        const distanceAlong =
+          closestPoint.distanceAlong * this.hoverSegment.length;
+        const reverse = closestPoint.alignment === ALIGNMENT.LEFT;
+        const segment = this.hoverSegment;
+
+        // Create undoable action for creating a train start position
+        const undoableAction: UndoableAction = {
+          name: "Add Train Start Position",
+          doAction: () => {
+            segment.trainStartPositions.push({
+              distanceAlong,
+              reverse,
+            });
+            this.dispatchUpdate();
+          },
+          undoAction: () => {
+            // Find and remove the train start position with the matching properties
+            const positionIndex = segment.trainStartPositions.findIndex(
+              (position) =>
+                position.distanceAlong === distanceAlong &&
+                position.reverse === reverse,
+            );
+            if (positionIndex > -1) {
+              segment.trainStartPositions.splice(positionIndex, 1);
+            }
+            this.dispatchUpdate();
+          },
+        };
+
+        // Push the action to the stack and execute it
+        this.#undoableActionManager.pushAndDoAction(undoableAction);
+        break;
+      }
+
+      case EDITOR_STATE.DRAG_SELECT: {
+        const startPoint = this.mousePos;
+        if (!startPoint) return;
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.DRAG_SELECT,
+          dragStartPoint: this.untransformPosition(startPoint),
+        });
+        break;
+      }
+
+      case EDITOR_STATE.QUERY_POINT: {
+        const point = this.mousePos;
+        if (!point) return;
+
+        const gameSelectionDistance = SELECTION_DISTANCE_PIXELS / this.scale;
+        const segments = this.network.segments.filter((segment) => {
+          const distanceToLine =
+            segment.distanceToPosition(gamePosition).distance;
+          return distanceToLine <= gameSelectionDistance;
+        });
         this.setcurrentStateWithData({
           state: EDITOR_STATE.MULTI_SELECT,
-          selectedSegments: this.getSegmentsInRectangle(
-            this.currentStateWithData.dragStartPoint,
-            this.untransformPosition(this.mousePos),
-          ),
+          selectedSegments: segments,
         });
-        this.#trackEditorCanvas.canvas.style.cursor = "default";
+        break;
       }
-    };
 
-    this.#trackEditorCanvas.canvas.onwheel = (ev) => {
-      // Prevent the default scroll behavior
-      ev.preventDefault();
+      case EDITOR_STATE.MULTI_SELECT: {
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.PAN,
+          dragStartPoint: this.mousePos,
+          originalOffset: { ...this.offset },
+        });
+        break;
+      }
 
-      // Adjust scale based on wheel delta
-      // Negative delta means scroll up/zoom in, positive means scroll down/zoom out
-      this.adjustScale(-ev.deltaY * 0.001 * this.scale, true);
-    };
+      case EDITOR_STATE.SPLIT: {
+        if (!this.hoverSegment) break;
+        if (!this.mousePos) break;
 
-    this.dispatchUpdate();
+        const splitResult = this.#replaceSegmentWithNewSegments();
+
+        if (!splitResult) break;
+
+        const [firstSegment, secondSegment] = splitResult;
+        const originalSegment = this.hoverSegment;
+
+        const currentConnections = this.hoverSegment.atStart.concat(
+          this.hoverSegment.atEnd,
+        );
+
+        const undoableAction: UndoableAction = {
+          name: "Split Segment",
+          doAction: () => {
+            originalSegment.disconnectAll(true);
+            this.network.segments.splice(
+              this.network.segments.indexOf(originalSegment),
+              1,
+            );
+
+            this.network.segments.push(firstSegment);
+            this.network.segments.push(secondSegment);
+            currentConnections.forEach((connection) => {
+              connection.connect(firstSegment);
+              connection.connect(secondSegment);
+            });
+            firstSegment.connect(secondSegment);
+
+            // Distribute stations to the new segments
+            originalSegment.stations.forEach((station) => {
+              if (station.distanceAlong <= firstSegment.length) {
+                if (!firstSegment.stations.includes(station)) {
+                  firstSegment.stations.push(station);
+                }
+                station.trackSegment = firstSegment;
+              } else {
+                if (!secondSegment.stations.includes(station)) {
+                  secondSegment.stations.push(station);
+                }
+                station.distanceAlong =
+                  station.distanceAlong - firstSegment.length;
+                station.trackSegment = secondSegment;
+              }
+            });
+
+            this.dispatchUpdate();
+          },
+          undoAction: () => {
+            firstSegment.disconnectAll(true);
+            secondSegment.disconnectAll(true);
+            this.network.segments.splice(
+              this.network.segments.indexOf(firstSegment),
+              1,
+            );
+            this.network.segments.splice(
+              this.network.segments.indexOf(secondSegment),
+              1,
+            );
+            this.network.segments.push(originalSegment);
+            currentConnections.forEach((connection) => {
+              connection.connect(originalSegment);
+            });
+
+            // Consolidate stations on the original segment
+            firstSegment.stations.forEach((station) => {
+              station.trackSegment = originalSegment;
+              if (!originalSegment.stations.includes(station)) {
+                originalSegment.stations.push(station);
+              }
+            });
+            secondSegment.stations.forEach((station) => {
+              station.distanceAlong =
+                station.distanceAlong + firstSegment.length;
+              station.trackSegment = originalSegment;
+              if (!originalSegment.stations.includes(station)) {
+                originalSegment.stations.push(station);
+              }
+            });
+
+            this.dispatchUpdate();
+          },
+        };
+
+        this.#undoableActionManager.pushAndDoAction(undoableAction);
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.SELECT,
+        });
+        break;
+      }
+    }
+    return;
+  }
+
+  handleMouseMove(ev: MouseEvent) {
+    this.mousePos = { x: ev.offsetX, y: ev.offsetY } as ScreenPoint;
+    const gamePosition = this.untransformPosition(this.mousePos);
+
+    if (this.currentStateWithData.state === EDITOR_STATE.SELECT) {
+      this.updateHoverState();
+      this.update();
+      return;
+    }
+
+    switch (this.currentStateWithData.state) {
+      case EDITOR_STATE.PAN: {
+        const { dragStartPoint, originalOffset } = this.currentStateWithData;
+        if (!dragStartPoint || !originalOffset) return;
+
+        const dragVector = {
+          x: this.mousePos!.x - dragStartPoint.x,
+          y: this.mousePos!.y - dragStartPoint.y,
+        };
+
+        // Convert screen drag vector to game coordinates by just dividing by scale
+        const dragVectorGamePosition = {
+          x: dragVector.x / this.scale,
+          y: dragVector.y / this.scale,
+        };
+
+        this.offset = {
+          x: originalOffset.x + dragVectorGamePosition.x,
+          y: originalOffset.y + dragVectorGamePosition.y,
+        } as ScreenPoint;
+
+        this.update();
+        break;
+      }
+
+      case EDITOR_STATE.MOVE_POINT: {
+        const { segment, pointType } = this.currentStateWithData;
+        const canMoveStart = segment.atStart.length === 0;
+        const canMoveEnd = segment.atEnd.length === 0;
+
+        if (pointType === SELECTION_TYPE.START && !canMoveStart) return;
+        if (pointType === SELECTION_TYPE.END && !canMoveEnd) return;
+
+        const selectedPoint =
+          pointType === SELECTION_TYPE.START ? segment.start : segment.end;
+
+        if (segment instanceof LinearTrackSegment) {
+          if (canMoveStart && canMoveEnd) {
+            selectedPoint.x = gamePosition.x;
+            selectedPoint.y = gamePosition.y;
+          } else {
+            const line1 = {
+              x1: segment.start.x,
+              y1: segment.start.y,
+              x2: segment.end.x,
+              y2: segment.end.y,
+            };
+            const angle = Math.atan2(line1.y2 - line1.y1, line1.x2 - line1.x1);
+            const perpendicularAngle = angle + Math.PI / 2;
+            const line2 = {
+              x1: gamePosition.x,
+              y1: gamePosition.y,
+              x2: gamePosition.x + Math.cos(perpendicularAngle),
+              y2: gamePosition.y + Math.sin(perpendicularAngle),
+            };
+            const intersection = getIntersection(line1, line2);
+            if (intersection) {
+              selectedPoint.x = intersection.x;
+              selectedPoint.y = intersection.y;
+            }
+          }
+        } else if (segment instanceof CircularTrackSegment) {
+          if (canMoveStart && canMoveEnd) {
+            let newCenter;
+            if (pointType === SELECTION_TYPE.START) {
+              newCenter = findCenter(
+                gamePosition,
+                segment.end,
+                segment.theta,
+                segment.counterClockWise,
+              );
+            } else {
+              newCenter = findCenter(
+                segment.start,
+                gamePosition,
+                segment.theta,
+                segment.counterClockWise,
+              );
+            }
+            selectedPoint.x = gamePosition.x;
+            selectedPoint.y = gamePosition.y;
+            segment.center.x = newCenter.x;
+            segment.center.y = newCenter.y;
+          }
+        }
+        this.dispatchUpdate();
+        break;
+      }
+
+      case EDITOR_STATE.MOVE_SEGMENT: {
+        const {
+          segment,
+          dragStartPoint,
+          originalStart,
+          originalEnd,
+          originalCenter,
+        } = this.currentStateWithData;
+        const gamePosition = this.untransformPosition(this.mousePos);
+        const dragVector = {
+          x: gamePosition.x - dragStartPoint.x,
+          y: gamePosition.y - dragStartPoint.y,
+        };
+
+        segment.start.x = originalStart.x + dragVector.x;
+        segment.start.y = originalStart.y + dragVector.y;
+        segment.end.x = originalEnd.x + dragVector.x;
+        segment.end.y = originalEnd.y + dragVector.y;
+
+        if (segment instanceof CircularTrackSegment && originalCenter) {
+          segment.center.x = originalCenter.x + dragVector.x;
+          segment.center.y = originalCenter.y + dragVector.y;
+        }
+
+        this.dispatchUpdate();
+        break;
+      }
+
+      default:
+        this.updateHoverState();
+        this.update();
+        break;
+    }
+  }
+
+  handleMouseUp() {
+    if (
+      this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ||
+      this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT
+    ) {
+      if (this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT) {
+        // Create undoable action for moving segment
+        const { segment, originalStart, originalEnd, originalCenter } =
+          this.currentStateWithData;
+
+        // Capture the final position after the move
+        const finalStart = { ...segment.start } as GamePoint;
+        const finalEnd = { ...segment.end } as GamePoint;
+        const finalCenter =
+          segment instanceof CircularTrackSegment
+            ? ({ ...segment.center } as GamePoint)
+            : undefined;
+
+        const undoableAction: UndoableAction = {
+          name: "Move Segment",
+          doAction: () => {
+            // Set to final position (already done during drag)
+            segment.start.x = finalStart.x;
+            segment.start.y = finalStart.y;
+            segment.end.x = finalEnd.x;
+            segment.end.y = finalEnd.y;
+            if (segment instanceof CircularTrackSegment && finalCenter) {
+              segment.center.x = finalCenter.x;
+              segment.center.y = finalCenter.y;
+            }
+            this.dispatchUpdate();
+          },
+          undoAction: () => {
+            // Restore to original position
+            segment.start.x = originalStart.x;
+            segment.start.y = originalStart.y;
+            segment.end.x = originalEnd.x;
+            segment.end.y = originalEnd.y;
+            if (segment instanceof CircularTrackSegment && originalCenter) {
+              segment.center.x = originalCenter.x;
+              segment.center.y = originalCenter.y;
+            }
+            this.dispatchUpdate();
+          },
+        };
+
+        this.#undoableActionManager.pushAndDoAction(undoableAction);
+      } else if (this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT) {
+        // Create undoable action for moving point
+        const { segment, pointType, originalPoint, originalCenter } =
+          this.currentStateWithData;
+
+        const selectedPoint =
+          pointType === SELECTION_TYPE.START ? segment.start : segment.end;
+        const finalPosition = { ...selectedPoint } as GamePoint;
+
+        // For circular segments, also capture the center position
+        const finalCenter =
+          segment instanceof CircularTrackSegment
+            ? ({ ...segment.center } as GamePoint)
+            : undefined;
+
+        const undoableAction: UndoableAction = {
+          name: `Move ${
+            pointType === SELECTION_TYPE.START ? "Start" : "End"
+          } Point`,
+          doAction: () => {
+            // Set to final position (already done during drag)
+            selectedPoint.x = finalPosition.x;
+            selectedPoint.y = finalPosition.y;
+            if (segment instanceof CircularTrackSegment && finalCenter) {
+              segment.center.x = finalCenter.x;
+              segment.center.y = finalCenter.y;
+            }
+            this.dispatchUpdate();
+          },
+          undoAction: () => {
+            // Restore to original position
+            selectedPoint.x = originalPoint.x;
+            selectedPoint.y = originalPoint.y;
+            if (segment instanceof CircularTrackSegment && originalCenter) {
+              segment.center.x = originalCenter.x;
+              segment.center.y = originalCenter.y;
+            }
+            this.dispatchUpdate();
+          },
+        };
+
+        this.#undoableActionManager.pushAndDoAction(undoableAction);
+      }
+
+      this.setcurrentStateWithData({
+        state: EDITOR_STATE.SELECT,
+        selectedSegment: this.currentStateWithData.segment,
+        selectionType:
+          this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT
+            ? this.currentStateWithData.pointType
+            : SELECTION_TYPE.SEGMENT,
+      });
+    } else if (this.currentStateWithData.state === EDITOR_STATE.PAN) {
+      this.setcurrentStateWithData({
+        state: EDITOR_STATE.SELECT,
+      });
+      this.#trackEditorCanvas.canvas.style.cursor = "default";
+    } else if (this.currentStateWithData.state === EDITOR_STATE.DRAG_SELECT) {
+      if (!this.currentStateWithData.dragStartPoint || !this.mousePos) return;
+      this.setcurrentStateWithData({
+        state: EDITOR_STATE.MULTI_SELECT,
+        selectedSegments: this.getSegmentsInRectangle(
+          this.currentStateWithData.dragStartPoint,
+          this.untransformPosition(this.mousePos),
+        ),
+      });
+      this.#trackEditorCanvas.canvas.style.cursor = "default";
+    }
+  }
+
+  handleMouseWheel(ev: WheelEvent) {
+    // Prevent the default scroll behavior
+    ev.preventDefault();
+
+    // Adjust scale based on wheel delta
+    // Negative delta means scroll up/zoom in, positive means scroll down/zoom out
+    this.adjustScale(-ev.deltaY * 0.001 * this.scale, true);
   }
 
   clearSegment(
