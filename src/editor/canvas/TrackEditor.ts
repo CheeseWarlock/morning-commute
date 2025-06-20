@@ -1,19 +1,16 @@
-import CircularTrackSegment from "../engine/CircularTrackSegment";
-import LinearTrackSegment from "../engine/LinearTrackSegment";
-import Network from "../engine/Network";
-import Station, { ALIGNMENT } from "../engine/Station";
-import TrackSegment from "../engine/TrackSegment";
+import CircularTrackSegment from "../../engine/CircularTrackSegment";
+import LinearTrackSegment from "../../engine/LinearTrackSegment";
+import Network from "../../engine/Network";
+import Station, { ALIGNMENT } from "../../engine/Station";
+import TrackSegment from "../../engine/TrackSegment";
 import {
   connectSegments,
   findCenter,
   calculateCircularCenter,
   calculateConstrainedCircleCenter,
-} from "./utils";
-import Controller from "../engine/Controller";
-import Game from "../engine/Game";
-import BabylonRenderer from "../renderer/basic/babylon/BabylonRenderer";
-import RendererCoordinator from "../renderer/RendererCoordinator";
-import { getIntersection, generateName } from "../utils";
+} from "../utils";
+import { getIntersection, generateName } from "../../utils";
+import { UndoableActionManager, UndoableAction } from "./UndoableActionStack";
 
 /**
  * The vague concept of a point.
@@ -196,33 +193,6 @@ type EDITOR_STATE_PAYLOADS =
       state: EDITOR_STATE.SPLIT;
     };
 
-/**
- * An action that can be undone and redone.
- */
-type UndoableAction = {
-  name: string;
-  undoAction: () => void;
-  doAction: () => void;
-};
-
-/**
- * A stack of undoable actions.
- */
-type UndoableActionStack = {
-  /**
-   * The maximum number of actions to keep in the history.
-   */
-  historyLength: number;
-  /**
-   * The actions that have been applied, and the ones that have been undone.
-   */
-  actions: UndoableAction[];
-  /**
-   * The index of the last action that was applied, from the start of the stack.
-   */
-  currentIndex: number;
-};
-
 const SELECTION_DISTANCE_PIXELS = 15;
 const _dist = (a: GamePoint, b: GamePoint) =>
   Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -254,11 +224,7 @@ class TrackEditor {
   onStateChanged?: (payload: EDITOR_STATE_PAYLOADS) => void;
   onNetworkChanged?: () => void;
 
-  #undoableActionStack: UndoableActionStack = {
-    historyLength: 10,
-    actions: [],
-    currentIndex: 0,
-  };
+  #undoableActionManager = new UndoableActionManager();
 
   constructor(options: {
     element: HTMLElement;
@@ -523,7 +489,6 @@ class TrackEditor {
 
         case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END: {
           let gamePosition;
-          let snappingEnd = false;
           if (
             this.#hoverSelectionType === SELECTION_TYPE.START ||
             this.#hoverSelectionType === SELECTION_TYPE.END
@@ -533,7 +498,6 @@ class TrackEditor {
               this.#hoverSelectionType === SELECTION_TYPE.START
                 ? this.#hoverSegment!.start
                 : this.#hoverSegment!.end;
-            snappingEnd = true;
             gamePosition = lockPoint as GamePoint;
           } else {
             // just use the current mouse position
@@ -575,7 +539,7 @@ class TrackEditor {
           };
 
           // Push the action to the stack and execute it
-          this.#pushAndDoAction(undoableAction);
+          this.#undoableActionManager.pushAndDoAction(undoableAction);
 
           this.setcurrentStateWithData({
             state: EDITOR_STATE.SELECT,
@@ -697,7 +661,7 @@ class TrackEditor {
             if (snappingEnd) segmentsToConnectTo.push(this.#hoverSegment!);
           }
 
-          this.#pushAndDoAction({
+          this.#undoableActionManager.pushAndDoAction({
             name: "Create Circular Segment",
             doAction: () => {
               this.network.segments.push(newSegment);
@@ -783,7 +747,7 @@ class TrackEditor {
             };
 
             // Push the action to the stack and execute it
-            this.#pushAndDoAction(undoableAction);
+            this.#undoableActionManager.pushAndDoAction(undoableAction);
 
             this.setcurrentStateWithData({
               state: EDITOR_STATE.SELECT,
@@ -843,7 +807,7 @@ class TrackEditor {
           };
 
           // Push the action to the stack and execute it
-          this.#pushAndDoAction(undoableAction);
+          this.#undoableActionManager.pushAndDoAction(undoableAction);
           break;
         }
 
@@ -887,7 +851,7 @@ class TrackEditor {
           };
 
           // Push the action to the stack and execute it
-          this.#pushAndDoAction(undoableAction);
+          this.#undoableActionManager.pushAndDoAction(undoableAction);
           break;
         }
 
@@ -1014,7 +978,7 @@ class TrackEditor {
             },
           };
 
-          this.#pushAndDoAction(undoableAction);
+          this.#undoableActionManager.pushAndDoAction(undoableAction);
           this.setcurrentStateWithData({
             state: EDITOR_STATE.SELECT,
           });
@@ -1070,7 +1034,7 @@ class TrackEditor {
             },
           };
 
-          this.#pushAndDoAction(undoableAction);
+          this.#undoableActionManager.pushAndDoAction(undoableAction);
         } else if (
           this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT
         ) {
@@ -1114,7 +1078,7 @@ class TrackEditor {
             },
           };
 
-          this.#pushAndDoAction(undoableAction);
+          this.#undoableActionManager.pushAndDoAction(undoableAction);
         }
 
         this.setcurrentStateWithData({
@@ -1196,7 +1160,7 @@ class TrackEditor {
       },
     };
 
-    this.#pushAndDoAction(undoableAction);
+    this.#undoableActionManager.pushAndDoAction(undoableAction);
   }
 
   deleteSegment(segment: TrackSegment) {
@@ -1234,7 +1198,7 @@ class TrackEditor {
     };
 
     // Push the action to the stack and execute it
-    this.#pushAndDoAction(undoableAction);
+    this.#undoableActionManager.pushAndDoAction(undoableAction);
   }
 
   /**
@@ -1252,26 +1216,14 @@ class TrackEditor {
    * If there is no action that can be undone, returns null.
    */
   get undoStatement() {
-    if (this.#undoableActionStack.currentIndex > 0) {
-      return this.#undoableActionStack.actions[
-        this.#undoableActionStack.currentIndex - 1
-      ].name;
-    }
-    return null;
+    return this.#undoableActionManager.undoStatement;
   }
 
   /**
    * Undo the last action.
    */
   undo() {
-    if (this.#undoableActionStack.currentIndex > 0) {
-      this.#undoableActionStack.currentIndex--;
-      const action =
-        this.#undoableActionStack.actions[
-          this.#undoableActionStack.currentIndex
-        ];
-      action.undoAction();
-    }
+    this.#undoableActionManager.undo();
   }
 
   /**
@@ -1279,32 +1231,14 @@ class TrackEditor {
    * If there is no action that can be redone, returns null.
    */
   get redoStatement() {
-    if (
-      this.#undoableActionStack.currentIndex <
-      this.#undoableActionStack.actions.length
-    ) {
-      return this.#undoableActionStack.actions[
-        this.#undoableActionStack.currentIndex
-      ].name;
-    }
-    return null;
+    return this.#undoableActionManager.redoStatement;
   }
 
   /**
    * Redo the last undone action.
    */
   redo() {
-    if (
-      this.#undoableActionStack.currentIndex <
-      this.#undoableActionStack.actions.length
-    ) {
-      const action =
-        this.#undoableActionStack.actions[
-          this.#undoableActionStack.currentIndex
-        ];
-      action.doAction();
-      this.#undoableActionStack.currentIndex++;
-    }
+    this.#undoableActionManager.redo();
   }
 
   /**
@@ -1814,23 +1748,6 @@ class TrackEditor {
     }
   }
 
-  finish() {
-    document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-  <div>
-    <p id="map-holder"></p><p id="map-holder-2"></p><p id="renderCanvasHolder"></p>
-  </div>
-`;
-    const controller = new Controller();
-    this.network.autoConnect();
-    const game = new Game(this.network, controller);
-    game.initialize();
-    const map3 = new BabylonRenderer(
-      document.querySelector("#renderCanvasHolder")!,
-      game,
-    );
-    new RendererCoordinator(game, [map3]);
-  }
-
   getSegmentsInRectangle(from: ScreenPoint, to: ScreenPoint) {
     const gameFrom = this.untransformPosition(from);
     const gameTo = this.untransformPosition(to);
@@ -2182,36 +2099,6 @@ class TrackEditor {
     });
 
     return [firstSegment, secondSegment];
-  }
-
-  /**
-   * Push an undoable action to the stack, trim if needed, and execute it.
-   */
-  #pushAndDoAction(action: UndoableAction) {
-    if (
-      this.#undoableActionStack.currentIndex <
-      this.#undoableActionStack.actions.length
-    ) {
-      // Splitting the timeline, so we need to trim the stack
-      this.#undoableActionStack.actions.splice(
-        this.#undoableActionStack.currentIndex,
-        this.#undoableActionStack.actions.length -
-          this.#undoableActionStack.currentIndex,
-      );
-      this.#undoableActionStack.currentIndex =
-        this.#undoableActionStack.actions.length;
-    }
-    this.#undoableActionStack.actions.push(action);
-    this.#undoableActionStack.currentIndex++;
-    // Trim the stack if it exceeds the history length
-    if (
-      this.#undoableActionStack.actions.length >
-      this.#undoableActionStack.historyLength
-    ) {
-      this.#undoableActionStack.actions.shift();
-      this.#undoableActionStack.currentIndex--;
-    }
-    action.doAction();
   }
 }
 

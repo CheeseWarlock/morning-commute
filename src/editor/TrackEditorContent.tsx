@@ -1,4 +1,4 @@
-import TrackEditor, { EDITOR_STATE } from "./TrackEditor";
+import TrackEditor, { EDITOR_STATE } from "./canvas/TrackEditor";
 import React, { useRef, useEffect, useState } from "react";
 import TrackSegment from "../engine/TrackSegment";
 import TrackSegmentDetail from "./TrackSegmentDetail";
