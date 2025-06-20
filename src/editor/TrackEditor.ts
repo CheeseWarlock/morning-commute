@@ -1058,16 +1058,43 @@ class TrackEditor {
     action: "STATIONS" | "TRAIN_START_POSITIONS",
   ) {
     const selectedSegment = segment;
-    this.#onSelect?.();
-    this.setcurrentStateWithData({
-      state: EDITOR_STATE.SELECT,
-    });
-    if (action === "STATIONS") {
-      selectedSegment.stations = [];
-    } else {
-      selectedSegment.trainStartPositions = [];
-    }
-    this.dispatchUpdate();
+
+    const originalStations = [...selectedSegment.stations];
+    const originalTrainStartPositions = [
+      ...selectedSegment.trainStartPositions,
+    ];
+
+    const undoableAction: UndoableAction = {
+      name:
+        action === "STATIONS"
+          ? "Clear Stations"
+          : "Clear Train Start Positions",
+      doAction: () => {
+        this.#onSelect?.();
+        this.setcurrentStateWithData({
+          state: EDITOR_STATE.SELECT,
+        });
+        if (action === "STATIONS") {
+          selectedSegment.stations = [];
+        } else {
+          selectedSegment.trainStartPositions = [];
+        }
+        this.dispatchUpdate();
+      },
+      undoAction: () => {
+        // Restore the cleared arrays
+        if (action === "STATIONS") {
+          selectedSegment.stations = [...originalStations];
+        } else {
+          selectedSegment.trainStartPositions = [
+            ...originalTrainStartPositions,
+          ];
+        }
+        this.dispatchUpdate();
+      },
+    };
+
+    this.#pushAndDoAction(undoableAction);
   }
 
   deleteSegment(segment: TrackSegment) {
