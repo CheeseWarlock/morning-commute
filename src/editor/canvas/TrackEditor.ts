@@ -11,6 +11,7 @@ import {
 } from "../utils";
 import { getIntersection, generateName } from "../../utils";
 import { UndoableActionManager, UndoableAction } from "./UndoableActionStack";
+import TrackEditorCanvas from "./TrackEditorCanvas";
 
 /**
  * The vague concept of a point.
@@ -28,11 +29,11 @@ export type Branded<T, B> = T & Brand<B>;
 /**
  * A point in screen coordinates.
  */
-type ScreenPoint = Branded<Point, "ScreenPoint">;
+export type ScreenPoint = Branded<Point, "ScreenPoint">;
 /**
  * A point in 2d game world coordinates.
  */
-type GamePoint = Branded<Point, "GamePoint">;
+export type GamePoint = Branded<Point, "GamePoint">;
 
 /**
  * Which end of the segment is selected, or if it's just the whole thing
@@ -198,7 +199,6 @@ const _dist = (a: GamePoint, b: GamePoint) =>
   Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 
 class TrackEditor {
-  #canvas: HTMLCanvasElement;
   network: Network;
   /**
    * The offset of the canvas in screen coordinates.
@@ -209,7 +209,6 @@ class TrackEditor {
    */
   #size: ScreenPoint;
   #scale: number;
-  #context: CanvasRenderingContext2D | null;
   #onSelect?: (segment?: TrackSegment) => void;
   onScaleChanged?: (scale: number) => void;
   /**
@@ -225,6 +224,16 @@ class TrackEditor {
   onNetworkChanged?: () => void;
 
   #undoableActionManager = new UndoableActionManager();
+  #trackEditorCanvas: TrackEditorCanvas;
+
+  /**
+   * The segment that is being created that is not yet added to the network.
+   */
+  #ghostSegments: TrackSegment[] = [];
+  /**
+   * The station that is being created that is not yet added to the network.
+   */
+  #ghostStation?: Station;
 
   constructor(options: {
     element: HTMLElement;
@@ -238,17 +247,13 @@ class TrackEditor {
     this.#offset = offset || ({ x: 0, y: 0 } as ScreenPoint);
     this.#scale = scale || 1;
     this.#size = size || ({ x: 1200, y: 800 } as ScreenPoint);
-    const canvas = document.createElement("canvas");
-    canvas.width = this.#size.x;
-    canvas.height = this.#size.y;
-    canvas.style.background = "black";
-    element.appendChild(canvas);
-    this.#canvas = canvas;
-    this.#context = canvas.getContext("2d");
+
+    this.#trackEditorCanvas = new TrackEditorCanvas(element, this, this.#size);
+
     this.network = network;
     this.#onSelect = onSelect;
 
-    canvas.onmousemove = (ev) => {
+    this.#trackEditorCanvas.canvas.onmousemove = (ev) => {
       this.mousePos = { x: ev.offsetX, y: ev.offsetY } as ScreenPoint;
       const gamePosition = this.untransformPosition(this.mousePos);
 
@@ -385,7 +390,7 @@ class TrackEditor {
       }
     };
 
-    canvas.onmousedown = () => {
+    this.#trackEditorCanvas.canvas.onmousedown = () => {
       if (!this.mousePos) return;
       const gamePosition = this.untransformPosition(this.mousePos);
 
@@ -455,7 +460,7 @@ class TrackEditor {
               dragStartPoint: this.mousePos,
               originalOffset: { ...this.#offset },
             });
-            this.#canvas.style.cursor = "grabbing";
+            this.#trackEditorCanvas.canvas.style.cursor = "grabbing";
           }
           break;
         }
@@ -988,7 +993,7 @@ class TrackEditor {
       return;
     };
 
-    canvas.onmouseup = () => {
+    this.#trackEditorCanvas.canvas.onmouseup = () => {
       if (
         this.currentStateWithData.state === EDITOR_STATE.MOVE_POINT ||
         this.currentStateWithData.state === EDITOR_STATE.MOVE_SEGMENT
@@ -1093,7 +1098,7 @@ class TrackEditor {
         this.setcurrentStateWithData({
           state: EDITOR_STATE.SELECT,
         });
-        this.#canvas.style.cursor = "default";
+        this.#trackEditorCanvas.canvas.style.cursor = "default";
       } else if (this.currentStateWithData.state === EDITOR_STATE.DRAG_SELECT) {
         if (!this.currentStateWithData.dragStartPoint || !this.mousePos) return;
         this.setcurrentStateWithData({
@@ -1103,11 +1108,11 @@ class TrackEditor {
             this.mousePos,
           ),
         });
-        this.#canvas.style.cursor = "default";
+        this.#trackEditorCanvas.canvas.style.cursor = "default";
       }
     };
 
-    canvas.onwheel = (ev) => {
+    this.#trackEditorCanvas.canvas.onwheel = (ev) => {
       // Prevent the default scroll behavior
       ev.preventDefault();
 
@@ -1321,9 +1326,9 @@ class TrackEditor {
 
     this.currentStateWithData = payload;
     if (payload.state === EDITOR_STATE.PAN) {
-      this.#canvas.style.cursor = "grab";
+      this.#trackEditorCanvas.canvas.style.cursor = "grab";
     } else {
-      this.#canvas.style.cursor = "default";
+      this.#trackEditorCanvas.canvas.style.cursor = "default";
     }
 
     if (currentSelection !== newSelection) {
@@ -1402,9 +1407,6 @@ class TrackEditor {
    * Draw the track sections, including the segment that is being created.
    */
   drawTrackSections() {
-    if (!this.#context) return;
-    this.#context.lineWidth = 2;
-    const segmentsWithGhostSegment = [...this.network.segments];
     if (
       this.currentStateWithData.state ===
         EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
@@ -1417,9 +1419,8 @@ class TrackEditor {
         endPosition,
       );
 
-      segmentsWithGhostSegment.push(previewSegment);
-    }
-    if (
+      this.#ghostSegments = [previewSegment];
+    } else if (
       this.currentStateWithData.state === EDITOR_STATE.CREATE_CONNECTION_END &&
       this.#hoverSegment &&
       (this.#hoverSelectionType === SELECTION_TYPE.START ||
@@ -1432,9 +1433,8 @@ class TrackEditor {
         this.#hoverSegment,
         this.#hoverSelectionType === SELECTION_TYPE.END,
       );
-      segmentsWithGhostSegment.push(...connection);
-    }
-    if (
+      this.#ghostSegments = connection;
+    } else if (
       this.currentStateWithData.state ===
       EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END
     ) {
@@ -1442,48 +1442,57 @@ class TrackEditor {
         this.#calculateCircularSegmentParams(
           this.untransformPosition(this.mousePos!),
         );
-      segmentsWithGhostSegment.push(
+      this.#ghostSegments = [
         new CircularTrackSegment(
           this.currentStateWithData.segmentStart,
           endPosition,
           center,
           counterClockwise,
         ),
-      );
+      ];
+    } else {
+      this.#ghostSegments = [];
     }
 
-    segmentsWithGhostSegment.forEach((segment) => {
-      if (!this.#context) return;
+    const context = this.#trackEditorCanvas.canvas.getContext("2d");
+    if (!context) return;
+    context.lineWidth = 2;
+
+    const segments = [...this.network.segments, ...this.#ghostSegments];
+
+    segments.forEach((segment) => {
+      const context = this.#trackEditorCanvas.canvas.getContext("2d");
+      if (!context) return;
       if (
         (this.currentStateWithData.state === EDITOR_STATE.SELECT &&
           segment === this.currentStateWithData.selectedSegment) ||
         (this.currentStateWithData.state === EDITOR_STATE.MULTI_SELECT &&
           this.currentStateWithData.selectedSegments.includes(segment))
       ) {
-        this.#context.strokeStyle = "rgb(255, 255, 255)";
-        this.#context.lineWidth = 4;
+        context.strokeStyle = "rgb(255, 255, 255)";
+        context.lineWidth = 4;
       } else if (segment === this.#hoverSegment) {
-        this.#context.strokeStyle = "rgb(200, 200, 200)";
-        this.#context.lineWidth = 4;
+        context.strokeStyle = "rgb(200, 200, 200)";
+        context.lineWidth = 4;
       } else {
-        this.#context.strokeStyle = "rgb(200, 200, 200)";
-        this.#context.lineWidth = 2;
+        context.strokeStyle = "rgb(200, 200, 200)";
+        context.lineWidth = 2;
       }
 
       if (segment instanceof LinearTrackSegment) {
-        this.#context.beginPath();
-        this.#context.moveTo(
+        context.beginPath();
+        context.moveTo(
           (segment.start.x + this.#offset.x) * this.#scale,
           (segment.start.y + this.#offset.y) * this.#scale,
         );
-        this.#context.lineTo(
+        context.lineTo(
           (segment.end.x + this.#offset.x) * this.#scale,
           (segment.end.y + this.#offset.y) * this.#scale,
         );
-        this.#context.stroke();
+        context.stroke();
       } else if (segment instanceof CircularTrackSegment) {
-        this.#context.beginPath();
-        this.#context.arc(
+        context.beginPath();
+        context.arc(
           (segment.center.x + this.#offset.x) * this.#scale,
           (segment.center.y + this.#offset.y) * this.#scale,
           segment.radius * this.#scale,
@@ -1493,7 +1502,7 @@ class TrackEditor {
             (segment.counterClockWise ? Math.PI / 2 : -Math.PI / 2),
           segment.counterClockWise,
         );
-        this.#context.stroke();
+        context.stroke();
       }
 
       // Draw endpoint dots
@@ -1562,21 +1571,20 @@ class TrackEditor {
         );
       }
 
-      this.#context.closePath();
-      this.#context.fill();
+      context.closePath();
+      context.fill();
     });
 
     if (this.currentStateWithData.state === EDITOR_STATE.QUERY_POINT) {
-      this.#context.strokeStyle = "rgb(200, 200, 200)";
-      this.#context.lineWidth = 2;
-      this.#context.beginPath();
-      this.#context.arc(this.mousePos!.x, this.mousePos!.y, 15, 0, Math.PI * 2);
-      this.#context.stroke();
+      context.strokeStyle = "rgb(200, 200, 200)";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.arc(this.mousePos!.x, this.mousePos!.y, 15, 0, Math.PI * 2);
+      context.stroke();
     }
   }
 
   drawStations() {
-    const fakeStationsList = [...this.network.stations];
     if (
       this.currentStateWithData.state === EDITOR_STATE.CREATE_STATION &&
       this.mousePos &&
@@ -1587,17 +1595,20 @@ class TrackEditor {
         x: gamePosition.x,
         y: gamePosition.y,
       });
-      fakeStationsList.push(
-        new Station(
-          this.#hoverSegment,
-          closestPoint.distanceAlong * this.#hoverSegment.length,
-          closestPoint.alignment,
-        ),
+      this.#ghostStation = new Station(
+        this.#hoverSegment,
+        closestPoint.distanceAlong * this.#hoverSegment.length,
+        closestPoint.alignment,
       );
+    } else {
+      this.#ghostStation = undefined;
     }
-    fakeStationsList.forEach((station) => {
-      if (!this.#context) return;
-      this.#context.fillStyle = "rgb(222, 200, 0)";
+    const stations = [...this.network.stations];
+    if (this.#ghostStation) stations.push(this.#ghostStation);
+    stations.forEach((station) => {
+      const context = this.#trackEditorCanvas.canvas.getContext("2d");
+      if (!context) return;
+      context.fillStyle = "rgb(222, 200, 0)";
       const SIZE = 10;
 
       const targetPosition = station.trackSegment.getPositionAlong(
@@ -1619,8 +1630,8 @@ class TrackEditor {
       const targetRotation = -station.trackSegment.getAngleAlong(
         station.distanceAlong,
       );
-      this.#context.beginPath();
-      this.#context.moveTo(
+      context.beginPath();
+      context.moveTo(
         targetPosition.x +
           (-SIZE * Math.cos(targetRotation) -
             (SIZE / 2) * Math.sin(targetRotation)),
@@ -1628,7 +1639,7 @@ class TrackEditor {
           (-(SIZE / 2) * Math.cos(targetRotation) +
             SIZE * Math.sin(targetRotation)),
       );
-      this.#context.lineTo(
+      context.lineTo(
         targetPosition.x +
           (SIZE * Math.cos(targetRotation) -
             (SIZE / 2) * Math.sin(targetRotation)),
@@ -1636,7 +1647,7 @@ class TrackEditor {
           (-(SIZE / 2) * Math.cos(targetRotation) -
             SIZE * Math.sin(targetRotation)),
       );
-      this.#context.lineTo(
+      context.lineTo(
         targetPosition.x +
           (SIZE * Math.cos(targetRotation) +
             (SIZE / 2) * Math.sin(targetRotation)),
@@ -1644,7 +1655,7 @@ class TrackEditor {
           ((SIZE / 2) * Math.cos(targetRotation) -
             SIZE * Math.sin(targetRotation)),
       );
-      this.#context.lineTo(
+      context.lineTo(
         targetPosition.x +
           (-SIZE * Math.cos(targetRotation) +
             (SIZE / 2) * Math.sin(targetRotation)),
@@ -1653,8 +1664,8 @@ class TrackEditor {
             SIZE * Math.sin(targetRotation)),
       );
 
-      this.#context.closePath();
-      this.#context.fill();
+      context.closePath();
+      context.fill();
     });
   }
 
@@ -1735,11 +1746,11 @@ class TrackEditor {
    * Redraw the editor canvas.
    */
   update() {
-    this.#context = this.#canvas.getContext("2d");
-    if (!this.#context) return;
+    const context = this.#trackEditorCanvas.canvas.getContext("2d");
+    if (!context) return;
 
     // Render
-    this.#context.clearRect(0, 0, this.#size.x, this.#size.y);
+    context.clearRect(0, 0, this.#size.x, this.#size.y);
     this.#drawGridLines(100);
     this.drawTrackSections();
     this.drawStations();
@@ -1766,84 +1777,89 @@ class TrackEditor {
 
   // --- Drawing helpers ---
   #drawEndpointDot(point: GamePoint) {
-    if (!this.#context) return;
+    const context = this.#trackEditorCanvas.canvas.getContext("2d");
+    if (!context) return;
     const canvasPosition = this.transformPosition(point);
-    this.#context.fillStyle = "rgb(100, 100, 255)";
-    this.#context.beginPath();
-    this.#context.arc(canvasPosition.x, canvasPosition.y, 5, 0, Math.PI * 2);
-    this.#context.closePath();
-    this.#context.fill();
+    context.fillStyle = "rgb(100, 100, 255)";
+    context.beginPath();
+    context.arc(canvasPosition.x, canvasPosition.y, 5, 0, Math.PI * 2);
+    context.closePath();
+    context.fill();
   }
 
   #drawEndpointHighlight(point: GamePoint) {
-    if (!this.#context) return;
+    const context = this.#trackEditorCanvas.canvas.getContext("2d");
+    if (!context) return;
     const canvasPosition = this.transformPosition(point);
-    this.#context.strokeStyle = "rgba(255,255,255)";
-    this.#context.lineWidth = 2;
-    this.#context.beginPath();
-    this.#context.arc(canvasPosition.x, canvasPosition.y, 8, 0, Math.PI * 2);
-    this.#context.closePath();
-    this.#context.stroke();
+    context.strokeStyle = "rgba(255,255,255)";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(canvasPosition.x, canvasPosition.y, 8, 0, Math.PI * 2);
+    context.closePath();
+    context.stroke();
   }
 
   #drawArrowInMiddle(segment: TrackSegment) {
-    if (!this.#context) return;
+    const context = this.#trackEditorCanvas.canvas.getContext("2d");
+    if (!context) return;
     const mid = segment.length / 2;
     const canvasPosition = this.transformPosition(
       segment.getPositionAlong(mid).point as GamePoint,
     );
     const angle = segment.getAngleAlong(mid) + Math.PI;
-    this.#context.strokeStyle = "rgb(222, 200, 0)";
-    this.#context.beginPath();
-    this.#context.moveTo(canvasPosition.x, canvasPosition.y);
-    this.#context.lineTo(
+    context.strokeStyle = "rgb(222, 200, 0)";
+    context.beginPath();
+    context.moveTo(canvasPosition.x, canvasPosition.y);
+    context.lineTo(
       canvasPosition.x + Math.cos(angle + Math.PI / 4) * 10,
       canvasPosition.y + Math.sin(angle + Math.PI / 4) * 10,
     );
-    this.#context.stroke();
-    this.#context.beginPath();
-    this.#context.moveTo(canvasPosition.x, canvasPosition.y);
-    this.#context.lineTo(
+    context.stroke();
+    context.beginPath();
+    context.moveTo(canvasPosition.x, canvasPosition.y);
+    context.lineTo(
       canvasPosition.x + Math.cos(angle - Math.PI / 4) * 10,
       canvasPosition.y + Math.sin(angle - Math.PI / 4) * 10,
     );
-    this.#context.stroke();
+    context.stroke();
   }
 
   #drawRedX(segment: TrackSegment, distanceAlong: number, angle: number) {
-    if (!this.#context) return;
+    const context = this.#trackEditorCanvas.canvas.getContext("2d");
+    if (!context) return;
     const pos = segment.getPositionAlong(distanceAlong).point;
     const canvasPos = this.transformPosition(pos as GamePoint);
     const size = 10;
-    this.#context.save();
-    this.#context.translate(canvasPos.x, canvasPos.y);
-    this.#context.rotate(angle);
-    this.#context.strokeStyle = "#e11d48"; // Tailwind red-600
-    this.#context.lineWidth = 3;
-    this.#context.beginPath();
-    this.#context.moveTo(-size / 2, -size / 2);
-    this.#context.lineTo(size / 2, size / 2);
-    this.#context.moveTo(size / 2, -size / 2);
-    this.#context.lineTo(-size / 2, size / 2);
-    this.#context.stroke();
-    this.#context.restore();
+    context.save();
+    context.translate(canvasPos.x, canvasPos.y);
+    context.rotate(angle);
+    context.strokeStyle = "#e11d48"; // Tailwind red-600
+    context.lineWidth = 3;
+    context.beginPath();
+    context.moveTo(-size / 2, -size / 2);
+    context.lineTo(size / 2, size / 2);
+    context.moveTo(size / 2, -size / 2);
+    context.lineTo(-size / 2, size / 2);
+    context.stroke();
+    context.restore();
   }
 
   #drawGridLines(interval: number) {
-    if (!this.#context) return;
+    const context = this.#trackEditorCanvas.canvas.getContext("2d");
+    if (!context) return;
 
     const scaledInterval = interval * this.#scale;
-    this.#context.strokeStyle = "rgba(255, 255, 255, 0.2)";
-    this.#context.lineWidth = 1;
-    this.#context.beginPath();
+    context.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    context.lineWidth = 1;
+    context.beginPath();
     for (
       let x =
         ((this.#offset.x * this.#scale) % scaledInterval) - scaledInterval;
       x < this.#size.x;
       x += scaledInterval
     ) {
-      this.#context.moveTo(x, 0);
-      this.#context.lineTo(x, this.#size.y);
+      context.moveTo(x, 0);
+      context.lineTo(x, this.#size.y);
     }
     for (
       let y =
@@ -1851,31 +1867,33 @@ class TrackEditor {
       y < this.#size.y;
       y += scaledInterval
     ) {
-      this.#context.moveTo(0, y);
-      this.#context.lineTo(this.#size.x, y);
+      context.moveTo(0, y);
+      context.lineTo(this.#size.x, y);
     }
-    this.#context.stroke();
+    context.stroke();
   }
 
   #drawDragSelection() {
+    const context = this.#trackEditorCanvas.canvas.getContext("2d");
+    if (!context) return;
     if (this.currentStateWithData.state !== EDITOR_STATE.DRAG_SELECT) return;
-    if (!this.#context || !this.currentStateWithData.dragStartPoint) return;
+    if (!context || !this.currentStateWithData.dragStartPoint) return;
     const startPoint = this.currentStateWithData.dragStartPoint;
     if (!startPoint) return;
     const endPoint = this.mousePos;
     if (!endPoint) return;
-    this.#context.strokeStyle = "rgba(255, 255, 255, 0.5)";
-    this.#context.lineWidth = 2;
-    this.#context.setLineDash([10, 5]);
-    this.#context.beginPath();
-    this.#context.rect(
+    context.strokeStyle = "rgba(255, 255, 255, 0.5)";
+    context.lineWidth = 2;
+    context.setLineDash([10, 5]);
+    context.beginPath();
+    context.rect(
       startPoint.x,
       startPoint.y,
       endPoint.x - startPoint.x,
       endPoint.y - startPoint.y,
     );
-    this.#context.stroke();
-    this.#context.setLineDash([]);
+    context.stroke();
+    context.setLineDash([]);
   }
 
   #drawStartArrow(
@@ -1883,26 +1901,27 @@ class TrackEditor {
     distanceAlong: number,
     reverse: boolean,
   ) {
-    if (!this.#context) return;
+    const context = this.#trackEditorCanvas.canvas.getContext("2d");
+    if (!context) return;
 
-    this.#context.fillStyle = "rgb(50,240,30)";
+    context.fillStyle = "rgb(50,240,30)";
     const SIZE = 12;
     // Get the point and angle on the segment
     const pos = segment.getPositionAlong(distanceAlong).point;
     const angle =
       segment.getAngleAlong(distanceAlong) + (reverse ? Math.PI : 0);
     const canvasPos = this.transformPosition(pos as GamePoint);
-    this.#context.save();
-    this.#context.translate(canvasPos.x, canvasPos.y);
-    this.#context.rotate(angle);
-    this.#context.beginPath();
+    context.save();
+    context.translate(canvasPos.x, canvasPos.y);
+    context.rotate(angle);
+    context.beginPath();
     // Draw an equilateral triangle pointing right (along +X), then rotate
-    this.#context.moveTo(SIZE, 0);
-    this.#context.lineTo(-SIZE * 0.6, SIZE * 0.6);
-    this.#context.lineTo(-SIZE * 0.6, -SIZE * 0.6);
-    this.#context.closePath();
-    this.#context.fill();
-    this.#context.restore();
+    context.moveTo(SIZE, 0);
+    context.lineTo(-SIZE * 0.6, SIZE * 0.6);
+    context.lineTo(-SIZE * 0.6, -SIZE * 0.6);
+    context.closePath();
+    context.fill();
+    context.restore();
   }
 
   /**
