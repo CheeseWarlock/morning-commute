@@ -917,54 +917,93 @@ class TrackEditor {
           if (!this.#hoverSegment) break;
           if (!this.mousePos) break;
 
-          const gamePosition = this.untransformPosition(this.mousePos);
-          const closestPoint = this.#hoverSegment.distanceToPosition({
-            x: gamePosition.x,
-            y: gamePosition.y,
+          const splitResult = this.#replaceSegmentWithNewSegments();
+
+          if (!splitResult) break;
+
+          const [firstSegment, secondSegment] = splitResult;
+          const originalSegment = this.#hoverSegment;
+
+          const currentConnections = this.#hoverSegment.atStart.concat(
+            this.#hoverSegment.atEnd,
+          );
+
+          const undoableAction: UndoableAction = {
+            name: "Split Segment",
+            doAction: () => {
+              originalSegment.disconnectAll(true);
+              this.network.segments.splice(
+                this.network.segments.indexOf(originalSegment),
+                1,
+              );
+
+              this.network.segments.push(firstSegment);
+              this.network.segments.push(secondSegment);
+              currentConnections.forEach((connection) => {
+                connection.connect(firstSegment);
+                connection.connect(secondSegment);
+              });
+              firstSegment.connect(secondSegment);
+
+              // Distribute stations to the new segments
+              originalSegment.stations.forEach((station) => {
+                if (station.distanceAlong <= firstSegment.length) {
+                  if (!firstSegment.stations.includes(station)) {
+                    firstSegment.stations.push(station);
+                  }
+                  station.trackSegment = firstSegment;
+                } else {
+                  if (!secondSegment.stations.includes(station)) {
+                    secondSegment.stations.push(station);
+                  }
+                  station.distanceAlong =
+                    station.distanceAlong - firstSegment.length;
+                  station.trackSegment = secondSegment;
+                }
+              });
+
+              this.dispatchUpdate();
+            },
+            undoAction: () => {
+              firstSegment.disconnectAll(true);
+              secondSegment.disconnectAll(true);
+              this.network.segments.splice(
+                this.network.segments.indexOf(firstSegment),
+                1,
+              );
+              this.network.segments.splice(
+                this.network.segments.indexOf(secondSegment),
+                1,
+              );
+              this.network.segments.push(originalSegment);
+              currentConnections.forEach((connection) => {
+                connection.connect(originalSegment);
+              });
+
+              // Consolidate stations on the original segment
+              firstSegment.stations.forEach((station) => {
+                station.trackSegment = originalSegment;
+                if (!originalSegment.stations.includes(station)) {
+                  originalSegment.stations.push(station);
+                }
+              });
+              secondSegment.stations.forEach((station) => {
+                station.distanceAlong =
+                  station.distanceAlong + firstSegment.length;
+                station.trackSegment = originalSegment;
+                if (!originalSegment.stations.includes(station)) {
+                  originalSegment.stations.push(station);
+                }
+              });
+
+              this.dispatchUpdate();
+            },
+          };
+
+          this.#pushAndDoAction(undoableAction);
+          this.setcurrentStateWithData({
+            state: EDITOR_STATE.SELECT,
           });
-
-          // Handle linear segments
-          if (this.#hoverSegment instanceof LinearTrackSegment) {
-            const splitPoint = closestPoint.point;
-
-            // Create the first segment: from original start to split point
-            const firstSegment = new LinearTrackSegment(
-              { ...this.#hoverSegment.start },
-              { ...splitPoint },
-            );
-
-            // Create the second segment: from split point to original end
-            const secondSegment = new LinearTrackSegment(
-              { ...splitPoint },
-              { ...this.#hoverSegment.end },
-            );
-
-            // Replace the original segment with the two new ones
-            this.#replaceSegmentWithNewSegments(firstSegment, secondSegment);
-          } else if (this.#hoverSegment instanceof CircularTrackSegment) {
-            const splitPoint = this.#hoverSegment.getPositionAlong(
-              closestPoint.distanceAlong * this.#hoverSegment.length,
-            ).point;
-
-            // Create the first segment: from original start to split point
-            const firstSegment = new CircularTrackSegment(
-              { ...this.#hoverSegment.start },
-              { ...splitPoint },
-              { ...this.#hoverSegment.center },
-              this.#hoverSegment.counterClockWise,
-            );
-
-            // Create the second segment: from split point to original end
-            const secondSegment = new CircularTrackSegment(
-              { ...splitPoint },
-              { ...this.#hoverSegment.end },
-              { ...this.#hoverSegment.center },
-              this.#hoverSegment.counterClockWise,
-            );
-
-            // Replace the original segment with the two new ones
-            this.#replaceSegmentWithNewSegments(firstSegment, secondSegment);
-          }
           break;
         }
       }
@@ -1938,117 +1977,82 @@ class TrackEditor {
     }
   }
 
-  #replaceSegmentWithNewSegments(
-    firstSegment: TrackSegment,
-    secondSegment: TrackSegment,
-  ) {
-    if (!this.#hoverSegment) return;
+  /**
+   * Determine the new segments that result from splitting the hovered segment.
+   * Uses editor state to determine which segment to split, and where.
+   * @returns The two new segments.
+   */
+  #replaceSegmentWithNewSegments(): [TrackSegment, TrackSegment] | null {
+    if (!this.#hoverSegment) return null;
+    if (!this.mousePos) return null;
 
-    const originalSegment = this.#hoverSegment;
-
-    // Calculate the split distance along the original segment
-    const gamePosition = this.untransformPosition(this.mousePos!);
-    const closestPoint = originalSegment.distanceToPosition({
+    const gamePosition = this.untransformPosition(this.mousePos);
+    const closestPoint = this.#hoverSegment.distanceToPosition({
       x: gamePosition.x,
       y: gamePosition.y,
     });
     const splitDistanceAlong =
-      closestPoint.distanceAlong * originalSegment.length;
+      closestPoint.distanceAlong * this.#hoverSegment.length;
 
-    // Preserve stations by distributing them to the appropriate new segments
-    originalSegment.stations.forEach((station) => {
-      if (station.distanceAlong <= splitDistanceAlong) {
-        // Station is on the first segment
-        firstSegment.stations.push(station);
-        station.trackSegment = firstSegment;
-      } else {
-        // Station is on the second segment, adjust its distance
-        const newDistanceAlong = station.distanceAlong - splitDistanceAlong;
-        station.distanceAlong = newDistanceAlong;
-        secondSegment.stations.push(station);
-        station.trackSegment = secondSegment;
-      }
-    });
+    let firstSegment: TrackSegment | null = null;
+    let secondSegment: TrackSegment | null = null;
 
-    // Preserve train start positions by distributing them to the appropriate new segments
-    originalSegment.trainStartPositions.forEach((startPosition) => {
+    // Handle linear segments
+    if (this.#hoverSegment instanceof LinearTrackSegment) {
+      const splitPoint = closestPoint.point;
+
+      // Create the first segment: from original start to split point
+      firstSegment = new LinearTrackSegment(
+        { ...this.#hoverSegment.start },
+        { ...splitPoint },
+      );
+
+      // Create the second segment: from split point to original end
+      secondSegment = new LinearTrackSegment(
+        { ...splitPoint },
+        { ...this.#hoverSegment.end },
+      );
+    } else if (this.#hoverSegment instanceof CircularTrackSegment) {
+      const splitPoint =
+        this.#hoverSegment.getPositionAlong(splitDistanceAlong).point;
+
+      // Create the first segment: from original start to split point
+      firstSegment = new CircularTrackSegment(
+        { ...this.#hoverSegment.start },
+        { ...splitPoint },
+        { ...this.#hoverSegment.center },
+        this.#hoverSegment.counterClockWise,
+      );
+
+      // Create the second segment: from split point to original end
+      secondSegment = new CircularTrackSegment(
+        { ...splitPoint },
+        { ...this.#hoverSegment.end },
+        { ...this.#hoverSegment.center },
+        this.#hoverSegment.counterClockWise,
+      );
+    }
+
+    if (!firstSegment || !secondSegment) {
+      return null;
+    }
+
+    // Add train start positions to the new segments
+    // Doing this here because they're simple objects (for now)
+    this.#hoverSegment.trainStartPositions.forEach((startPosition) => {
       if (startPosition.distanceAlong <= splitDistanceAlong) {
-        // Train start position is on the first segment
-        firstSegment.trainStartPositions.push(startPosition);
+        firstSegment.trainStartPositions.push({
+          ...startPosition,
+        });
       } else {
-        // Train start position is on the second segment, adjust its distance
-        const newDistanceAlong =
-          startPosition.distanceAlong - splitDistanceAlong;
         secondSegment.trainStartPositions.push({
-          distanceAlong: newDistanceAlong,
-          reverse: startPosition.reverse,
+          ...startPosition,
+          distanceAlong: startPosition.distanceAlong - splitDistanceAlong,
         });
       }
     });
 
-    // Store the original connections before removing the segment
-    const segmentsConnectedToStart = [...originalSegment.atStart];
-    const segmentsConnectedToEnd = [...originalSegment.atEnd];
-
-    segmentsConnectedToStart.forEach((connectedSegment) => {
-      if (connectedSegment.atStart.includes(originalSegment)) {
-        connectedSegment.atStart.splice(
-          connectedSegment.atStart.indexOf(originalSegment),
-          1,
-        );
-        connectedSegment.atStart.push(firstSegment);
-      }
-      if (connectedSegment.atEnd.includes(originalSegment)) {
-        connectedSegment.atEnd.splice(
-          connectedSegment.atEnd.indexOf(originalSegment),
-          1,
-        );
-        connectedSegment.atEnd.push(firstSegment);
-      }
-    });
-    segmentsConnectedToEnd.forEach((connectedSegment) => {
-      if (connectedSegment.atStart.includes(originalSegment)) {
-        connectedSegment.atStart.splice(
-          connectedSegment.atStart.indexOf(originalSegment),
-          1,
-        );
-        connectedSegment.atStart.push(secondSegment);
-      }
-      if (connectedSegment.atEnd.includes(originalSegment)) {
-        connectedSegment.atEnd.splice(
-          connectedSegment.atEnd.indexOf(originalSegment),
-          1,
-        );
-        connectedSegment.atEnd.push(secondSegment);
-      }
-    });
-
-    // Remove the original segment from the network
-    const originalSegmentIndex = this.network.segments.indexOf(originalSegment);
-    if (originalSegmentIndex > -1) {
-      this.network.segments.splice(originalSegmentIndex, 1);
-    }
-
-    // Add the new segments to the network
-    this.network.segments.push(firstSegment);
-    this.network.segments.push(secondSegment);
-
-    segmentsConnectedToStart.forEach((connectedSegment) => {
-      firstSegment.atEnd.push(connectedSegment);
-    });
-    segmentsConnectedToEnd.forEach((connectedSegment) => {
-      secondSegment.atEnd.push(connectedSegment);
-    });
-
-    // Connect the two new segments to each other at the split point
-    firstSegment.atEnd.push(secondSegment);
-    secondSegment.atStart.push(firstSegment);
-
-    // Update the network and return to SELECT state
-    this.dispatchUpdate();
-    this.setcurrentStateWithData({
-      state: EDITOR_STATE.SELECT,
-    });
+    return [firstSegment, secondSegment];
   }
 
   /**
