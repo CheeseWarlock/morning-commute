@@ -13,6 +13,7 @@ class TrackEditorCanvas {
   canvas: HTMLCanvasElement;
   #trackEditor: TrackEditor;
   #size: ScreenPoint;
+  strongHighlight: TrackSegment[] = [];
 
   constructor(
     targetElement: HTMLElement,
@@ -64,7 +65,12 @@ class TrackEditorCanvas {
     segments.forEach((segment) => {
       const context = this.canvas.getContext("2d");
       if (!context) return;
-      if (
+
+      // Check if this segment should be strongly highlighted
+      if (this.strongHighlight.includes(segment)) {
+        context.strokeStyle = "rgb(255, 255, 0)"; // Yellow
+        context.lineWidth = 6;
+      } else if (
         (this.#trackEditor.currentStateWithData.state === EDITOR_STATE.SELECT &&
           segment === this.#trackEditor.currentStateWithData.selectedSegment) ||
         (this.#trackEditor.currentStateWithData.state ===

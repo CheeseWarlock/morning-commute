@@ -354,6 +354,7 @@ const TrackEditorContent = ({
           EDITOR_STATE.MULTI_SELECT && (
           <div className="h-full overflow-hidden">
             <MultiSegmentDetail
+              trackEditor={trackEditorRef.current!}
               segments={
                 trackEditorRef.current?.currentStateWithData.selectedSegments
               }

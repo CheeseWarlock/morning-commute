@@ -1772,6 +1772,11 @@ class TrackEditor {
 
     return [firstSegment, secondSegment];
   }
+
+  setStrongHighlight(segments: TrackSegment[]) {
+    this.#trackEditorCanvas.strongHighlight = segments;
+    this.#trackEditorCanvas.draw();
+  }
 }
 
 export default TrackEditor;
