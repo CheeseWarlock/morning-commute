@@ -1214,6 +1214,24 @@ class TrackEditor {
     this.#undoableActionManager.pushAndDoAction(undoableAction);
   }
 
+  setStationName(segment: TrackSegment, stationIndex: number, name: string) {
+    const oldName = segment.stations[stationIndex].name;
+
+    const undoableAction = {
+      name: `Set Station Name`,
+      doAction: () => {
+        segment.stations[stationIndex].name = name;
+        this.dispatchUpdate();
+      },
+      undoAction: () => {
+        segment.stations[stationIndex].name = oldName;
+        this.dispatchUpdate();
+      },
+    };
+
+    this.#undoableActionManager.pushAndDoAction(undoableAction);
+  }
+
   /**
    * After this editor makes a change, make sure everything is updated.
    */

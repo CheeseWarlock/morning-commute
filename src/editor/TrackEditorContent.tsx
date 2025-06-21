@@ -275,6 +275,7 @@ const TrackEditorContent = ({
               clearSegment={(segment, action) =>
                 trackEditorRef.current?.clearSegment(segment, action)
               }
+              key={selectedSegment.id}
             />
           </div>
         )}

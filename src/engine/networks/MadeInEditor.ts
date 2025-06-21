@@ -32,6 +32,7 @@ export default [
       {
         distanceAlong: 67,
         alignment: "LEFT",
+        name: "Station 1",
       },
     ],
     trainStartPositions: [],
@@ -163,6 +164,7 @@ export default [
       {
         distanceAlong: 102.20839217355359,
         alignment: "LEFT",
+        name: "Station 2",
       },
     ],
     trainStartPositions: [],
@@ -186,6 +188,7 @@ export default [
       {
         distanceAlong: 63.14403908142557,
         alignment: "LEFT",
+        name: "Station 3",
       },
     ],
     trainStartPositions: [
