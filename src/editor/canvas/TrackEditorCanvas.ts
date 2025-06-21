@@ -351,7 +351,48 @@ class TrackEditorCanvas {
     if (!context) return;
 
     const scaledInterval = interval * this.#trackEditor.scale;
-    context.strokeStyle = "rgba(255, 255, 255, 0.2)";
+
+    // Draw minor grid lines (25 units) when scale is 1 or greater
+    if (this.#trackEditor.scale >= 1) {
+      const minorInterval = 25 * this.#trackEditor.scale;
+      context.strokeStyle = "rgba(255, 255, 255, 0.15)";
+      context.lineWidth = 1;
+      context.beginPath();
+
+      // Minor vertical lines
+      for (
+        let x =
+          ((this.#trackEditor.offset.x * this.#trackEditor.scale) %
+            minorInterval) -
+          minorInterval;
+        x < this.#size.x;
+        x += minorInterval
+      ) {
+        // Skip if this line would overlap with a major grid line
+        if (Math.abs(x % scaledInterval) < 1) continue;
+        context.moveTo(x, 0);
+        context.lineTo(x, this.#size.y);
+      }
+
+      // Minor horizontal lines
+      for (
+        let y =
+          ((this.#trackEditor.offset.y * this.#trackEditor.scale) %
+            minorInterval) -
+          minorInterval;
+        y < this.#size.y;
+        y += minorInterval
+      ) {
+        // Skip if this line would overlap with a major grid line
+        if (Math.abs(y % scaledInterval) < 1) continue;
+        context.moveTo(0, y);
+        context.lineTo(this.#size.x, y);
+      }
+      context.stroke();
+    }
+
+    // Draw major grid lines with increased opacity
+    context.strokeStyle = "rgba(255, 255, 255, 0.3)";
     context.lineWidth = 1;
     context.beginPath();
     for (
@@ -378,7 +419,7 @@ class TrackEditorCanvas {
     }
     context.stroke();
 
-    // Draw coordinate numbers
+    // Draw coordinate numbers (only for major grid lines)
     context.fillStyle = "rgba(255, 255, 255, 0.6)";
     context.font = "12px monospace";
     context.textAlign = "center";

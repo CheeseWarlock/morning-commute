@@ -12,7 +12,7 @@ import MadeInEditor from "../engine/networks/MadeInEditor";
 import { isNetworkCoherent } from "../utils";
 import GamePreview from "./GamePreview";
 
-const DEFAULT_NETWORK = loadNetworkFromJSON([] as JSONTrackSegment[]);
+const DEFAULT_NETWORK = loadNetworkFromJSON(MadeInEditor as JSONTrackSegment[]);
 
 export enum EDITOR_PAGE_STATE {
   EDITOR = "EDITOR",
