@@ -1124,6 +1124,14 @@ class TrackEditor {
     this.adjustScale(-ev.deltaY * 0.001 * this.scale, true);
   }
 
+  selectSegment(segment: TrackSegment) {
+    this.setcurrentStateWithData({
+      state: EDITOR_STATE.SELECT,
+      selectedSegment: segment,
+      selectionType: SELECTION_TYPE.SEGMENT,
+    });
+  }
+
   clearSegment(
     segment: TrackSegment,
     action: "STATIONS" | "TRAIN_START_POSITIONS",

@@ -21,9 +21,11 @@ class Network {
 
   /**
    * Connect all segments based on position.
+   * This function is being deprecated from usage outside tests, that's why it warns if it does anything.
    *
    * @param options.ignoreAngles Whether segments with matching start/end points
    * should be connected even if their angles don't match.
+   *
    */
   autoConnect(options?: { ignoreAngles?: boolean }) {
     const priorConnections = this.segments.reduce((acc, segment) => {
@@ -47,6 +49,7 @@ class Network {
       console.warn(
         `Auto-connected ${afterConnections - priorConnections} connections`,
       );
+      console.warn(priorConnections, afterConnections);
     }
   }
 
@@ -71,6 +74,10 @@ class Network {
       min: { x: minX, y: minY },
       max: { x: maxX, y: maxY },
     };
+  }
+
+  removeSegment(segment: TrackSegment) {
+    this.segments.splice(this.segments.indexOf(segment), 1);
   }
 }
 

@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import CircularTrackSegment from "../engine/CircularTrackSegment";
 import Network from "../engine/Network";
-import { findCenter } from "./utils";
-import Point from "../engine/Point";
-import LinearTrackSegment from "../engine/LinearTrackSegment";
 import TrackSegment from "../engine/TrackSegment";
+import TrackEditor from "./canvas/TrackEditor";
 
 const TrackSegmentDetail = (props: {
   network: Network;
@@ -15,80 +13,21 @@ const TrackSegmentDetail = (props: {
     segment: TrackSegment,
     action: "STATIONS" | "TRAIN_START_POSITIONS",
   ) => void;
+  trackEditor: TrackEditor;
 }) => {
-  const { update } = props;
   const [editingStationIndex, setEditingStationIndex] = useState<number | null>(
     null,
   );
   const [editingStationName, setEditingStationName] = useState<string>("");
 
-  const doUpdateProp = (newProp: {
-    start?: Partial<Point>;
-    end?: Partial<Point>;
-    theta?: number;
-    counterClockWise?: boolean;
-  }) => {
-    const network = props.network;
-
-    if (network.segments[props.segmentIndex] instanceof CircularTrackSegment) {
-      const newNetwork = new Network(network.segments);
-      const thisSegment = newNetwork.segments[
-        props.segmentIndex
-      ] as CircularTrackSegment;
-      const newPos = findCenter(
-        { ...thisSegment.start, ...newProp.start },
-        { ...thisSegment.end, ...newProp.end },
-        newProp.theta ?? thisSegment.theta,
-        newProp.counterClockWise ?? thisSegment.counterClockWise,
-      );
-      if (newProp.start?.x != null) {
-        thisSegment.start.x = newProp.start.x;
-      }
-      if (newProp.start?.y != null) {
-        thisSegment.start.y = newProp.start.y;
-      }
-      if (newProp.end?.x != null) {
-        thisSegment.end.x = newProp.end.x;
-      }
-      if (newProp.end?.y != null) {
-        thisSegment.end.y = newProp.end.y;
-      }
-      if (newProp.counterClockWise != null) {
-        thisSegment.counterClockWise = newProp.counterClockWise;
-      }
-      thisSegment.center.x = newPos.x;
-      thisSegment.center.y = newPos.y;
-      update(newNetwork);
-    } else {
-      const newNetwork = new Network(network.segments);
-      const thisSegment = newNetwork.segments[
-        props.segmentIndex
-      ] as LinearTrackSegment;
-      if (newProp.start?.x != null) {
-        thisSegment.start.x = newProp.start.x;
-      }
-      if (newProp.start?.y != null) {
-        thisSegment.start.y = newProp.start.y;
-      }
-      if (newProp.end?.x != null) {
-        thisSegment.end.x = newProp.end.x;
-      }
-      if (newProp.end?.y != null) {
-        thisSegment.end.y = newProp.end.y;
-      }
-      update(newNetwork);
-    }
-  };
-
   const updateStationName = (stationIndex: number, newName: string) => {
     const newNetwork = new Network(props.network.segments);
     const thisSegment = newNetwork.segments[props.segmentIndex];
     thisSegment.stations[stationIndex].name = newName;
-    update(newNetwork);
+    props.update(newNetwork);
   };
 
   const segment = props.network.segments[props.segmentIndex];
-  const hasConnections = segment.atStart.length > 0 || segment.atEnd.length > 0;
 
   return (
     <div className="flex flex-col m-4 border-2 border-zinc-300 rounded-md p-2 bg-zinc-100 w-[400px]">
@@ -174,7 +113,7 @@ const TrackSegmentDetail = (props: {
                 props.clearSegment(segment, "TRAIN_START_POSITIONS");
               }}
             >
-              Delete
+              Clear All
             </button>
           </div>
         </>
@@ -182,87 +121,28 @@ const TrackSegmentDetail = (props: {
       <div className="my-3">
         <h4 className="text-lg">From</h4>
         <div className="font-mono flex flex-row gap-2 items-center">
-          <label className="whitespace-nowrap">X</label>
-          <input
-            type="number"
-            className="w-24 border-zinc-300 border rounded"
-            value={segment.start.x}
-            onChange={(ev) =>
-              doUpdateProp({ start: { x: Number.parseInt(ev.target.value) } })
-            }
-            disabled={hasConnections}
-          />
-          <label className="whitespace-nowrap">Y</label>
-          <input
-            type="number"
-            className="w-24 border-zinc-300 border rounded"
-            value={segment.start.y}
-            onChange={(ev) =>
-              doUpdateProp({ start: { y: Number.parseInt(ev.target.value) } })
-            }
-            disabled={hasConnections}
-          />
+          <span className="mx-2">X: {segment.start.x.toFixed(2)}</span>
+          <span className="mx-2">Y: {segment.start.y.toFixed(2)}</span>
         </div>
       </div>
 
       <div className="my-3">
         <h4 className="text-lg">To</h4>
         <div className="font-mono flex flex-row gap-2 items-center">
-          <label className="whitespace-nowrap">X</label>
-          <input
-            type="number"
-            className="w-24 border-zinc-300 border rounded"
-            value={segment.end.x}
-            onChange={(ev) =>
-              doUpdateProp({ end: { x: Number.parseInt(ev.target.value) } })
-            }
-            disabled={hasConnections}
-          />
-          <label className="whitespace-nowrap">Y</label>
-          <input
-            type="number"
-            className="w-24 border-zinc-300 border rounded"
-            value={segment.end.y}
-            onChange={(ev) =>
-              doUpdateProp({ end: { y: Number.parseInt(ev.target.value) } })
-            }
-            disabled={hasConnections}
-          />
+          <span className="mx-2">X: {segment.end.x.toFixed(2)}</span>
+          <span className="mx-2">Y: {segment.end.y.toFixed(2)}</span>
         </div>
       </div>
 
       {segment instanceof CircularTrackSegment && (
         <div className="my-3">
           <h4 className="text-lg">Angle</h4>
-          <p className="flex flex-row gap-2 items-center">
-            <span className="font-mono flex flex-row items-center">
-              <input
-                type="number"
-                className="w-24 border-zinc-300 border rounded"
-                value={segment.theta}
-                step="any"
-                onChange={(ev) =>
-                  doUpdateProp({ theta: Number.parseInt(ev.target.value) })
-                }
-                disabled={hasConnections}
-              />
+          <div className="font-mono flex flex-row gap-2 items-center">
+            <span className="mx-2">θ: {segment.theta.toFixed(2)}</span>
+            <span className="mx-2">
+              CCW: {segment.counterClockWise ? "Yes" : "No"}
             </span>
-
-            <span>CCW</span>
-            <input
-              type="checkbox"
-              checked={segment.counterClockWise}
-              onChange={(ev) =>
-                doUpdateProp({ counterClockWise: ev.target.checked })
-              }
-              disabled={hasConnections}
-            />
-          </p>
-        </div>
-      )}
-      {hasConnections && (
-        <div className="my-3 text-sm text-zinc-600 italic">
-          Connected segments can't be moved
+          </div>
         </div>
       )}
       <div className="my-3">
@@ -270,17 +150,19 @@ const TrackSegmentDetail = (props: {
         <div className="flex flex-col gap-2">
           <div className="flex flex-row items-center gap-2">
             <span>Start:</span>
-            <span className="font-mono">
-              {segment.atStart.length +
-                " " +
-                (segment.atStart.length > 0 ? "✓" : "✗")}
-            </span>
             {segment.atStart.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {segment.atStart.map((connectedSegment, index) => (
                   <span
                     key={index}
-                    className="font-mono text-xs bg-blue-100 px-1 rounded"
+                    className="font-mono text-xs bg-blue-100 px-1 rounded cursor-pointer"
+                    onMouseOver={() =>
+                      props.trackEditor.setStrongHighlight([connectedSegment])
+                    }
+                    onMouseOut={() => props.trackEditor.setStrongHighlight([])}
+                    onClick={() =>
+                      props.trackEditor.selectSegment(connectedSegment)
+                    }
                   >
                     {connectedSegment.id.substring(0, 8)}
                   </span>
@@ -290,17 +172,19 @@ const TrackSegmentDetail = (props: {
           </div>
           <div className="flex flex-row items-center gap-2">
             <span>End:</span>
-            <span className="font-mono">
-              {segment.atEnd.length +
-                " " +
-                (segment.atEnd.length > 0 ? "✓" : "✗")}
-            </span>
             {segment.atEnd.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {segment.atEnd.map((connectedSegment, index) => (
                   <span
                     key={index}
-                    className="font-mono text-xs bg-green-100 px-1 rounded"
+                    className="font-mono text-xs bg-green-100 px-1 rounded cursor-pointer"
+                    onMouseOver={() =>
+                      props.trackEditor.setStrongHighlight([connectedSegment])
+                    }
+                    onMouseOut={() => props.trackEditor.setStrongHighlight([])}
+                    onClick={() =>
+                      props.trackEditor.selectSegment(connectedSegment)
+                    }
                   >
                     {connectedSegment.id.substring(0, 8)}
                   </span>

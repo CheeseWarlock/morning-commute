@@ -268,6 +268,7 @@ const TrackEditorContent = ({
                 network.segments.find((seg) => seg.id === selectedSegment.id)!,
               )}
               network={network}
+              trackEditor={trackEditorRef.current!}
               deleteSegment={(segment) =>
                 trackEditorRef.current?.deleteSegment(segment)
               }
