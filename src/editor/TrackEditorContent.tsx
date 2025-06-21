@@ -24,6 +24,7 @@ const TrackEditorContent = ({
     EDITOR_STATE.SELECT,
   );
   const [scale, setScale] = useState<number>(1);
+  const [snappingToGrid, setSnappingToGrid] = useState<boolean>(false);
   const [isCircularCounterClockwise, setIsCircularCounterClockwise] =
     useState<boolean>(false);
   const [circularAngle, setCircularAngle] = useState<number>(Math.PI / 2); // 90 degrees default
@@ -149,6 +150,21 @@ const TrackEditorContent = ({
                   value="Fit"
                   onClick={() => trackEditorRef.current?.autoScaleAndOffset()}
                 />
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={snappingToGrid}
+                    onChange={() => {
+                      const newValue = !snappingToGrid;
+                      setSnappingToGrid(newValue);
+                      if (trackEditorRef.current) {
+                        trackEditorRef.current.snappingToGrid = newValue;
+                      }
+                    }}
+                    className="w-4 h-4"
+                  />
+                  Snap
+                </label>
               </div>
             </div>
             {/* Undo/Redo Actions */}

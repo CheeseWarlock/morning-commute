@@ -208,12 +208,20 @@ class TrackEditor {
    */
   size: ScreenPoint;
   scale: number;
+  /**
+   * Whether to snap to grid lines when creating or moving segments.
+   */
+  snappingToGrid: boolean = false;
   #onSelect?: (segment?: TrackSegment) => void;
   onScaleChanged?: (scale: number) => void;
   /**
    * The position of the mouse on the canvas itself.
    */
   mousePos?: ScreenPoint;
+  /**
+   * The position of the mouse, snapped to the grid.
+   */
+  snappedMousePos?: ScreenPoint;
   hoverSegment?: TrackSegment;
   hoverSelectionType?: SELECTION_TYPE;
   currentStateWithData: EDITOR_STATE_PAYLOADS = {
@@ -263,7 +271,9 @@ class TrackEditor {
 
   handleMouseDown() {
     if (!this.mousePos) return;
-    const gamePosition = this.untransformPosition(this.mousePos);
+    let gamePosition = this.untransformPosition(
+      this.snappingToGrid ? this.snappedMousePos! : this.mousePos!,
+    );
 
     switch (this.currentStateWithData.state) {
       case EDITOR_STATE.SELECT: {
@@ -277,7 +287,6 @@ class TrackEditor {
               this.hoverSegment.atStart.length === 0 &&
               this.hoverSegment.atEnd.length === 0;
             if (canMoveSegment) {
-              const gamePosition = this.untransformPosition(this.mousePos);
               this.setcurrentStateWithData({
                 state: EDITOR_STATE.MOVE_SEGMENT,
                 segment: this.hoverSegment,
@@ -364,7 +373,6 @@ class TrackEditor {
       }
 
       case EDITOR_STATE.CREATE_LINEAR_SEGMENT_END: {
-        let gamePosition;
         if (
           this.hoverSelectionType === SELECTION_TYPE.START ||
           this.hoverSelectionType === SELECTION_TYPE.END
@@ -375,10 +383,8 @@ class TrackEditor {
               ? this.hoverSegment!.start
               : this.hoverSegment!.end;
           gamePosition = lockPoint as GamePoint;
-        } else {
-          // just use the current mouse position
-          gamePosition = this.untransformPosition(this.mousePos!);
         }
+        // otherwise just use the current mouse position
         const { endPosition } =
           this.#calculateLinearSegmentParams(gamePosition);
         const newSegment = new LinearTrackSegment(
@@ -462,7 +468,6 @@ class TrackEditor {
           });
         } else {
           // Otherwise use the current mouse position
-          const gamePosition = this.untransformPosition(this.mousePos!);
           this.setcurrentStateWithData({
             state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
             segmentStart: gamePosition,
@@ -474,7 +479,6 @@ class TrackEditor {
       }
 
       case EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END: {
-        let gamePosition;
         let snappingEnd = false;
         let newSegment: TrackSegment;
         let segmentsToConnectTo: TrackSegment[] = [];
@@ -489,10 +493,9 @@ class TrackEditor {
               : this.hoverSegment!.end;
           snappingEnd = true;
           gamePosition = lockPoint as GamePoint;
-        } else {
-          // just use the current mouse position
-          gamePosition = this.untransformPosition(this.mousePos!);
         }
+        // otherwise just use the current mouse position
+
         if (this.currentStateWithData.lockedToSegment) {
           // Use the current mouse position
 
@@ -861,7 +864,10 @@ class TrackEditor {
 
   handleMouseMove(ev: MouseEvent) {
     this.mousePos = { x: ev.offsetX, y: ev.offsetY } as ScreenPoint;
-    const gamePosition = this.untransformPosition(this.mousePos);
+    this.snappedMousePos = this.roundScreenPosition(this.mousePos);
+    let gamePosition = this.untransformPosition(
+      this.snappingToGrid ? this.snappedMousePos : this.mousePos,
+    );
 
     if (this.currentStateWithData.state === EDITOR_STATE.SELECT) {
       this.updateHoverState();
@@ -966,7 +972,6 @@ class TrackEditor {
           originalEnd,
           originalCenter,
         } = this.currentStateWithData;
-        const gamePosition = this.untransformPosition(this.mousePos);
         const dragVector = {
           x: gamePosition.x - dragStartPoint.x,
           y: gamePosition.y - dragStartPoint.y,
@@ -1399,6 +1404,16 @@ class TrackEditor {
   }
 
   /**
+   * Round a screen position to the nearest 25x25 in game coordinates.
+   */
+  roundScreenPosition(p: ScreenPoint): ScreenPoint {
+    const gameEventPosition = this.untransformPosition(p);
+    const roundedX = Math.round(gameEventPosition.x / 25) * 25;
+    const roundedY = Math.round(gameEventPosition.y / 25) * 25;
+    return this.transformPosition({ x: roundedX, y: roundedY } as GamePoint);
+  }
+
+  /**
    * For the current mouse position, find the closest segment and which part of it is closest.
    */
   updateHoverState() {
@@ -1482,12 +1497,13 @@ class TrackEditor {
    * Determine the ghost station and segments that should be drawn on the canvas.
    */
   determineGhosts() {
+    if (!this.mousePos) return;
+    let gamePosition = this.untransformPosition(
+      this.snappingToGrid ? this.snappedMousePos! : this.mousePos!,
+    );
     if (
-      this.currentStateWithData.state ===
-        EDITOR_STATE.CREATE_LINEAR_SEGMENT_END &&
-      this.mousePos
+      this.currentStateWithData.state === EDITOR_STATE.CREATE_LINEAR_SEGMENT_END
     ) {
-      const gamePosition = this.untransformPosition(this.mousePos);
       const { endPosition } = this.#calculateLinearSegmentParams(gamePosition);
       const previewSegment = new LinearTrackSegment(
         this.currentStateWithData.segmentStart,
@@ -1514,9 +1530,7 @@ class TrackEditor {
       EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END
     ) {
       const { center, endPosition, counterClockwise } =
-        this.#calculateCircularSegmentParams(
-          this.untransformPosition(this.mousePos!),
-        );
+        this.#calculateCircularSegmentParams(gamePosition);
       this.ghostSegments = [
         new CircularTrackSegment(
           this.currentStateWithData.segmentStart,
