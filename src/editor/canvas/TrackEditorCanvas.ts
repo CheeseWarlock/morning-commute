@@ -24,10 +24,21 @@ class TrackEditorCanvas {
     canvas.width = size.x;
     canvas.height = size.y;
     canvas.style.background = "black";
+    canvas.style.position = "absolute";
     targetElement.appendChild(canvas);
     this.canvas = canvas;
     this.#trackEditor = trackEditor;
     this.#size = size;
+  }
+
+  /**
+   * Resize the canvas to match the new size and redraw.
+   */
+  resize(newSize: ScreenPoint) {
+    this.#size = newSize;
+    this.canvas.width = newSize.x;
+    this.canvas.height = newSize.y;
+    this.draw();
   }
 
   /**

@@ -49,7 +49,19 @@ const TrackEditorContent = ({
     te.update();
     trackEditorRef.current = te;
 
+    // Set up ResizeObserver to handle canvas resizing
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (trackEditorRef.current && width > 0 && height > 0) {
+          trackEditorRef.current.resize({ x: width, y: height } as any);
+        }
+      }
+    });
+    resizeObserver.observe(container);
+
     return () => {
+      resizeObserver.disconnect();
       container.innerHTML = "";
       trackEditorRef.current = null;
     };
@@ -74,12 +86,15 @@ const TrackEditorContent = ({
   return (
     <div className="flex flex-col h-full font-mono">
       <div className="flex flex-row h-full">
-        <div>
-          <div ref={trackEditorContainer} />
-          <div className="flex flex-col bg-zinc-200 border-b border-zinc-300 shadow-sm gap-2 p-2">
+        <div className="editor-and-tools flex-1 flex flex-col">
+          <div
+            ref={trackEditorContainer}
+            className="flex-1 w-full h-full min-h-0 bg-purple-600"
+          />
+          <div className="flex flex-col bg-zinc-400 border-b border-zinc-300 shadow-sm gap-2 p-2">
             <div className="flex flex-row justify-between items-center gap-4">
               {/* Selection Actions */}
-              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center">
+              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center h-16">
                 <Button
                   selected={
                     buttonBarState === EDITOR_STATE.SELECT ||
@@ -126,7 +141,7 @@ const TrackEditorContent = ({
               </div>
 
               {/* Zoom Controls */}
-              <div className="flex items-center gap-2 bg-white rounded shadow px-3 py-2">
+              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center h-16">
                 <Button
                   value="−"
                   onClick={() =>
@@ -169,7 +184,7 @@ const TrackEditorContent = ({
             </div>
             {/* Undo/Redo Actions */}
             <div className="flex flex-row justify-between items-center gap-4">
-              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center">
+              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center h-16">
                 <span className="text-lg font-bold text-zinc-500">
                   History:
                 </span>
@@ -189,7 +204,7 @@ const TrackEditorContent = ({
             </div>
             {/* Construction Actions */}
             <div className="flex flex-row justify-between items-center gap-4">
-              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center">
+              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center h-16">
                 <span className="text-lg font-bold text-zinc-500">Add:</span>
                 <Button
                   selected={
@@ -260,116 +275,122 @@ const TrackEditorContent = ({
             </div>
           </div>
         </div>
-        {selectedSegment && network.segments.includes(selectedSegment) && (
-          <div className="overflow-y-auto">
-            <TrackSegmentDetail
-              update={updateNetwork}
-              segmentIndex={network.segments.indexOf(
-                network.segments.find((seg) => seg.id === selectedSegment.id)!,
-              )}
-              network={network}
-              trackEditor={trackEditorRef.current!}
-              deleteSegment={(segment) =>
-                trackEditorRef.current?.deleteSegment(segment)
-              }
-              clearSegment={(segment, action) =>
-                trackEditorRef.current?.clearSegment(segment, action)
-              }
-              key={selectedSegment.id}
-            />
-          </div>
-        )}
-        {(buttonBarState === EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START ||
-          buttonBarState === EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END) && (
-          <div className="overflow-y-auto">
-            <CircularSegmentCreationPanel
-              isCounterClockwise={isCircularCounterClockwise}
-              onDirectionChange={(counterClockwise) => {
-                setIsCircularCounterClockwise(counterClockwise);
-                // Update the current state with the new direction
-                if (
-                  trackEditorRef.current?.currentStateWithData.state ===
-                  EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START
-                ) {
-                  trackEditorRef.current.setcurrentStateWithData({
-                    state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START,
-                    counterClockwise,
-                    angle: circularAngle,
-                  });
-                } else if (
-                  trackEditorRef.current?.currentStateWithData.state ===
-                  EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END
-                ) {
-                  trackEditorRef.current.setcurrentStateWithData({
-                    state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
-                    segmentStart:
-                      trackEditorRef.current.currentStateWithData.segmentStart,
-                    lockedToSegment:
-                      trackEditorRef.current.currentStateWithData
-                        .lockedToSegment,
-                    lockedToEnd:
-                      trackEditorRef.current.currentStateWithData.lockedToEnd,
-                    counterClockwise,
-                    angle: circularAngle,
-                    startAngle:
-                      trackEditorRef.current.currentStateWithData.startAngle,
-                  });
+        <div className="details-container w-[450px] bg-zinc-400">
+          {selectedSegment && network.segments.includes(selectedSegment) && (
+            <div className="overflow-y-auto">
+              <TrackSegmentDetail
+                update={updateNetwork}
+                segmentIndex={network.segments.indexOf(
+                  network.segments.find(
+                    (seg) => seg.id === selectedSegment.id,
+                  )!,
+                )}
+                network={network}
+                trackEditor={trackEditorRef.current!}
+                deleteSegment={(segment) =>
+                  trackEditorRef.current?.deleteSegment(segment)
                 }
-              }}
-              angle={circularAngle}
-              onAngleChange={(angle) => {
-                setCircularAngle(angle);
-                // Update the current state with the new angle
-                if (
-                  trackEditorRef.current?.currentStateWithData.state ===
-                  EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START
-                ) {
-                  trackEditorRef.current.setcurrentStateWithData({
-                    state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START,
-                    counterClockwise: isCircularCounterClockwise,
-                    angle,
-                  });
-                } else if (
-                  trackEditorRef.current?.currentStateWithData.state ===
-                  EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END
-                ) {
-                  trackEditorRef.current.setcurrentStateWithData({
-                    state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
-                    segmentStart:
-                      trackEditorRef.current.currentStateWithData.segmentStart,
-                    lockedToSegment:
-                      trackEditorRef.current.currentStateWithData
-                        .lockedToSegment,
-                    lockedToEnd:
-                      trackEditorRef.current.currentStateWithData.lockedToEnd,
-                    counterClockwise: isCircularCounterClockwise,
-                    angle,
-                    startAngle:
-                      trackEditorRef.current.currentStateWithData.startAngle,
-                  });
+                clearSegment={(segment, action) =>
+                  trackEditorRef.current?.clearSegment(segment, action)
                 }
-              }}
-            />
-          </div>
-        )}
-        {trackEditorRef.current?.currentStateWithData.state ===
-          EDITOR_STATE.MULTI_SELECT && (
-          <div className="h-full overflow-hidden">
-            <MultiSegmentDetail
-              trackEditor={trackEditorRef.current!}
-              segments={
-                trackEditorRef.current?.currentStateWithData.selectedSegments
-              }
-              selectSegment={(segment) => {
-                trackEditorRef.current?.setcurrentStateWithData({
-                  state: EDITOR_STATE.SELECT,
-                  selectedSegment: segment,
-                });
-                setButtonBarState(EDITOR_STATE.SELECT);
-              }}
-            />
-          </div>
-        )}
+                key={selectedSegment.id}
+              />
+            </div>
+          )}
+          {(buttonBarState === EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START ||
+            buttonBarState === EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END) && (
+            <div className="overflow-y-auto">
+              <CircularSegmentCreationPanel
+                isCounterClockwise={isCircularCounterClockwise}
+                onDirectionChange={(counterClockwise) => {
+                  setIsCircularCounterClockwise(counterClockwise);
+                  // Update the current state with the new direction
+                  if (
+                    trackEditorRef.current?.currentStateWithData.state ===
+                    EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START
+                  ) {
+                    trackEditorRef.current.setcurrentStateWithData({
+                      state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START,
+                      counterClockwise,
+                      angle: circularAngle,
+                    });
+                  } else if (
+                    trackEditorRef.current?.currentStateWithData.state ===
+                    EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END
+                  ) {
+                    trackEditorRef.current.setcurrentStateWithData({
+                      state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
+                      segmentStart:
+                        trackEditorRef.current.currentStateWithData
+                          .segmentStart,
+                      lockedToSegment:
+                        trackEditorRef.current.currentStateWithData
+                          .lockedToSegment,
+                      lockedToEnd:
+                        trackEditorRef.current.currentStateWithData.lockedToEnd,
+                      counterClockwise,
+                      angle: circularAngle,
+                      startAngle:
+                        trackEditorRef.current.currentStateWithData.startAngle,
+                    });
+                  }
+                }}
+                angle={circularAngle}
+                onAngleChange={(angle) => {
+                  setCircularAngle(angle);
+                  // Update the current state with the new angle
+                  if (
+                    trackEditorRef.current?.currentStateWithData.state ===
+                    EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START
+                  ) {
+                    trackEditorRef.current.setcurrentStateWithData({
+                      state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_START,
+                      counterClockwise: isCircularCounterClockwise,
+                      angle,
+                    });
+                  } else if (
+                    trackEditorRef.current?.currentStateWithData.state ===
+                    EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END
+                  ) {
+                    trackEditorRef.current.setcurrentStateWithData({
+                      state: EDITOR_STATE.CREATE_CIRCULAR_SEGMENT_END,
+                      segmentStart:
+                        trackEditorRef.current.currentStateWithData
+                          .segmentStart,
+                      lockedToSegment:
+                        trackEditorRef.current.currentStateWithData
+                          .lockedToSegment,
+                      lockedToEnd:
+                        trackEditorRef.current.currentStateWithData.lockedToEnd,
+                      counterClockwise: isCircularCounterClockwise,
+                      angle,
+                      startAngle:
+                        trackEditorRef.current.currentStateWithData.startAngle,
+                    });
+                  }
+                }}
+              />
+            </div>
+          )}
+          {trackEditorRef.current?.currentStateWithData.state ===
+            EDITOR_STATE.MULTI_SELECT && (
+            <div className="h-full overflow-hidden">
+              <MultiSegmentDetail
+                trackEditor={trackEditorRef.current!}
+                segments={
+                  trackEditorRef.current?.currentStateWithData.selectedSegments
+                }
+                selectSegment={(segment) => {
+                  trackEditorRef.current?.setcurrentStateWithData({
+                    state: EDITOR_STATE.SELECT,
+                    selectedSegment: segment,
+                  });
+                  setButtonBarState(EDITOR_STATE.SELECT);
+                }}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

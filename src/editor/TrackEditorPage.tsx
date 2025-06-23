@@ -43,7 +43,7 @@ export default function TrackEditorPage() {
   }, [network]);
 
   return (
-    <div>
+    <div className="h-screen w-screen flex flex-col">
       <TrackEditorTopBar
         network={network}
         isNetworkComplete={isNetworkComplete}

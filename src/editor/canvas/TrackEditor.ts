@@ -266,7 +266,21 @@ class TrackEditor {
       this.handleMouseDown.bind(this);
     this.#trackEditorCanvas.canvas.onmouseup = this.handleMouseUp.bind(this);
     this.#trackEditorCanvas.canvas.onwheel = this.handleMouseWheel.bind(this);
+
+    this.resize({
+      x: this.#trackEditorCanvas.canvas.parentElement!.clientWidth,
+      y: this.#trackEditorCanvas.canvas.parentElement!.clientHeight,
+    } as ScreenPoint);
+    this.autoScaleAndOffset();
     this.dispatchUpdate();
+  }
+
+  /**
+   * Resize the editor canvas to the new size.
+   */
+  resize(newSize: ScreenPoint) {
+    this.size = newSize;
+    this.#trackEditorCanvas.resize(newSize);
   }
 
   handleMouseDown() {
@@ -1275,20 +1289,23 @@ class TrackEditor {
   /**
    * Automatically scale and offset the canvas to fit the network.
    */
-  autoScaleAndOffset() {
+  autoScaleAndOffset(padding: number = 300) {
     const gameBounds = this.network.getBounds();
 
     if (this.network.segments.length === 0) {
       return;
     }
 
-    const padding = 100;
     // The max fittable scale along X
     const scaleX =
       (this.size.x - padding) / (gameBounds.max.x - gameBounds.min.x);
     // The max fittable scale along Y
     const scaleY =
       (this.size.y - padding) / (gameBounds.max.y - gameBounds.min.y);
+
+    if (scaleX < 0 || scaleY < 0) {
+      return;
+    }
 
     if (scaleX < scaleY) {
       this.scale = scaleX;
