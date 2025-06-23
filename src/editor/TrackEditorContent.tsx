@@ -95,12 +95,13 @@ const TrackEditorContent = ({
             <div className="flex flex-row justify-between items-center gap-4">
               {/* Selection Actions */}
               <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center h-16">
+                <span className="text-lg font-bold text-zinc-500">Select:</span>
                 <Button
                   selected={
                     buttonBarState === EDITOR_STATE.SELECT ||
                     buttonBarState === EDITOR_STATE.PAN
                   }
-                  value="Select"
+                  value="Single"
                   onClick={() => {
                     trackEditorRef.current?.setcurrentStateWithData({
                       state: EDITOR_STATE.SELECT,
@@ -110,7 +111,7 @@ const TrackEditorContent = ({
                 />
                 <Button
                   selected={buttonBarState === EDITOR_STATE.QUERY_POINT}
-                  value="Query Point"
+                  value="By Point"
                   onClick={() => {
                     trackEditorRef.current?.setcurrentStateWithData({
                       state: EDITOR_STATE.QUERY_POINT,
@@ -120,22 +121,12 @@ const TrackEditorContent = ({
                 />
                 <Button
                   selected={buttonBarState === EDITOR_STATE.DRAG_SELECT}
-                  value="Drag Select"
+                  value="By Rectangle"
                   onClick={() => {
                     trackEditorRef.current?.setcurrentStateWithData({
                       state: EDITOR_STATE.DRAG_SELECT,
                     });
                     setButtonBarState(EDITOR_STATE.DRAG_SELECT);
-                  }}
-                />
-                <Button
-                  selected={buttonBarState === EDITOR_STATE.SPLIT}
-                  value="Split"
-                  onClick={() => {
-                    trackEditorRef.current?.setcurrentStateWithData({
-                      state: EDITOR_STATE.SPLIT,
-                    });
-                    setButtonBarState(EDITOR_STATE.SPLIT);
                   }}
                 />
               </div>
@@ -269,6 +260,21 @@ const TrackEditorContent = ({
                       state: EDITOR_STATE.SET_START_POSITION,
                     });
                     setButtonBarState(EDITOR_STATE.SET_START_POSITION);
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex flex-row justify-between items-center gap-4">
+              <div className="flex gap-2 bg-white rounded shadow px-3 py-2 items-center h-16">
+                <span className="text-lg font-bold text-zinc-500">Tools:</span>
+                <Button
+                  selected={buttonBarState === EDITOR_STATE.SPLIT}
+                  value="Split"
+                  onClick={() => {
+                    trackEditorRef.current?.setcurrentStateWithData({
+                      state: EDITOR_STATE.SPLIT,
+                    });
+                    setButtonBarState(EDITOR_STATE.SPLIT);
                   }}
                 />
               </div>
