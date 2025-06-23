@@ -6,33 +6,104 @@ import { ALIGNMENT } from "../../../engine/Station";
 export class StationManager {
   private scene: BABYLON.Scene;
   private game: Game;
-  private stationMaterial: BABYLON.StandardMaterial;
+  private stationMeshes: BABYLON.AbstractMesh[] = [];
   private stationTexts: GUI.TextBlock[][] = [];
 
   constructor(scene: BABYLON.Scene, game: Game) {
     this.scene = scene;
     this.game = game;
 
-    // Create station material
-    this.stationMaterial = new BABYLON.StandardMaterial("");
-    this.stationMaterial.diffuseColor = new BABYLON.Color3(0.3, 0.6, 1);
-    this.stationMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
-    this.stationMaterial.ambientColor = new BABYLON.Color3(0.77, 0.77, 0.77);
-
     this.createStations();
   }
 
-  private createStations() {
+  private async createStations() {
+    try {
+      // Load the station model
+      const result = await BABYLON.SceneLoader.ImportMeshAsync(
+        "",
+        "/models/",
+        "station.obj",
+        this.scene,
+      );
+
+      if (result.meshes.length === 0) {
+        console.error("Failed to load station model");
+        return;
+      }
+
+      this.game.network.stations.forEach((station, index) => {
+        // Create a parent mesh for this station instance
+        const stationParent = new BABYLON.Mesh(
+          `station_${index}_parent`,
+          this.scene,
+        );
+
+        // Clone all meshes and parent them to the station parent
+        result.meshes.forEach((originalMesh, meshIndex) => {
+          const clonedMesh = originalMesh.clone(
+            `station_${index}_mesh_${meshIndex}`,
+            null,
+            true,
+          );
+          if (meshIndex === 1 && clonedMesh) {
+            clonedMesh.position.y = 1.1;
+          }
+          if (clonedMesh) {
+            clonedMesh.parent = stationParent;
+          }
+        });
+
+        // Position the station
+        const targetPosition = station.trackSegment.getPositionAlong(
+          station.distanceAlong,
+        ).point;
+        let angleFromForward = station.trackSegment.getAngleAlong(
+          station.distanceAlong,
+        );
+        angleFromForward +=
+          station.alignment === ALIGNMENT.LEFT ? -Math.PI / 2 : Math.PI / 2;
+
+        targetPosition.x += Math.cos(angleFromForward) * 5;
+        targetPosition.y += Math.sin(angleFromForward) * 5;
+
+        // Set position and rotation for the entire model
+        stationParent.position.x = targetPosition.x;
+        stationParent.position.z = -targetPosition.y;
+        stationParent.rotation.y = angleFromForward + Math.PI / 2;
+
+        // Scale the station to appropriate size
+        stationParent.scaling = new BABYLON.Vector3(1, 1, 1);
+
+        this.stationMeshes.push(stationParent);
+      });
+
+      // Hide the original meshes
+      result.meshes.forEach((mesh) => {
+        mesh.setEnabled(false);
+        mesh.isVisible = false;
+      });
+    } catch (error) {
+      console.error("Error loading station model:", error);
+      // Fallback to simple geometry if model loading fails
+      this.createFallbackStations();
+    }
+  }
+
+  private createFallbackStations() {
+    // Create a simple fallback station material
+    const fallbackMaterial = new BABYLON.StandardMaterial("");
+    fallbackMaterial.diffuseColor = new BABYLON.Color3(0.3, 0.6, 1);
+    fallbackMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+    fallbackMaterial.ambientColor = new BABYLON.Color3(0.77, 0.77, 0.77);
+
     this.game.network.stations.forEach((station) => {
-      // Create station building
-      const rect = [
-        new BABYLON.Vector3(-2, -1, 0),
-        new BABYLON.Vector3(2, -1, 0),
-        new BABYLON.Vector3(2, 1, 0),
-        new BABYLON.Vector3(0, 2, 0),
-        new BABYLON.Vector3(-2, 1, 0),
-      ];
-      rect.push(rect[0]);
+      // Create simple box as fallback
+      const stationMesh = BABYLON.MeshBuilder.CreateBox(
+        `fallback_station_${station.name}`,
+        { width: 4, height: 3, depth: 4 },
+        this.scene,
+      );
+
       const targetPosition = station.trackSegment.getPositionAlong(
         station.distanceAlong,
       ).point;
@@ -45,27 +116,12 @@ export class StationManager {
       targetPosition.x += Math.cos(angleFromForward) * 5;
       targetPosition.y += Math.sin(angleFromForward) * 5;
 
-      const path = [
-        new BABYLON.Vector3(-4, 0, 0),
-        new BABYLON.Vector3(4, 0, 0),
-      ];
+      stationMesh.position.x = targetPosition.x;
+      stationMesh.position.z = -targetPosition.y;
+      stationMesh.rotation.y = angleFromForward + Math.PI / 2;
+      stationMesh.material = fallbackMaterial;
 
-      const extrusion = BABYLON.MeshBuilder.ExtrudeShape(
-        "squareb",
-        {
-          shape: rect,
-          path: path,
-          sideOrientation: BABYLON.Mesh.DOUBLESIDE,
-          scale: 0.7,
-          cap: BABYLON.Mesh.CAP_ALL,
-        },
-        this.scene,
-      );
-      extrusion.position.x = targetPosition.x;
-      extrusion.position.z = -targetPosition.y;
-      extrusion.rotation.y = angleFromForward + Math.PI / 2;
-      extrusion.convertToFlatShadedMesh();
-      extrusion.material = this.stationMaterial;
+      this.stationMeshes.push(stationMesh);
     });
   }
 
@@ -145,6 +201,8 @@ export class StationManager {
   }
 
   cleanup() {
-    this.stationMaterial.dispose();
+    this.stationMeshes.forEach((mesh) => {
+      mesh.dispose();
+    });
   }
 }

@@ -1,0 +1,146 @@
+# Station Model
+# Created for Morning Commute Project
+# Red triangular roof, grey rectangular base, four grey pillars
+
+mtllib station.mtl
+
+# Base vertices (rectangular base) vertex numbers 1 to 8
+v -9.0 0.0 -3.0
+v 9.0 0.0 -3.0
+v 9.0 0.0 3.0
+v -9.0 0.0 3.0
+v -9.0 1.0 -3.0
+v 9.0 1.0 -3.0
+v 9.0 1.0 3.0
+v -9.0 1.0 3.0
+
+# Roof vertices (triangular roof - pyramid) vertex numbers 9 to 13
+v -3.5 1.0 -2.5
+v 3.5 1.0 -2.5
+v 3.5 1.0 2.5
+v -3.5 1.0 2.5
+v 0.0 3.5 0.0
+
+# Pillar vertices (four pillars, slightly inward from corners)
+# Pillar 1 (front-left) vertex numbers 14 to 21
+v -2.5 0.0 -2.0
+v -1.5 0.0 -2.0
+v -1.5 0.0 -1.0
+v -2.5 0.0 -1.0
+v -2.5 2.5 -2.0
+v -1.5 2.5 -2.0
+v -1.5 2.5 -1.0
+v -2.5 2.5 -1.0
+
+# Pillar 2 (front-right) vertex numbers 22 to 29
+v 1.5 0.0 -2.0
+v 2.5 0.0 -2.0
+v 2.5 0.0 -1.0
+v 1.5 0.0 -1.0
+v 1.5 2.5 -2.0
+v 2.5 2.5 -2.0
+v 2.5 2.5 -1.0
+v 1.5 2.5 -1.0
+
+# Pillar 3 (back-left) vertex numbers 30 to 37
+v -2.5 0.0 1.0
+v -1.5 0.0 1.0
+v -1.5 0.0 2.0
+v -2.5 0.0 2.0
+v -2.5 2.5 1.0
+v -1.5 2.5 1.0
+v -1.5 2.5 2.0
+v -2.5 2.5 2.0
+
+# Pillar 4 (back-right) vertex numbers 38 to 45
+v 1.5 0.0 1.0
+v 2.5 0.0 1.0
+v 2.5 0.0 2.0
+v 1.5 0.0 2.0
+v 1.5 2.5 1.0
+v 2.5 2.5 1.0
+v 2.5 2.5 2.0
+v 1.5 2.5 2.0
+
+# Base faces
+usemtl base_material
+# Bottom face
+f 1 2 3 4
+# Top face
+f 8 7 6 5
+# Front face
+f 1 5 6 2
+# Back face
+f 4 3 7 8
+# Left face
+f 1 4 8 5
+# Right face
+f 2 6 7 3
+
+# Roof faces
+usemtl roof_material
+# Front triangle
+f 10 9 13
+# Back triangle
+f 12 11 13
+# Left triangle
+f 9 12 13
+# Right triangle
+f 11 10 13
+
+# Pillar 1 faces
+usemtl pillar_material
+# Bottom
+f 14 15 16 17
+# Top
+f 21 20 19 18
+# Front
+f 14 18 19 15
+# Back
+f 17 16 20 21
+# Left
+f 14 17 21 18
+# Right
+f 15 19 20 16
+
+# Pillar 2 faces
+# Bottom
+f 22 23 24 25
+# Top
+f 29 28 27 26
+# Front
+f 22 26 27 23
+# Back
+f 25 24 28 29
+# Left
+f 22 25 29 26
+# Right
+f 23 27 28 24
+
+# Pillar 3 faces
+# Bottom
+f 30 31 32 33
+# Top
+f 37 36 35 34
+# Front
+f 30 34 35 31
+# Back
+f 33 32 36 37
+# Left
+f 30 33 37 34
+# Right
+f 31 35 36 32
+
+# Pillar 4 faces
+# Bottom
+f 38 39 40 41
+# Top
+f 45 44 43 42
+# Front
+f 38 42 43 39
+# Back
+f 41 40 44 45
+# Left
+f 38 41 45 42
+# Right
+f 39 43 44 40

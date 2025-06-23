@@ -1,0 +1,29 @@
+# Station Model Materials
+# Created for Morning Commute Project
+
+newmtl roof_material
+Ns 32
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.200000 0.200000
+Ks 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+
+newmtl base_material
+Ns 32
+Ka 1.000000 1.000000 1.000000
+Kd 0.530000 0.530000 0.530000
+Ks 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 0
+
+newmtl pillar_material
+Ns 32
+Ka 1.000000 1.000000 1.000000
+Kd 0.600000 0.600000 0.600000
+Ks 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2 
